@@ -1,0 +1,7 @@
+-something to run .sh (like git in windows)
+-cmake to PATH
+-ninja to PATH
+-clang to PATH
+
+-build dependencies first
+-build.sh

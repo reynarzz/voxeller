@@ -1,0 +1,7 @@
+-read ".vox" files from magicaVoxel
+   -
+multi threaded processing.
+
+
+[Fix]
+-reader, when saving from magical voxel using the the disk icon, the format changed, is like the file used for edition
