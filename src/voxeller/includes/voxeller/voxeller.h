@@ -8,3 +8,5 @@
 #include "vox_mesh_builder.h"
 
 #endif
+
+VXAPI void VoxellerInit();

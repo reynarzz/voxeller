@@ -13,8 +13,16 @@ get_filename_component(ROOT_DIR ${ROOT_DIR} DIRECTORY) # go from src/voxeller to
 
 add_subdirectory(
     ${ROOT_DIR}/third/shared/assimp
+  
     ${CMAKE_BINARY_DIR}/third_party/assimp
 )
+
+add_subdirectory(
+    ${ROOT_DIR}/third/shared/spdlog
+    ${CMAKE_BINARY_DIR}/third_party/spdlog
+)
+
+  
 file(GLOB_RECURSE VOXELLER_SRC CONFIGURE_DEPENDS
     ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/*.h
@@ -31,4 +39,5 @@ target_include_directories(voxeller PUBLIC
 
 target_link_libraries(voxeller PRIVATE
     assimp
+    spdlog
 )

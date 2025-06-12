@@ -9,6 +9,7 @@ add_subdirectory(${ROOT_DIR}/third/editor/glfw
 ${CMAKE_BINARY_DIR}/third_party/glfw
 )
 
+
 file(GLOB_RECURSE EDITOR_SRC CONFIGURE_DEPENDS
     ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/*.h
@@ -30,6 +31,7 @@ target_include_directories(voxeller_editor PRIVATE
 target_link_libraries(voxeller_editor PRIVATE
     voxeller
     glfw
+    spdlog
 )
 
 if(WIN32)
