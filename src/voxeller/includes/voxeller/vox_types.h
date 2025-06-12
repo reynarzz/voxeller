@@ -50,6 +50,7 @@ EXPORT struct VOXELLER_API vox_nTRN
     int layerID;
     int framesCount;
     std::vector<vox_frame_attrib> frameAttrib;
+
 };
 
 EXPORT struct VOXELLER_API vox_bounding_box
