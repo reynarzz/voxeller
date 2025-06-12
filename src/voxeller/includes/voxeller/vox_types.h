@@ -115,6 +115,9 @@ EXPORT struct VOXELLER_API vox_file
     std::unordered_map<int, vox_nTRN> transforms;
     std::unordered_map<int, vox_MATL> materials;
 
+    std::unordered_map<int, vox_vec3> modelsOffsets;
+
+    
 
     bool isValid;
 };

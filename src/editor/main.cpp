@@ -8,6 +8,7 @@
 #include <GLFW/glfw3.h>
 #include <voxeller/Log/Log.h>
 #include <GUI/ImGuiInit.h>
+#include <voxeller/VoxParser.h>
 
 using namespace VoxellerEditor;
 
@@ -47,16 +48,18 @@ int main()
     
     
    //std::shared_ptr<vox_file> file = vox_parser::read_vox_file("testvox/chr_knight.vox");
-   std::shared_ptr<vox_file> file = vox_parser::read_vox_file("testvox/monu3.vox");
+   //std::shared_ptr<vox_file> file = vox_parser::read_vox_file("testvox/room.vox");
+
+   std::shared_ptr<Voxeller::vox_file> file = Voxeller::VoxParser::read_vox_file("testvox/monu2.vox");
     
    LOG_EDITOR_INFO("This is the editor");
     
    if (file != nullptr && file->isValid)
    {
-       std::cout << "header: " << file->header.id << ", name: " << file->name << ", version: " << file->header.version << '\n';
-
-       mesh_texturizer::export_pallete_png("pallete.png", file->pallete);
-       vox_mesh_builder::build_mesh_greedy(file);
+       std::cout << "header: " << file->header.id << ", models: " << file->voxModels.size() << ", version: " << file->header.version << '\n';
+         LOG_EDITOR_INFO("Valid: {0}, Materials: {1}, Shapes: {2}", file->isValid, file->materials.size(), file->shapes.size());
+       mesh_texturizer::export_pallete_png("pallete.png", file->palette);
+       //vox_mesh_builder::build_mesh_greedy(file);
    }
    else 
    {

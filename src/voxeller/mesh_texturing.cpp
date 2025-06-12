@@ -15,7 +15,7 @@
 #include <iostream>
 
 
-void mesh_texturizer::export_pallete_png(const char* path, const std::vector<color>& pallete)
+void mesh_texturizer::export_pallete_png(const char* path, const std::vector<Voxeller::color>& pallete)
 {
 	if (!pallete.empty()) 
 	{

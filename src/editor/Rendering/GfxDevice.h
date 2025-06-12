@@ -25,6 +25,22 @@ struct DeviceInfo
     
 };
 
+
+struct ShaderObject
+{
+
+};
+
+struct PilelineData
+{
+    bool ZWrite = true;
+    bool Bleding = false;
+    ShaderObject Shader;
+
+};
+
+
+
 // Base class for devices
 class GfxDevice
 {
@@ -41,6 +57,8 @@ public:
     virtual bool DestroyShader(void*) = 0;
     virtual bool DestroyTexture(void*) = 0;
     virtual bool DestroyMesh(void*) = 0;
+   // virtual void SetPipelineData(const PilelineData* data) = 0;
+   // virtual void DrawMesh(const void* mesh) = 0;
 private:
     
 };
