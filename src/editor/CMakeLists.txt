@@ -19,6 +19,10 @@ add_executable(voxeller_editor
     ${ROOT_DIR}/third/editor/gl/glad.cpp
 )
 
+set_target_properties(voxeller_editor PROPERTIES
+    OUTPUT_NAME "Voxeller Editor"
+)
+
 target_include_directories(voxeller_editor PRIVATE
     ${ROOT_DIR}/third/editor
 )

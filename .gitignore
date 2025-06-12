@@ -1,3 +1,4 @@
-build/
-third/shared/assimp
-bin/
+/build/
+/third/shared/assimp
+/bin/
+cmakefiles

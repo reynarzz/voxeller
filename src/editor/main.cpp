@@ -29,14 +29,14 @@ int main()
    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
    
    // set: 'glfwGetPrimaryMonitor()' to make the window full screen
-   GLFWwindow* win = glfwCreateWindow(600, 400, "voxeller", nullptr, nullptr);
+   GLFWwindow* win = glfwCreateWindow(600, 400, "Voxeller", nullptr, nullptr);
 
    // openGL 
    glfwMakeContextCurrent(win);
    int status = gladLoadGLLoader((GLADloadproc)glfwGetProcAddress);
    
    //std::shared_ptr<vox_file> file = vox_parser::read_vox_file("testvox/chr_knight.vox");
-   std::shared_ptr<vox_file> file = vox_parser::read_vox_file("testvox/work_vox/Zebra.vox");
+   std::shared_ptr<vox_file> file = vox_parser::read_vox_file("testvox/chr_knight.vox");
 
    if (file != nullptr && file->isValid)
    {
