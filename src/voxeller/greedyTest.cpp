@@ -64,9 +64,149 @@ struct FaceRect {
     int constantCoord; // the coordinate of the face plane (e.g., x or y or z value for the face)
 };
 
+static std::vector<FaceRect> GreedyMeshModel(
+    const vox_model& model,
+    const vox_size&  size, std::unordered_set<uint8_t>& usedColors)
+{
+    const int X = size.x;
+    const int Y = size.y;
+    const int Z = size.z;
+    std::vector<FaceRect> faces;
+    faces.reserve(1000);
+
+    // Quick occupancy test
+    auto isFilled = [&](int x,int y,int z){
+        if(x<0||x>=X||y<0||y>=Y||z<0||z>=Z) return false;
+        return model.voxel_3dGrid[z][y][x] >= 0;
+    };
+
+    // Helper lambda to do one 2D‐greedy pass:
+    auto sweep = [&](char orient,
+                     int dimU, int dimV, int dimW,
+                     auto getFilled,
+                     auto getPlaneConst)
+    {
+        // dimU,dimV = extents of the mask; dimW = sweep axis length
+        std::vector<bool> mask(dimU*dimV), visited(dimU*dimV);
+        for(int w=0; w<dimW; ++w){
+            // clear mask+visited
+            std::fill(mask.begin(),    mask.end(),    false);
+            std::fill(visited.begin(), visited.end(), false);
+
+            // build mask[u,v] = true if face at (u,v,w)
+            for(int v=0; v<dimV; ++v) for(int u=0; u<dimU; ++u){
+                if(getFilled(u,v,w))
+                    mask[v*dimU + u] = true;
+            }
+
+            // greedy‐merge rects in mask
+            for(int v=0; v<dimV; ++v) for(int u=0; u<dimU; ++u){
+                int idx = v*dimU + u;
+                if(!mask[idx] || visited[idx]) continue;
+
+                // expand width
+                int wU = 1;
+                while(u+wU<dimU && mask[v*dimU + (u+wU)] 
+                                  && !visited[v*dimU + (u+wU)])
+                    ++wU;
+
+                // expand height
+                int wV = 1;
+                bool ok=true;
+                while(ok && v+wV<dimV){
+                    for(int k=0; k<wU; ++k){
+                        int idx2 = (v+wV)*dimU + (u+k);
+                        if(!mask[idx2] || visited[idx2]){
+                            ok=false; break;
+                        }
+                    }
+                    if(ok) ++wV;
+                }
+
+                // mark visited
+                for(int dv=0; dv<wV; ++dv)
+                    for(int du=0; du<wU; ++du)
+                        visited[(v+dv)*dimU + (u+du)] = true;
+
+                // record a FaceRect
+                FaceRect f;
+                f.orientation   = orient;
+                f.constantCoord = getPlaneConst(u,v,w);
+                f.uMin = u;     f.uMax = u + wU;
+                f.vMin = v;     f.vMax = v + wV;
+                f.w    = wU;    f.h    = wV;
+                f.colorIndex = 0;            // unused for merging
+                faces.push_back(f);
+            }
+        }
+    };
+
+    // +X ('X'): sweep w=x in [0..X-1], UV=(z,y)
+    sweep('X',
+          /*dimU=*/Z, /*dimV=*/Y, /*dimW=*/X,
+          [&](int z,int y,int x){
+             return isFilled(x,y,z) && (x==X-1 || !isFilled(x+1,y,z));
+          },
+          [&](int z,int y,int x){
+             return x+1; // plane at x+1
+          });
+
+    // -X ('x'): sweep w=x, UV=(z,y)
+    sweep('x',
+          Z, Y, X,
+          [&](int z,int y,int x){
+             return isFilled(x,y,z) && (x==0 || !isFilled(x-1,y,z));
+          },
+          [&](int z,int y,int x){
+             return x;   // plane at x
+          });
+
+    // +Y ('Y'): sweep w=y, UV=(x,z)
+    sweep('Y',
+          X, Z, Y,
+          [&](int x,int z,int y){
+             return isFilled(x,y,z) && (y==Y-1 || !isFilled(x,y+1,z));
+          },
+          [&](int x,int z,int y){
+             return y+1;
+          });
+
+    // -Y ('y'): sweep w=y, UV=(x,z)
+    sweep('y',
+          X, Z, Y,
+          [&](int x,int z,int y){
+             return isFilled(x,y,z) && (y==0   || !isFilled(x,y-1,z));
+          },
+          [&](int x,int z,int y){
+             return y;
+          });
+
+    // +Z ('Z'): sweep w=z, UV=(x,y)
+    sweep('Z',
+          X, Y, Z,
+          [&](int x,int y,int z){
+             return isFilled(x,y,z) && (z==Z-1 || !isFilled(x,y,z+1));
+          },
+          [&](int x,int y,int z){
+             return z+1;
+          });
+
+    // -Z ('z'): sweep w=z, UV=(x,y)
+    sweep('z',
+          X, Y, Z,
+          [&](int x,int y,int z){
+             return isFilled(x,y,z) && (z==0   || !isFilled(x,y,z-1));
+          },
+          [&](int x,int y,int z){
+             return z;
+          });
+
+    return faces;
+}
+
 // Performs greedy meshing on a single vox_model to extract faces and merge contiguous ones.
 // Returns a list of FaceRect representing all merged faces (with orientation and extents), and sets usedColors (unique palette indices used).
-static std::vector<FaceRect> GreedyMeshModel(const vox_model& model, const vox_size& size, std::unordered_set<uint8_t>& usedColors) {
+static std::vector<FaceRect> GreedyMeshModel_(const vox_model& model, const vox_size& size, std::unordered_set<uint8_t>& usedColors) {
     int sizex = size.x;
     int sizey = size.y;
     int sizez = size.z;
@@ -574,182 +714,184 @@ static bool PackFacesIntoAtlas(int atlasSize, std::vector<FaceRect>& rects) {
 }
 
 // Build the actual geometry (vertices and indices) for a mesh from the FaceRect list and a given texture atlas configuration.
-static void BuildMeshFromFaces(const std::vector<FaceRect>& faces, int texWidth, int texHeight, bool flatShading,
-                               const std::vector<color>& palette, aiMesh* mesh) {
+static void BuildMeshFromFaces(
+    const std::vector<FaceRect>& faces,
+    int texWidth,
+    int texHeight,
+    bool flatShading,
+    const std::vector<color>& palette,
+    aiMesh* mesh)
+{
     std::vector<Vertex> vertices;
     std::vector<unsigned int> indices;
     vertices.reserve(faces.size() * 4);
     indices.reserve(faces.size() * 6);
-    // If smooth shading, use map to unify vertices
+
+    // map<quantized pos+uv, index> for smooth shading
     std::unordered_map<VertKey, unsigned int, VertKeyHash> vertMap;
     vertMap.reserve(faces.size() * 4);
 
-    // Lambda to add a vertex (with optional reuse if smooth)
-    auto addVertex = [&](float vx, float vy, float vz, float nx, float ny, float nz, float u, float v) -> unsigned int {
-        if(!flatShading) {
-            // Use quantized key for position and UV to merge vertices
+    auto addVertex = [&](float vx, float vy, float vz,
+                         float nx, float ny, float nz,
+                         float u, float v) -> unsigned int
+    {
             VertKey key;
-            // Quantize position by multiplying by 100 (positions are small integers mostly, avoid float issues)
-            key.px_i = (int)std::round(vx * 100.0f);
-            key.py_i = (int)std::round(vy * 100.0f);
-            key.pz_i = (int)std::round(vz * 100.0f);
-            // Quantize UV by texture dimensions (map to pixel coordinates)
-            key.u_i = (int)std::round(u * texWidth * 100.0f);   // multiply by 100 to preserve sub-pixel if any
-            key.v_i = (int)std::round(v * texHeight * 100.0f);
+
+        if (!flatShading) {
+            key.px_i = int(std::round(vx * 100.0f));
+            key.py_i = int(std::round(vy * 100.0f));
+            key.pz_i = int(std::round(vz * 100.0f));
+            key.u_i  = int(std::round(u  * texWidth  * 100.0f));
+            key.v_i  = int(std::round(v  * texHeight * 100.0f));
             auto it = vertMap.find(key);
-            if(it != vertMap.end()) {
-                // Vertex exists, accumulate normal
+            if (it != vertMap.end()) {
                 unsigned int idx = it->second;
                 vertices[idx].nx += nx;
                 vertices[idx].ny += ny;
                 vertices[idx].nz += nz;
                 return idx;
-            } else {
-                // Create new vertex
-                Vertex vert;
-                vert.px = vx; vert.py = vy; vert.pz = vz;
-                vert.nx = nx; vert.ny = ny; vert.nz = nz;
-                vert.u = u; vert.v = v;
-                unsigned int newIndex = vertices.size();
-                vertices.push_back(vert);
-                vertMap[key] = newIndex;
-                return newIndex;
             }
-        } else {
-            // Flat shading: always create separate vertex
-            Vertex vert;
-            vert.px = vx; vert.py = vy; vert.pz = vz;
-            vert.nx = nx; vert.ny = ny; vert.nz = nz;
-            vert.u = u; vert.v = v;
-            unsigned int idx = vertices.size();
-            vertices.push_back(vert);
-            return idx;
+            // else fall through and create new
         }
+        Vertex vert;
+        vert.px = vx; vert.py = vy; vert.pz = vz;
+        vert.nx = nx; vert.ny = ny; vert.nz = nz;
+        vert.u  = u;  vert.v  = v;
+        unsigned int idx = vertices.size();
+        vertices.push_back(vert);
+        if (!flatShading) vertMap[key] = idx;
+        return idx;
     };
 
-    // Process each face rect to generate two triangles
-    for(const FaceRect& face : faces) {
-        // Determine face normal and orientation axes
+    // Precompute some atlas‐space constants
+    const float pixelW = 1.0f / float(texWidth);
+    const float pixelH = 1.0f / float(texHeight);
+    const float border = 1.0f;
+
+    for (auto const& face : faces) {
+        // 1px bleed → inset by 0.5px to sample at centers
+        float u0 = (face.atlasX + border + 0.5f)           * pixelW;
+        float v0 = 1.0f - (face.atlasY + border + 0.5f)    * pixelH;
+        float u1 = (face.atlasX + border + face.w - 0.5f)  * pixelW;
+        float v1 = 1.0f - (face.atlasY + border + face.h - 0.5f) * pixelH;
+
+        // determine face normal & 3D‐coords for corners
         float nx=0, ny=0, nz=0;
-        // We'll map face coordinates to texture using the atlas placement.
-        // Pre-calculate UV bounds (in [0,1] texture coordinate space) for this face's interior (excluding border).
-        const float border = 1.0f;
-    float u0 = (face.atlasX + border)               / (float)texWidth;
-    float u1 = (face.atlasX + border + face.w)      / (float)texWidth;
-    float v0 = 1.0f - (face.atlasY + border + face.h) / float(texHeight);
-float v1 = 1.0f - (face.atlasY + border)      / float(texHeight);
+        float x0,y0,z0, x1,y1,z1, x2,y2,z2, x3,y3,z3;
 
-        // Actually, adjusting by -0.5 for center might be ideal, but since all pixels are same color, it's fine.
+        switch (face.orientation) {
+          case 'X': {
+            nx = +1; 
+            float fx = float(face.constantCoord);
+            float zmin = float(face.uMin), zmax = float(face.uMax);
+            float ymin = float(face.vMin), ymax = float(face.vMax);
+            // bottom‐left
+            x0=fx; y0=ymin; z0=zmin;
+            // top‐left
+            x1=fx; y1=ymax; z1=zmin;
+            // top‐right
+            x2=fx; y2=ymax; z2=zmax;
+            // bottom‐right
+            x3=fx; y3=ymin; z3=zmax;
+            } break;
+          case 'x': {
+            nx = -1;
+            float fx = float(face.constantCoord);
+            float zmin = float(face.uMin), zmax = float(face.uMax);
+            float ymin = float(face.vMin), ymax = float(face.vMax);
+            // reverse U‐axis so pattern stays upright
+            std::swap(zmin,zmax);
+            x0=fx; y0=ymin; z0=zmin;
+            x1=fx; y1=ymax; z1=zmin;
+            x2=fx; y2=ymax; z2=zmax;
+            x3=fx; y3=ymin; z3=zmax;
+            } break;
+          case 'Y': {
+            ny = +1;
+            float fy = float(face.constantCoord);
+            float xmin = float(face.uMin), xmax = float(face.uMax);
+            float zmin = float(face.vMin), zmax = float(face.vMax);
+            x0=xmin; y0=fy; z0=zmin;
+            x1=xmin; y1=fy; z1=zmax;
+            x2=xmax; y2=fy; z2=zmax;
+            x3=xmax; y3=fy; z3=zmin;
+            } break;
+          case 'y': {
+            ny = -1;
+            float fy = float(face.constantCoord);
+            float xmin = float(face.uMin), xmax = float(face.uMax);
+            float zmin = float(face.vMin), zmax = float(face.vMax);
+            std::swap(zmin,zmax);
+            x0=xmin; y0=fy; z0=zmin;
+            x1=xmin; y1=fy; z1=zmax;
+            x2=xmax; y2=fy; z2=zmax;
+            x3=xmax; y3=fy; z3=zmin;
+            } break;
+          case 'Z': {
+            nz = +1;
+            float fz = float(face.constantCoord);
+            float xmin = float(face.uMin), xmax = float(face.uMax);
+            float ymin = float(face.vMin), ymax = float(face.vMax);
+            x0=xmin; y0=ymin; z0=fz;
+            x1=xmin; y1=ymax; z1=fz;
+            x2=xmax; y2=ymax; z2=fz;
+            x3=xmax; y3=ymin; z3=fz;
+            } break;
+          case 'z': {
+            nz = -1;
+            float fz = float(face.constantCoord);
+            float xmin = float(face.uMin), xmax = float(face.uMax);
+            float ymin = float(face.vMin), ymax = float(face.vMax);
+            std::swap(xmin,xmax);
+            x0=xmin; y0=ymin; z0=fz;
+            x1=xmin; y1=ymax; z1=fz;
+            x2=xmax; y2=ymax; z2=fz;
+            x3=xmax; y3=ymin; z3=fz;
+            } break;
+          default: continue;
+        }
 
-        // Coordinates of face corners in world:
-        // We have face.uMin, face.uMax, face.vMin, face.vMax which are the face boundaries.
-        // If face.orientation is +X ('X') or -X ('x'):
-        //   U axis corresponds to Z, V axis to Y.
-        //   For +X: normal = (1,0,0), U increases with Z, V increases with Y.
-        //   For -X: normal = (-1,0,0), U increases with -Z, V increases with Y.
-        if(face.orientation == 'X' || face.orientation == 'x') {
-            bool pos = (face.orientation == 'X');
-            nx = pos ? 1.0f : -1.0f;
-            ny = 0; nz = 0;
-            // Face plane X coordinate:
-            float fx = (float)face.constantCoord;
-            // Compute the world min/max of Z and Y boundaries
-            float zmin = (float)face.uMin;
-            float zmax = (float)face.uMax;
-            float ymin = (float)face.vMin;
-            float ymax = (float)face.vMax;
-            // For -X face, we invert U axis (so we will swap zmin/zmax in mapping)
-            if(!pos) std::swap(zmin, zmax);
-            // Define the four corner vertices (v0 bottom-left, v1 top-left, v2 top-right, v3 bottom-right in UV space)
-            // Bottom-left (ymin,zmin):
-            unsigned int i0 = addVertex(fx, ymin, zmin, nx, ny, nz, u0, v0);
-            // Top-left (ymax, zmin):
-            unsigned int i1 = addVertex(fx, ymax, zmin, nx, ny, nz, u0, v1);
-            // Top-right (ymax, zmax):
-            unsigned int i2 = addVertex(fx, ymax, zmax, nx, ny, nz, u1, v1);
-            // Bottom-right (ymin, zmax):
-            unsigned int i3 = addVertex(fx, ymin, zmax, nx, ny, nz, u1, v0);
-            // Two triangles (i0, i1, i2) and (i0, i2, i3)
-            indices.push_back(i0); indices.push_back(i1); indices.push_back(i2);
-            indices.push_back(i0); indices.push_back(i2); indices.push_back(i3);
-        }
-        // +Y or -Y:
-        else if(face.orientation == 'Y' || face.orientation == 'y') {
-            bool pos = (face.orientation == 'Y');
-            nx = 0; ny = pos ? 1.0f : -1.0f; nz = 0;
-            float fy = (float)face.constantCoord;
-            float xmin = (float)face.uMin;
-            float xmax = (float)face.uMax;
-            float zmin = (float)face.vMin;
-            float zmax = (float)face.vMax;
-            // For -Y, V axis is -Z (so swap zmin,zmax in mapping)
-            if(!pos) std::swap(zmin, zmax);
-            // U axis for Y faces is X normally (not flipped).
-            // Define corners:
-            // Bottom-left (for top view, bottom is -Z direction? But we'll follow our mapping: 
-            // For +Y (top face), U=X (increasing east), V=Z (increasing south).
-            // v0 bottom-left = (xmin,zmin)
-            unsigned int i0 = addVertex(xmin, fy, zmin, nx, ny, nz, u0, v0);
-            unsigned int i1 = addVertex(xmin, fy, zmax, nx, ny, nz, u0, v1);
-            unsigned int i2 = addVertex(xmax, fy, zmax, nx, ny, nz, u1, v1);
-            unsigned int i3 = addVertex(xmax, fy, zmin, nx, ny, nz, u1, v0);
-            indices.push_back(i0); indices.push_back(i1); indices.push_back(i2);
-            indices.push_back(i0); indices.push_back(i2); indices.push_back(i3);
-        }
-        // +Z or -Z:
-        else if(face.orientation == 'Z' || face.orientation == 'z') {
-            bool pos = (face.orientation == 'Z');
-            nx = 0; ny = 0; nz = pos ? 1.0f : -1.0f;
-            float fz = (float)face.constantCoord;
-            float xmin = (float)face.uMin;
-            float xmax = (float)face.uMax;
-            float ymin = (float)face.vMin;
-            float ymax = (float)face.vMax;
-            // For -Z, U = -X (swap xmin,xmax)
-            if(!pos) std::swap(xmin, xmax);
-            // U axis = X, V axis = Y for Z faces.
-            unsigned int i0 = addVertex(xmin, ymin, fz, nx, ny, nz, u0, v0);
-            unsigned int i1 = addVertex(xmin, ymax, fz, nx, ny, nz, u0, v1);
-            unsigned int i2 = addVertex(xmax, ymax, fz, nx, ny, nz, u1, v1);
-            unsigned int i3 = addVertex(xmax, ymin, fz, nx, ny, nz, u1, v0);
-            indices.push_back(i0); indices.push_back(i1); indices.push_back(i2);
-            indices.push_back(i0); indices.push_back(i2); indices.push_back(i3);
+        // add the four verts (always using the same u0,v0→u1,v1)
+        unsigned int i0 = addVertex(x0,y0,z0, nx,ny,nz, u0,v0);
+        unsigned int i1 = addVertex(x1,y1,z1, nx,ny,nz, u0,v1);
+        unsigned int i2 = addVertex(x2,y2,z2, nx,ny,nz, u1,v1);
+        unsigned int i3 = addVertex(x3,y3,z3, nx,ny,nz, u1,v0);
+
+        indices.push_back(i0); indices.push_back(i1); indices.push_back(i2);
+        indices.push_back(i0); indices.push_back(i2); indices.push_back(i3);
+    }
+
+    // normalize normals if smooth
+    if (!flatShading) {
+        for (auto& v : vertices) {
+            float L = std::sqrt(v.nx*v.nx + v.ny*v.ny + v.nz*v.nz);
+            if (L>0) { v.nx/=L; v.ny/=L; v.nz/=L; }
         }
     }
 
-    // If smooth shading, normalize all accumulated normals
-    if(!flatShading) {
-        for(auto& v : vertices) {
-            float length = std::sqrt(v.nx*v.nx + v.ny*v.ny + v.nz*v.nz);
-            if(length > 0.0f) {
-                v.nx /= length;
-                v.ny /= length;
-                v.nz /= length;
-            }
-        }
-    }
-
-    // Now fill the aiMesh structure
+    // finally write into aiMesh
     mesh->mPrimitiveTypes = aiPrimitiveType_TRIANGLE;
-    mesh->mNumVertices = (unsigned int)vertices.size();
-    mesh->mVertices = new aiVector3D[mesh->mNumVertices];
-    mesh->mNormals = new aiVector3D[mesh->mNumVertices];
-    mesh->mTextureCoords[0] = new aiVector3D[mesh->mNumVertices];
+    mesh->mNumVertices   = vertices.size();
+    mesh->mVertices      = new aiVector3D[vertices.size()];
+    mesh->mNormals       = new aiVector3D[vertices.size()];
+    mesh->mTextureCoords[0] = new aiVector3D[vertices.size()];
     mesh->mNumUVComponents[0] = 2;
-    for(unsigned int i = 0; i < mesh->mNumVertices; ++i) {
+
+    for (unsigned int i=0;i<vertices.size();++i) {
         mesh->mVertices[i] = aiVector3D(vertices[i].px, vertices[i].py, vertices[i].pz);
-        mesh->mNormals[i] = aiVector3D(vertices[i].nx, vertices[i].ny, vertices[i].nz);
+        mesh->mNormals[i]  = aiVector3D(vertices[i].nx, vertices[i].ny, vertices[i].nz);
         mesh->mTextureCoords[0][i] = aiVector3D(vertices[i].u, vertices[i].v, 0.0f);
     }
-    // Faces (triangles)
-    mesh->mNumFaces = (unsigned int)(indices.size() / 3);
-    mesh->mFaces = new aiFace[mesh->mNumFaces];
-    for(unsigned int f = 0; f < mesh->mNumFaces; ++f) {
-        mesh->mFaces[f].mNumIndices = 3;
-        mesh->mFaces[f].mIndices = new unsigned int[3];
-        mesh->mFaces[f].mIndices[0] = indices[f*3 + 0];
-        mesh->mFaces[f].mIndices[1] = indices[f*3 + 1];
-        mesh->mFaces[f].mIndices[2] = indices[f*3 + 2];
+
+    mesh->mNumFaces = indices.size()/3;
+    mesh->mFaces    = new aiFace[mesh->mNumFaces];
+    for (unsigned int f=0; f<mesh->mNumFaces; ++f) {
+        aiFace& face = mesh->mFaces[f];
+        face.mNumIndices = 3;
+        face.mIndices    = new unsigned int[3];
+        face.mIndices[0] = indices[f*3+0];
+        face.mIndices[1] = indices[f*3+1];
+        face.mIndices[2] = indices[f*3+2];
     }
 }
 
@@ -763,39 +905,142 @@ static bool SaveAtlasImage(const std::string& filename, int width, int height, c
 }
 
 // Generate the texture atlas image data given the list of faces and palette colors
-static void GenerateAtlasImage(int texWidth, int texHeight, const std::vector<FaceRect>& faces, const std::vector<color>& palette, std::vector<unsigned char>& outImage) {
+static void GenerateAtlasImage(
+    int texWidth,
+    int texHeight,
+    const std::vector<FaceRect>& faces,
+    const vox_model& model,
+    const std::vector<color>& palette,
+    std::vector<unsigned char>& outImage)
+{
+    const int border = 1;
     outImage.assign(texWidth * texHeight * 4, 0);
 
+    // Helper to fetch RGBA from palette given a MagicaVoxel colorIndex (1–255)
+    auto getRGBA = [&](uint8_t ci){
+        size_t idx = ci > 0 ? ci - 1 : 0;
+        if (idx >= palette.size()) idx = palette.size() - 1;
+        return palette[idx];
+    };
 
-    
-    // Fill background with transparent or black? We'll use 0 alpha for clarity outside faces.
-    // outImage already 0-initialized, which corresponds to RGBA(0,0,0,0).
-    for(const FaceRect& face : faces) {
-        // Determine color RGBA for this face
-        color col = {0,0,0,255};
-        // MagicaVoxel colorIndex is 1–255 but our palette[0] is the first entry
-   size_t pi = (face.colorIndex > 0 ? face.colorIndex - 1 : 0);
-   if (pi >= palette.size()) pi = palette.size() - 1;
-   col = palette[pi];
-        // Coordinates in image including border:
+    // Sample the colorIndex at a given (x,y,z)
+    auto sampleCI = [&](int x, int y, int z)->uint8_t {
+        int cell = model.voxel_3dGrid[z][y][x];
+        if (cell < 0) return 0;
+        return model.voxels[cell].colorIndex;
+    };
+
+    for (auto& face : faces) {
         int x0 = face.atlasX;
         int y0 = face.atlasY;
-        int rw = face.w + 2;
-        int rh = face.h + 2;
-        // Fill interior and border:
-        for(int dy = 0; dy < rh; ++dy) {
-            for(int dx = 0; dx < rw; ++dx) {
-                int px = x0 + dx;
-                int py = y0 + dy;
-                // Bounds check (should always be inside)
-                if(px < 0 || px >= texWidth || py < 0 || py >= texHeight) continue;
+        int w  = face.w;
+        int h  = face.h;
+
+        // 1) Fill interior (w×h) by sampling the original voxels
+        for (int iy = 0; iy < h; ++iy) {
+            for (int ix = 0; ix < w; ++ix) {
+                int vx, vy, vz;
+                switch (face.orientation) {
+                  case 'X': // +X face: plane at x+1, u→Z, v→Y
+                    vx = face.constantCoord - 1;
+                    vy = face.vMin + iy;
+                    vz = face.uMin + ix;
+                    break;
+                  case 'x': // -X face: plane at x,  u→←Z, v→Y
+                    vx = face.constantCoord;
+                    vy = face.vMin + iy;
+                    vz = face.uMin + (w - 1 - ix);
+                    break;
+                  case 'Y': // +Y face: plane at y+1, u→X, v→Z
+                    vx = face.uMin + ix;
+                    vy = face.constantCoord - 1;
+                    vz = face.vMin + iy;
+                    break;
+                  case 'y': // -Y face: plane at y,  u→X, v→←Z
+                    vx = face.uMin + ix;
+                    vy = face.constantCoord;
+                    vz = face.vMin + (h - 1 - iy);
+                    break;
+                  case 'Z': // +Z face: plane at z+1, u→X, v→Y
+                    vx = face.uMin + ix;
+                    vy = face.vMin + iy;
+                    vz = face.constantCoord - 1;
+                    break;
+                  case 'z': // -Z face: plane at z,  u→←X, v→Y
+                    vx = face.uMin + (w - 1 - ix);
+                    vy = face.vMin + iy;
+                    vz = face.constantCoord;
+                    break;
+                  default:
+                    continue;
+                }
+
+                uint8_t ci = sampleCI(vx, vy, vz);
+                auto col = getRGBA(ci);
+
+                int px = x0 + border + ix;
+                int py = y0 + border + iy;
                 int idx = (py * texWidth + px) * 4;
-                outImage[idx]   = col.r;
-                outImage[idx+1] = col.g;
-                outImage[idx+2] = col.b;
-                outImage[idx+3] = col.a;
+                outImage[idx + 0] = col.r;
+                outImage[idx + 1] = col.g;
+                outImage[idx + 2] = col.b;
+                outImage[idx + 3] = col.a;
             }
         }
+
+        // 2) Bleed edges into the 1-pixel border on all four sides:
+
+        // Top & bottom
+        for (int ix = 0; ix < w; ++ix) {
+            // copy from first interior row → top border
+            int srcTop = ((y0 + border + 0) * texWidth + (x0 + border + ix)) * 4;
+            int dstTop = ((y0 + 0)           * texWidth + (x0 + border + ix)) * 4;
+            memcpy(&outImage[dstTop], &outImage[srcTop], 4);
+
+            // copy from last interior row → bottom border
+            int srcBot = ((y0 + border + h - 1) * texWidth + (x0 + border + ix)) * 4;
+            int dstBot = ((y0 + border + h)     * texWidth + (x0 + border + ix)) * 4;
+            memcpy(&outImage[dstBot], &outImage[srcBot], 4);
+        }
+
+        // Left & right
+        for (int iy = 0; iy < h; ++iy) {
+            // copy from first interior column → left border
+            int srcL = ((y0 + border + iy) * texWidth + (x0 + border + 0)) * 4;
+            int dstL = ((y0 + border + iy) * texWidth + (x0 + 0))           * 4;
+            memcpy(&outImage[dstL], &outImage[srcL], 4);
+
+            // copy from last interior column → right border
+            int srcR = ((y0 + border + iy) * texWidth + (x0 + border + w - 1)) * 4;
+            int dstR = ((y0 + border + iy) * texWidth + (x0 + border + w))     * 4;
+            memcpy(&outImage[dstR], &outImage[srcR], 4);
+        }
+
+        // Finally fill corners by copying the appropriate interior pixel:
+        // top-left corner
+        memcpy(
+          &outImage[( (y0+0)       * texWidth + (x0+0)      )*4],
+          &outImage[( (y0+border)  * texWidth + (x0+border) )*4],
+          4
+        );
+        // top-right
+        memcpy(
+          &outImage[( (y0+0)       * texWidth + (x0+border+w) )*4],
+          &outImage[( (y0+border)  * texWidth + (x0+border+w-1) )*4],
+          4
+        );
+        // bottom-left
+        memcpy(
+          &outImage[( (y0+border+h)* texWidth + (x0+0)      )*4],
+          &outImage[( (y0+border+h-1)*texWidth + (x0+border) )*4],
+          4
+        );
+        // bottom-right
+        memcpy(
+          &outImage[( (y0+border+h)* texWidth + (x0+border+w) )*4],
+          &outImage[( (y0+border+h-1)*texWidth + (x0+border+w-1) )*4],
+          4
+        );
     }
 }
 
@@ -937,7 +1182,7 @@ LOG_EDITOR_INFO("Frames count: {0}, Models: {1}", frameCount, voxData->voxModels
             }
             // Create image
             std::vector<unsigned char> image;
-            GenerateAtlasImage(atlasDim, atlasDim, faces, voxData->palette, image);
+            GenerateAtlasImage(atlasDim, atlasDim, faces,voxData->voxModels[modelIndex], voxData->palette, image);
             // Save image file for this frame
             std::string baseName = outputPath;
             if(dot != std::string::npos) baseName = outputPath.substr(0, outputPath.find_last_of('.'));
@@ -1051,7 +1296,9 @@ LOG_EDITOR_INFO("Frames count: {0}, Models: {1}", frameCount, voxData->voxModels
                 dim = std::max(usedW, usedH);
             }
             globalAtlasSize = dim;
-            GenerateAtlasImage(dim, dim, allFaces, voxData->palette, globalImage);
+            //GenerateAtlasImage(dim, dim, allFaces, voxData->palette, globalImage);
+            GenerateAtlasImage(dim, dim, allFaces,voxData->voxModels[0], voxData->palette, globalImage);
+
             // Save atlas image
             std::string baseName = outputPath;
             if(dot != std::string::npos) baseName = outputPath.substr(0, outputPath.find_last_of('.'));
@@ -1120,7 +1367,9 @@ LOG_EDITOR_INFO("Frames count: {0}, Models: {1}", frameCount, voxData->voxModels
                 }
                 // Create atlas for this mesh
                 std::vector<unsigned char> img;
-                GenerateAtlasImage(dim, dim, faces, voxData->palette, img);
+                //GenerateAtlasImage(dim, dim, faces, voxData->palette, img);
+            GenerateAtlasImage(dim, dim, faces,voxData->voxModels[modelIndex], voxData->palette, img);
+
                 std::string baseName = outputPath;
                 if(dot != std::string::npos) baseName = outputPath.substr(0, outputPath.find_last_of('.'));
                 std::string imageName = baseName + "_mesh" + std::to_string(i) + ".png";
