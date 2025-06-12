@@ -14,7 +14,7 @@
 #include <assimp/DefaultLogger.hpp>
 #include <assimp/material.h>
 #include <voxeller/VoxParser.h>
-
+#include <voxeller/Log/Log.h>
 
 // Include stb_image_write for saving texture atlas as PNG
 //#define STB_IMAGE_WRITE_IMPLEMENTATION
@@ -767,23 +767,7 @@ static void GenerateAtlasImage(int texWidth, int texHeight, const std::vector<Fa
     outImage.assign(texWidth * texHeight * 4, 0);
 
 
-        // ─── DEBUG: Dump unique face.colorIndex ─────────────────────────────────
-    std::unordered_set<uint8_t> idxs;
-    for(auto& f : faces) idxs.insert(f.colorIndex);
-    std::cout << "DEBUG: unique face.colorIndex = ";
-    for(auto i : idxs)  std::cout << int(i) << " ";
-    std::cout << std::endl;
-
-    // ─── DEBUG: Dump first few palette entries ──────────────────────────────
-    for(int i = 0; i < std::min<int>(palette.size(), 10); ++i) {
-        auto &c = palette[i];
-        std::cout << "  palette["<<i<<"] = ("
-                  << int(c.r)<<","<<int(c.g)<<","<<int(c.b)<<","<<int(c.a)<<")\n";
-    }
-    std::cout << std::endl;
-    // ────────────────────────────────────────────────────────────────────────────
-
-    outImage.assign(texWidth * texHeight * 4, 0);
+    
     // Fill background with transparent or black? We'll use 0 alpha for clarity outside faces.
     // outImage already 0-initialized, which corresponds to RGBA(0,0,0,0).
     for(const FaceRect& face : faces) {
@@ -847,30 +831,24 @@ bool Run(const std::string& inputPath, const std::string& outputPath)
     bool exportFramesSeparately = false;
     if(frameCount > 1) {
         std::cout << "This model has " << frameCount << " frames. Export frames as separate files? (y/n): ";
-        char c;
-        std::cin >> c;
-        exportFramesSeparately = (c == 'y' || c == 'Y');
+        exportFramesSeparately = true;
     }
     // Ask user about atlas vs separate textures if multiple meshes will be in one file
     bool separateTexturesPerMesh = false;
     if(!exportFramesSeparately && frameCount > 1) {
         std::cout << "Use separate texture per frame/mesh instead of one atlas? (y/n): ";
-        char c;
-        std::cin >> c;
-        separateTexturesPerMesh = (c == 'y' || c == 'Y');
+       
+        separateTexturesPerMesh = false;
     }
     // Ask about power-of-two texture enforcement
     bool forcePowerOfTwo = true;
     std::cout << "Force texture dimensions to power-of-two? (y/n): ";
-    char cpot;
-    std::cin >> cpot;
-    forcePowerOfTwo = (cpot == 'y' || cpot == 'Y');
+   
+    forcePowerOfTwo = true;
     // Ask about shading (flat or smooth)
     bool flatShading = true;
     std::cout << "Flat shading (y) or smooth shading (n)? ";
-    char cshade;
-    std::cin >> cshade;
-    flatShading = (cshade == 'y' || cshade == 'Y');
+    flatShading = true;
 
     // Set up Assimp scene
     aiScene* scene = new aiScene();
@@ -911,7 +889,7 @@ bool Run(const std::string& inputPath, const std::string& outputPath)
         }
         return true;
     };
-
+LOG_EDITOR_INFO("Frames count: {0}, Models: {1}", frameCount, voxData->voxModels.size());
     if(exportFramesSeparately && frameCount > 1) {
         // Loop through frames, create scene for each
         for(size_t fi = 0; fi < frameCount; ++fi) {
@@ -1107,7 +1085,10 @@ bool Run(const std::string& inputPath, const std::string& outputPath)
                 node->mNumMeshes = 1;
                 node->mMeshes = new unsigned int[1];
                 node->mMeshes[0] = i;
-                node->mTransformation = aiMatrix4x4(); // identity (we place all frames at origin overlapping)
+                aiMatrix4x4 rot;
+                aiMatrix4x4::RotationX(-static_cast<float>(AI_MATH_PI/2.0f), rot);
+                node->mTransformation = rot;
+
                 scene->mRootNode->mChildren[i] = node;
             }
         } else {
@@ -1157,16 +1138,15 @@ bool Run(const std::string& inputPath, const std::string& outputPath)
                 node->mNumMeshes = 1;
                 node->mMeshes = new unsigned int[1];
                 node->mMeshes[0] = i;
-                node->mTransformation = aiMatrix4x4(); // identity (assuming all at origin)
+                 aiMatrix4x4 rot;
+                aiMatrix4x4::RotationX(-static_cast<float>(AI_MATH_PI/2.0f), rot);
+                node->mTransformation = rot;
+
                 scene->mRootNode->mChildren[i] = node;
             }
         }
         // If there was only one mesh in scene (no children used above), attach it directly to root node
-        if(meshCount == 1) {
-            scene->mRootNode->mNumMeshes = 1;
-            scene->mRootNode->mMeshes = new unsigned int[1];
-            scene->mRootNode->mMeshes[0] = 0;
-        }
+        
         // Export combined scene
         if(!exportScene(outputPath)) {
             std::cerr << "Failed to export scene.\n";
