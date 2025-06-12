@@ -633,10 +633,12 @@ static void BuildMeshFromFaces(const std::vector<FaceRect>& faces, int texWidth,
         float nx=0, ny=0, nz=0;
         // We'll map face coordinates to texture using the atlas placement.
         // Pre-calculate UV bounds (in [0,1] texture coordinate space) for this face's interior (excluding border).
-        float u0 = (face.atlasX + 1) / (float)texWidth;
-        float u1 = (face.atlasX + 1 + face.w - 1) / (float)texWidth; // mapping last interior pixel center
-        float v0 = (face.atlasY + 1) / (float)texHeight;
-        float v1 = (face.atlasY + 1 + face.h - 1) / (float)texHeight;
+        const float border = 1.0f;
+    float u0 = (face.atlasX + border)               / (float)texWidth;
+    float u1 = (face.atlasX + border + face.w)      / (float)texWidth;
+    float v0 = 1.0f - (face.atlasY + border + face.h) / float(texHeight);
+float v1 = 1.0f - (face.atlasY + border)      / float(texHeight);
+
         // Actually, adjusting by -0.5 for center might be ideal, but since all pixels are same color, it's fine.
 
         // Coordinates of face corners in world:
