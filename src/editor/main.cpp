@@ -7,6 +7,9 @@
 #include <gl/glad.h>
 #include <GLFW/glfw3.h>
 #include <voxeller/Log/Log.h>
+#include <GUI/ImGuiInit.h>
+
+using namespace VoxellerEditor;
 
 int main()
 {
@@ -39,9 +42,15 @@ int main()
     
     VoxellerInit();
     
+    ImGuiApp imgui{};
+    imgui.Init(win);
+    
+    
    //std::shared_ptr<vox_file> file = vox_parser::read_vox_file("testvox/chr_knight.vox");
    std::shared_ptr<vox_file> file = vox_parser::read_vox_file("testvox/chr_knight.vox");
-    LOG_EDITOR_INFO("This is the editor");
+    
+   LOG_EDITOR_INFO("This is the editor");
+    
    if (file != nullptr && file->isValid)
    {
        std::cout << "header: " << file->header.id << ", name: " << file->name << ", version: " << file->header.version << '\n';
@@ -62,6 +71,7 @@ int main()
       glClearColor(1.2, 0.2, 0.2, 1.0);
       glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+      imgui.Update();
       glfwSwapBuffers(win);
 
    }

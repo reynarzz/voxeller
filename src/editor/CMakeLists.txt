@@ -9,11 +9,41 @@ add_subdirectory(${ROOT_DIR}/third/editor/glfw
 ${CMAKE_BINARY_DIR}/third_party/glfw
 )
 
+# ImGui source files
+set(IMGUI_SRC
+    ${ROOT_DIR}/third/editor/imgui/imgui.cpp
+    ${ROOT_DIR}/third/editor/imgui/imgui_draw.cpp
+    ${ROOT_DIR}/third/editor/imgui/imgui_tables.cpp
+    ${ROOT_DIR}/third/editor/imgui/imgui_widgets.cpp
+    ${ROOT_DIR}/third/editor/imgui/backends/imgui_impl_glfw.cpp
+    ${ROOT_DIR}/third/editor/imgui/backends/imgui_impl_opengl3.cpp
+    # Optional demo:
+    ${ROOT_DIR}/third/editor/imgui/imgui_demo.cpp
+)
+
+add_library(imgui STATIC ${IMGUI_SRC})
+
+target_include_directories(imgui PUBLIC
+    ${ROOT_DIR}/third/editor/imgui
+    ${ROOT_DIR}/third/editor/imgui/backends
+    ${ROOT_DIR}/third/editor/glfw/include
+)
 
 file(GLOB_RECURSE EDITOR_SRC CONFIGURE_DEPENDS
     ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/*.h
 )
+
+foreach(FILE ${EDITOR_SRC})
+    # Get relative path from project root
+    file(RELATIVE_PATH REL_PATH "${CMAKE_SOURCE_DIR}" "${FILE}")
+
+    # Extract folder path (e.g. src/voxeller/mesh)
+    get_filename_component(FOLDER "${REL_PATH}" PATH)
+
+    # Set the source group
+    source_group("${FOLDER}" FILES "${FILE}")
+endforeach()
 
 add_executable(voxeller_editor
     ${EDITOR_SRC}
@@ -26,9 +56,12 @@ set_target_properties(voxeller_editor PROPERTIES
 
 target_include_directories(voxeller_editor PRIVATE
     ${ROOT_DIR}/third/editor
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${ROOT_DIR}/third/editor/imgui
 )
 
 target_link_libraries(voxeller_editor PRIVATE
+    imgui
     voxeller
     glfw
     spdlog
@@ -37,15 +70,16 @@ target_link_libraries(voxeller_editor PRIVATE
 if(WIN32)
     target_link_libraries(voxeller_editor PRIVATE opengl32)
 elseif(APPLE)
+    find_package(OpenGL REQUIRED)
     find_library(COCOA_LIBRARY Cocoa REQUIRED)
-    find_library(OpenGL_LIBRARY OpenGL REQUIRED)
     find_library(IOKIT_LIBRARY IOKit REQUIRED)
     find_library(COREVIDEO_LIBRARY CoreVideo REQUIRED)
 
     target_link_libraries(voxeller_editor PRIVATE
+        OpenGL::GL
         ${COCOA_LIBRARY}
-        ${OpenGL_LIBRARY}
         ${IOKIT_LIBRARY}
         ${COREVIDEO_LIBRARY}
     )
+
 endif()

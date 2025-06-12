@@ -28,6 +28,17 @@ file(GLOB_RECURSE VOXELLER_SRC CONFIGURE_DEPENDS
     ${CMAKE_CURRENT_SOURCE_DIR}/*.h
 )
 
+foreach(FILE ${VOXELLER_SRC})
+    # Get relative path from project root
+    file(RELATIVE_PATH REL_PATH "${CMAKE_SOURCE_DIR}" "${FILE}")
+
+    # Extract folder path (e.g. src/voxeller/mesh)
+    get_filename_component(FOLDER "${REL_PATH}" PATH)
+
+    # Set the source group
+    source_group("${FOLDER}" FILES "${FILE}")
+endforeach()
+
 add_library(voxeller SHARED
     ${VOXELLER_SRC}
 )
