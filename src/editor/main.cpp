@@ -47,7 +47,7 @@ int main()
     
     
    //std::shared_ptr<vox_file> file = vox_parser::read_vox_file("testvox/chr_knight.vox");
-   std::shared_ptr<vox_file> file = vox_parser::read_vox_file("testvox/purple_mushroom_1.vox");
+   std::shared_ptr<vox_file> file = vox_parser::read_vox_file("testvox/monu3.vox");
     
    LOG_EDITOR_INFO("This is the editor");
     
@@ -56,7 +56,7 @@ int main()
        std::cout << "header: " << file->header.id << ", name: " << file->name << ", version: " << file->header.version << '\n';
 
        mesh_texturizer::export_pallete_png("pallete.png", file->pallete);
-       vox_mesh_builder::build_mesh_voxel(file);
+       vox_mesh_builder::build_mesh_greedy(file);
    }
    else 
    {

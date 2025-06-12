@@ -1,5 +1,6 @@
 #pragma once
 #include "api.h"
+#include <array>
 
 EXPORT struct VOXELLER_API vox_vec2
 {
@@ -15,6 +16,18 @@ EXPORT struct VOXELLER_API vox_ivec3
 EXPORT struct VOXELLER_API vox_vec3
 {
 	float x, y, z;
+	vox_vec3()
+	{
+		x = 0;
+		y = 0;
+		z = 0;
+	}
+	vox_vec3(float _x, float _y, float _z)
+	{
+		x = _x;
+		y = _y;
+		z = _z;
+	}
 
 	vox_vec3 operator-(const vox_vec3 v)
 	{
@@ -25,6 +38,8 @@ EXPORT struct VOXELLER_API vox_vec3
 	{
 		return { x + v.x, y + v.y, z + v.z };
 	}
+
+	
 
 	/*vox_vec3 operator/(const vox_vec3 v)
 	{
@@ -91,4 +106,8 @@ EXPORT struct VOXELLER_API vox_math
 	static vox_vec3 cross(const vox_vec3& a, const vox_vec3& b);
 	static vox_vec3 normalize(vox_vec3& v);
 	static float magnitude(const vox_vec3& v);
-};
+	static std::array<vox_vec3, 4> makeFaceQuad(int x, int y, int z, int dx, int dy, int dz);
+    static std::array<vox_vec3, 4> makeMergedQuad(
+        int slice, int u, int v, int w, int h,
+        int dx, int dy, int dz);
+}; 
