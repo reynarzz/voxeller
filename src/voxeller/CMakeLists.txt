@@ -1,54 +1,74 @@
+cmake_minimum_required(VERSION 3.14)
 project(voxeller_core LANGUAGES CXX)
 
+# -----------------------------------------------------------------------------
+# 1) Assimp configuration (as before)
+# -----------------------------------------------------------------------------
 set(ASSIMP_BUILD_ASSIMP_TOOLS OFF CACHE BOOL "" FORCE)
-set(ASSIMP_BUILD_TESTS OFF CACHE BOOL "" FORCE)
-set(ASSIMP_BUILD_SAMPLES OFF CACHE BOOL "" FORCE)
-set(ASSIMP_BUILD_EXPORTERS ON CACHE BOOL "" FORCE)
-set(ASSIMP_NO_EXPORT OFF CACHE BOOL "" FORCE)
+set(ASSIMP_BUILD_TESTS       OFF CACHE BOOL "" FORCE)
+set(ASSIMP_BUILD_SAMPLES     OFF CACHE BOOL "" FORCE)
+set(ASSIMP_BUILD_EXPORTERS   ON  CACHE BOOL "" FORCE)
+set(ASSIMP_NO_EXPORT         OFF CACHE BOOL "" FORCE)
 
-# Add Assimp source
+# compute project root from this CMakeLists location
 get_filename_component(ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR} DIRECTORY)
-get_filename_component(ROOT_DIR ${ROOT_DIR} DIRECTORY) # go from src/voxeller to project root
+get_filename_component(ROOT_DIR ${ROOT_DIR} DIRECTORY)
 
-
+# pull in Assimp
 add_subdirectory(
-    ${ROOT_DIR}/third/shared/assimp
-  
-    ${CMAKE_BINARY_DIR}/third_party/assimp
+  ${ROOT_DIR}/third/shared/assimp
+  ${CMAKE_BINARY_DIR}/third_party/assimp
 )
 
+# pull in spdlog
 add_subdirectory(
-    ${ROOT_DIR}/third/shared/spdlog
-    ${CMAKE_BINARY_DIR}/third_party/spdlog
+  ${ROOT_DIR}/third/shared/spdlog
+  ${CMAKE_BINARY_DIR}/third_party/spdlog
 )
 
-  
-file(GLOB_RECURSE VOXELLER_SRC CONFIGURE_DEPENDS
+# -----------------------------------------------------------------------------
+# 2) Add OpenMesh
+# -----------------------------------------------------------------------------
+# assumes you've cloned OpenMesh into third/shared/OpenMesh
+add_subdirectory(
+  ${ROOT_DIR}/third/shared/OpenMesh
+  ${CMAKE_BINARY_DIR}/third_party/openmesh
+)
+
+# -----------------------------------------------------------------------------
+# 3) Collect your sources & create your library
+# -----------------------------------------------------------------------------
+file(GLOB_RECURSE VOXELLER_SRC
+    CONFIGURE_DEPENDS
     ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/*.h
 )
 
+# optional: organize your IDE/project view
 foreach(FILE ${VOXELLER_SRC})
-    # Get relative path from project root
-    file(RELATIVE_PATH REL_PATH "${CMAKE_SOURCE_DIR}" "${FILE}")
-
-    # Extract folder path (e.g. src/voxeller/mesh)
-    get_filename_component(FOLDER "${REL_PATH}" PATH)
-
-    # Set the source group
-    source_group("${FOLDER}" FILES "${FILE}")
+  file(RELATIVE_PATH REL_PATH "${CMAKE_SOURCE_DIR}" "${FILE}")
+  get_filename_component(FOLDER "${REL_PATH}" PATH)
+  source_group("${FOLDER}" FILES "${FILE}")
 endforeach()
 
-add_library(voxeller SHARED
-    ${VOXELLER_SRC}
-)
+add_library(voxeller SHARED ${VOXELLER_SRC})
 
+# -----------------------------------------------------------------------------
+# 4) Include directories
+# -----------------------------------------------------------------------------
 target_include_directories(voxeller PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR}/includes
-    ${ROOT_DIR}/third/shared
+  ${CMAKE_CURRENT_SOURCE_DIR}/includes
+  ${ROOT_DIR}/third/shared          # so we pick up both assimp/, spdlog/ and OpenMesh includes
 )
 
+# -----------------------------------------------------------------------------
+# 5) Link libraries
+# -----------------------------------------------------------------------------
 target_link_libraries(voxeller PRIVATE
-    assimp
-    spdlog
+  assimp
+  spdlog
+
+  # OpenMesh core & tools
+  OpenMeshCore
+  OpenMeshTools
 )

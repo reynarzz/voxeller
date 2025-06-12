@@ -7,7 +7,7 @@
 #include <algorithm>
 #include <cassert>
 #include <voxeller/GreedyTest.h>
-
+#include <assimp/postprocess.h>
 // Include Assimp headers for creating and exporting 3D assets
 #include <assimp/scene.h>
 #include <assimp/Exporter.hpp>
@@ -63,6 +63,207 @@ struct FaceRect {
     int vMin, vMax;  // min and max along face's V-axis
     int constantCoord; // the coordinate of the face plane (e.g., x or y or z value for the face)
 };
+
+
+#include <OpenMesh/Core/IO/MeshIO.hh>
+#include <OpenMesh/Core/Mesh/TriMesh_ArrayKernelT.hh>
+
+struct MyTraits : public OpenMesh::DefaultTraits {
+  VertexTraits {
+    // store one 2D texcoord per vertex
+    OpenMesh::Vec2f  texcoord_;
+    OpenMesh::Vec3f  normal_;     // optionally store normal, too
+  };
+};
+using TriMesh = OpenMesh::TriMesh_ArrayKernelT<MyTraits>;
+
+
+// Import an aiMesh into OpenMesh
+static void convertAiMeshToOpenMesh(aiMesh* aimesh, TriMesh& om) {
+    om.clear();
+
+    // Enable per‐vertex normals and UVs in OpenMesh
+    om.request_vertex_normals();
+    om.request_vertex_texcoords2D();
+
+    // Keep a handle list for adding faces
+    std::vector<TriMesh::VertexHandle> vhandle(aimesh->mNumVertices);
+
+    // Import vertices, normals and UVs
+    for (unsigned int i = 0; i < aimesh->mNumVertices; ++i) {
+        // Position
+        const aiVector3D& p  = aimesh->mVertices[i];
+        vhandle[i] = om.add_vertex({ p.x, p.y, p.z });
+
+        // Normal (if present)
+        if (aimesh->HasNormals()) {
+            const aiVector3D& n = aimesh->mNormals[i];
+            om.set_normal(vhandle[i], { n.x, n.y, n.z });
+        }
+
+        // UV (if present)
+        if (aimesh->HasTextureCoords(0)) {
+            const aiVector3D& uv = aimesh->mTextureCoords[0][i];
+            om.set_texcoord2D(vhandle[i], { uv.x, uv.y });
+        }
+    }
+
+    // Import faces (triangles)
+    for (unsigned int f = 0; f < aimesh->mNumFaces; ++f) {
+        const aiFace& face = aimesh->mFaces[f];
+        std::vector<TriMesh::VertexHandle> fv;
+        fv.reserve(face.mNumIndices);
+        for (unsigned int j = 0; j < face.mNumIndices; ++j) {
+            fv.push_back(vhandle[face.mIndices[j]]);
+        }
+        om.add_face(fv);
+    }
+
+    // Optionally update OpenMesh’s internal normals if you want to recompute:
+    // om.update_normals();
+}
+
+// Export OpenMesh back into the existing aiMesh (overwriting its arrays)
+// Converts an OpenMesh TriMesh (with per‐vertex normals and 2D texcoords) back into an existing aiMesh
+static void convertOpenMeshToAiMesh(TriMesh& om, aiMesh* aimesh) {
+    // Ensure the mesh has normals and texcoords available
+    if (!om.has_vertex_normals()) {
+        om.request_vertex_normals();
+        om.update_normals();
+    }
+    if (!om.has_vertex_texcoords2D()) {
+        om.request_vertex_texcoords2D();
+        // You may need to compute or copy UVs before calling this
+    }
+
+    // --- Vertices, normals, texcoords ---
+    const unsigned int nv = static_cast<unsigned int>(om.n_vertices());
+
+    // Delete any existing data to avoid leaks
+    delete[] aimesh->mVertices;
+    delete[] aimesh->mNormals;
+    delete[] aimesh->mTextureCoords[0];
+
+    // Allocate new arrays
+    aimesh->mNumVertices = nv;
+    aimesh->mVertices    = new aiVector3D[nv];
+    aimesh->mNormals     = new aiVector3D[nv];
+    aimesh->mTextureCoords[0] = new aiVector3D[nv];
+    aimesh->mNumUVComponents[0] = 2;  // 2D UVs
+
+    // Map from OpenMesh vertex index → aiMesh index
+    std::vector<unsigned int> idxMap(nv);
+    unsigned int idx = 0;
+    for (auto vh : om.vertices()) {
+        // Position
+        auto  p  = om.point(vh);
+        aimesh->mVertices[idx] = aiVector3D(p[0], p[1], p[2]);
+
+        // Normal
+        auto  n  = om.normal(vh);
+        aimesh->mNormals [idx] = aiVector3D(n[0], n[1], n[2]);
+
+        // UV
+        auto  uv = om.texcoord2D(vh);
+        aimesh->mTextureCoords[0][idx] = aiVector3D(uv[0], uv[1], 0.0f);
+
+        idxMap[vh.idx()] = idx++;
+    }
+
+    // --- Faces (triangles) ---
+    const unsigned int nf = static_cast<unsigned int>(om.n_faces());
+    delete[] aimesh->mFaces;
+    aimesh->mNumFaces = nf;
+    aimesh->mFaces    = new aiFace[nf];
+
+    idx = 0;
+    for (auto fh : om.faces()) {
+        aiFace& af = aimesh->mFaces[idx];
+        af.mNumIndices = 3;               // TriMesh_ArrayKernelT<> produces triangles
+        af.mIndices    = new unsigned int[3];
+
+        int vi = 0;
+        for (auto fv_it = om.cfv_iter(fh); fv_it.is_valid(); ++fv_it) {
+            af.mIndices[vi++] = idxMap[fv_it->idx()];
+        }
+        ++idx;
+    }
+
+    // Copy over primitive type
+    aimesh->mPrimitiveTypes = aiPrimitiveType_TRIANGLE;
+}
+
+// Collapse any edge whose endpoints coincide (within eps):
+static void collapseDuplicateVertices(TriMesh& mesh) {
+  const float eps2 = 1e-12f;
+  mesh.request_vertex_status();
+  mesh.request_edge_status();
+  mesh.request_face_status();
+
+  for (auto eh : mesh.edges()) {
+    auto heh = mesh.halfedge_handle(eh, 0);
+    auto v0  = mesh.from_vertex_handle(heh);
+    auto v1  = mesh.to_vertex_handle(heh);
+    if ((mesh.point(v0) - mesh.point(v1)).sqrnorm() < eps2
+        && mesh.is_collapse_ok(heh)) {
+      mesh.collapse(heh);
+    }
+  }
+}
+
+// Split edges whenever a vertex lies on their interior (i.e. T-junction):
+static void splitTJunctions(TriMesh& mesh) {
+  const float eps2 = 1e-8f;   // squared distance threshold
+  mesh.request_face_normals();
+  mesh.request_vertex_normals();
+  mesh.request_vertex_texcoords2D();
+
+  for (auto vh : mesh.vertices()) {
+    auto  p = mesh.point(vh);
+    for (auto eh : mesh.edges()) {
+      if (mesh.status(eh).deleted()) continue;
+      auto  heh = mesh.halfedge_handle(eh,0);
+      auto  v0  = mesh.from_vertex_handle(heh);
+      auto  v1  = mesh.to_vertex_handle(heh);
+      if (vh==v0 || vh==v1) continue;
+      auto  p0  = mesh.point(v0);
+      auto  p1  = mesh.point(v1);
+      auto  dir = p1-p0;
+      float d2  = dir.sqrnorm();
+      float t   = ( (p-p0) | dir )/ d2;
+      if (t>0.01f && t<0.99f) {
+        auto proj = p0 + dir * t;
+        if ((proj-p).sqrnorm() < eps2) {
+          mesh.split(eh, vh);
+          // after splitting, restart edge iteration on this vertex
+          goto next_vertex;
+        }
+      }
+    }
+    next_vertex: ;
+  }
+}
+
+static void CleanUpMesh(aiMesh* mesh)
+{
+    TriMesh om;
+convertAiMeshToOpenMesh(mesh, om);
+
+// 2) Weld duplicates + fix T-junctions
+collapseDuplicateVertices(om);
+splitTJunctions(om);
+
+// 3) Clean up deletions
+om.garbage_collection();
+
+// 4) Recompute smooth normals
+om.request_face_normals();
+om.request_vertex_normals();
+om.update_normals();
+
+// 5) Convert OpenMesh → aiMesh
+convertOpenMeshToAiMesh(om, mesh);
+}
 
 static std::vector<FaceRect> GreedyMeshModel(
     const vox_model& model,
@@ -1127,7 +1328,7 @@ bool Run(const std::string& inputPath, const std::string& outputPath)
             return false;
         }
         formatId = selectedFormat->id;
-        aiReturn ret = exporter.Export(scene, formatId.c_str(), outName);
+        aiReturn ret = exporter.Export(scene, formatId.c_str(), outName, aiProcess_JoinIdenticalVertices);
         if(ret != aiReturn_SUCCESS) {
             std::cerr << "Export failed: " << exporter.GetErrorString() << "\n";
             return false;
@@ -1200,6 +1401,7 @@ LOG_EDITOR_INFO("Frames count: {0}, Models: {1}", frameCount, voxData->voxModels
             singleScene.mMeshes[0] = new aiMesh();
             aiMesh* mesh = singleScene.mMeshes[0];
             BuildMeshFromFaces(faces, atlasDim, atlasDim, flatShading, voxData->palette, mesh);
+        
             mesh->mMaterialIndex = 0;
             // Attach mesh to root node
             singleScene.mRootNode->mNumMeshes = 1;
@@ -1325,6 +1527,8 @@ LOG_EDITOR_INFO("Frames count: {0}, Models: {1}", frameCount, voxData->voxModels
                 aiMesh* mesh = new aiMesh();
                 scene->mMeshes[i] = mesh;
                 BuildMeshFromFaces(facesForMesh, globalAtlasSize, globalAtlasSize, flatShading, voxData->palette, mesh);
+           
+
                 mesh->mMaterialIndex = separateTexturesPerMesh ? (int)i : 0;
                 // Create node for this mesh
                 aiNode* node = new aiNode();
@@ -1380,6 +1584,8 @@ LOG_EDITOR_INFO("Frames count: {0}, Models: {1}", frameCount, voxData->voxModels
                 aiMesh* mesh = new aiMesh();
                 scene->mMeshes[i] = mesh;
                 BuildMeshFromFaces(faces, dim, dim, flatShading, voxData->palette, mesh);
+           
+
                 mesh->mMaterialIndex = (int)i;
                 // Node
                 aiNode* node = new aiNode();
@@ -1396,6 +1602,10 @@ LOG_EDITOR_INFO("Frames count: {0}, Models: {1}", frameCount, voxData->voxModels
         }
         // If there was only one mesh in scene (no children used above), attach it directly to root node
         
+for (unsigned int m = 0; m < scene->mNumMeshes; ++m) {
+    CleanUpMesh(scene->mMeshes[m]);
+}
+
         // Export combined scene
         if(!exportScene(outputPath)) {
             std::cerr << "Failed to export scene.\n";

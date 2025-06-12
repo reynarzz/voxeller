@@ -52,7 +52,7 @@ int main()
    //std::shared_ptr<vox_file> file = vox_parser::read_vox_file("testvox/room.vox");
 
   
-    Run("testvox/chr_knight.vox", "Output.fbx");
+    Run("testvox/T-Rex_anim.vox", "Output.fbx");
 
    LOG_EDITOR_INFO("This is the editor");
     
