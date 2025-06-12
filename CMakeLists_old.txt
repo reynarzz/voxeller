@@ -1,0 +1,94 @@
+cmake_minimum_required(VERSION 3.14)
+
+project(voxeller LANGUAGES CXX)
+
+set(EDITOR_PROJECT_NAME "voxeller")
+set(CORE_PROJECT_NAME "voxellerd")
+set(CORE_ROOT "src/core")
+set(EDITOR_ROOT "src/editor")
+set(EDITOR_THIRD_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/third/editor")
+set(CORE_THIRD_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/third/core")
+set(SHARED_THIRD_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/third/shared")
+
+set(CMAKE_CXX_STANDARD 17)
+
+# ------------------------------------------------------------------------------
+# Source Files
+# ------------------------------------------------------------------------------
+file(GLOB_RECURSE CORE_SRC CONFIGURE_DEPENDS 
+    ${CORE_ROOT}/*.h
+    ${CORE_ROOT}/*.cpp
+)
+
+file(GLOB_RECURSE EDITOR_SRC CONFIGURE_DEPENDS 
+    ${EDITOR_ROOT}/*.h
+    ${EDITOR_ROOT}/*.cpp
+)
+
+# ------------------------------------------------------------------------------
+# GLFW Setup (use as subdirectory)
+# ------------------------------------------------------------------------------
+add_subdirectory(${EDITOR_THIRD_ROOT}/glfw)
+
+# ------------------------------------------------------------------------------
+# Core Library
+# ------------------------------------------------------------------------------
+add_library(${CORE_PROJECT_NAME} SHARED
+    ${CORE_SRC}
+)
+
+target_include_directories(${CORE_PROJECT_NAME} PRIVATE
+    ${SHARED_THIRD_ROOT}
+    ${CORE_ROOT}/includes
+    ${CORE_THIRD_ROOT}/assimp/include
+)
+
+if(WIN32)
+    target_link_libraries(${CORE_PROJECT_NAME} PRIVATE
+        ${CORE_THIRD_ROOT}/assimp_vs/lib/assimpd.lib
+        ${CORE_THIRD_ROOT}/assimp_vs/lib/zlibstaticd.lib
+    )
+elseif(APPLE)
+    # macOS: adjust this to match your Assimp build setup
+    target_link_libraries(${CORE_PROJECT_NAME} PRIVATE
+        "-framework Foundation"
+    )
+endif()
+
+# ------------------------------------------------------------------------------
+# Editor Executable
+# ------------------------------------------------------------------------------
+add_executable(${EDITOR_PROJECT_NAME}
+    ${EDITOR_SRC}
+    ${EDITOR_THIRD_ROOT}/gl/glad.cpp
+)
+
+target_include_directories(${EDITOR_PROJECT_NAME} PRIVATE
+    ${EDITOR_THIRD_ROOT}
+    ${EDITOR_THIRD_ROOT}/glfw/include
+    ${SHARED_THIRD_ROOT}
+    ${CORE_ROOT}/includes
+)
+
+target_link_libraries(${EDITOR_PROJECT_NAME} PRIVATE
+    ${CORE_PROJECT_NAME}
+    glfw
+)
+
+# Platform-specific OpenGL libs
+if(WIN32)
+    add_definitions(-DWINDOWS)
+    target_link_libraries(${EDITOR_PROJECT_NAME} PRIVATE opengl32)
+elseif(APPLE)
+    find_library(COCOA_LIBRARY Cocoa REQUIRED)
+    find_library(OpenGL_LIBRARY OpenGL REQUIRED)
+    find_library(IOKIT_LIBRARY IOKit REQUIRED)
+    find_library(COREVIDEO_LIBRARY CoreVideo REQUIRED)
+
+    target_link_libraries(${EDITOR_PROJECT_NAME} PRIVATE
+        ${COCOA_LIBRARY}
+        ${OpenGL_LIBRARY}
+        ${IOKIT_LIBRARY}
+        ${COREVIDEO_LIBRARY}
+    )
+endif()
