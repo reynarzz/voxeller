@@ -765,14 +765,34 @@ static bool SaveAtlasImage(const std::string& filename, int width, int height, c
 // Generate the texture atlas image data given the list of faces and palette colors
 static void GenerateAtlasImage(int texWidth, int texHeight, const std::vector<FaceRect>& faces, const std::vector<color>& palette, std::vector<unsigned char>& outImage) {
     outImage.assign(texWidth * texHeight * 4, 0);
+
+
+        // ─── DEBUG: Dump unique face.colorIndex ─────────────────────────────────
+    std::unordered_set<uint8_t> idxs;
+    for(auto& f : faces) idxs.insert(f.colorIndex);
+    std::cout << "DEBUG: unique face.colorIndex = ";
+    for(auto i : idxs)  std::cout << int(i) << " ";
+    std::cout << std::endl;
+
+    // ─── DEBUG: Dump first few palette entries ──────────────────────────────
+    for(int i = 0; i < std::min<int>(palette.size(), 10); ++i) {
+        auto &c = palette[i];
+        std::cout << "  palette["<<i<<"] = ("
+                  << int(c.r)<<","<<int(c.g)<<","<<int(c.b)<<","<<int(c.a)<<")\n";
+    }
+    std::cout << std::endl;
+    // ────────────────────────────────────────────────────────────────────────────
+
+    outImage.assign(texWidth * texHeight * 4, 0);
     // Fill background with transparent or black? We'll use 0 alpha for clarity outside faces.
     // outImage already 0-initialized, which corresponds to RGBA(0,0,0,0).
     for(const FaceRect& face : faces) {
         // Determine color RGBA for this face
         color col = {0,0,0,255};
-        if(face.colorIndex < palette.size()) {
-            col = palette[face.colorIndex];
-        }
+        // MagicaVoxel colorIndex is 1–255 but our palette[0] is the first entry
+   size_t pi = (face.colorIndex > 0 ? face.colorIndex - 1 : 0);
+   if (pi >= palette.size()) pi = palette.size() - 1;
+   col = palette[pi];
         // Coordinates in image including border:
         int x0 = face.atlasX;
         int y0 = face.atlasY;
@@ -1167,20 +1187,20 @@ bool Run(const std::string& inputPath, const std::string& outputPath)
             delete mat;
         }
         // Clean meshes
-        for(unsigned int i = 0; i < scene->mNumMeshes; ++i) {
-            delete scene->mMeshes[i];
-        }
-        delete [] scene->mMeshes;
-        delete [] scene->mMaterials;
-        // Clean nodes
-        for(unsigned int i = 0; i < scene->mRootNode->mNumChildren; ++i) {
-            aiNode* child = scene->mRootNode->mChildren[i];
-            delete [] child->mMeshes;
-            delete child;
-        }
-        if(scene->mRootNode->mMeshes) delete [] scene->mRootNode->mMeshes;
-        delete scene->mRootNode;
-        delete scene;
+        // for(unsigned int i = 0; i < scene->mNumMeshes; ++i) {
+        //     delete scene->mMeshes[i];
+        // }
+        // delete [] scene->mMeshes;
+        // delete [] scene->mMaterials;
+        // // Clean nodes
+        // for(unsigned int i = 0; i < scene->mRootNode->mNumChildren; ++i) {
+        //     aiNode* child = scene->mRootNode->mChildren[i];
+        //     delete [] child->mMeshes;
+        //     delete child;
+        // }
+        // if(scene->mRootNode->mMeshes) delete [] scene->mRootNode->mMeshes;
+        // delete scene->mRootNode;
+        // delete scene;
     }
     return 0;
 }

@@ -61,6 +61,16 @@ std::shared_ptr<vox_file> VoxParser::read_vox_file(const char *path) {
     vox->materials.clear();
     vox->layers.clear();  // assuming vox_file has a container for layers
 
+     vox->palette.resize(default_palette.size());
+    for (size_t i = 0; i < default_palette.size(); ++i) {
+        uint32_t c = default_palette[i];
+        vox->palette[i].r = uint8_t( (c >>  0) & 0xFF );
+        vox->palette[i].g = uint8_t( (c >>  8) & 0xFF );
+        vox->palette[i].b = uint8_t( (c >> 16) & 0xFF );
+        vox->palette[i].a = uint8_t( (c >> 24) & 0xFF );
+    }
+    // track if we ever see an RGBA chunk
+    bool sawRGBA = false;
     // Read file magic and version
     char magic[4];
     int version;
@@ -102,7 +112,9 @@ std::shared_ptr<vox_file> VoxParser::read_vox_file(const char *path) {
         voxFile.read(reinterpret_cast<char*>(&chunkContentBytes), 4);
         voxFile.read(reinterpret_cast<char*>(&chunkChildrenBytes), 4);
         std::string chunkStr(chunkId, 4);
+        
 
+        
         if (chunkStr == "PACK") {
             // Multiple models chunk
             parse_PACK(vox, voxFile, chunkContentBytes, chunkChildrenBytes);
@@ -111,6 +123,7 @@ std::shared_ptr<vox_file> VoxParser::read_vox_file(const char *path) {
         } else if (chunkStr == "XYZI") {
             parse_XYZI(vox, voxFile, chunkContentBytes, chunkChildrenBytes);
         } else if (chunkStr == "RGBA") {
+            sawRGBA = true;
             parse_RGBA(vox, voxFile, chunkContentBytes, chunkChildrenBytes);
         } else if (chunkStr == "MATT") {
             parse_MATT(vox, voxFile, chunkContentBytes, chunkChildrenBytes);
@@ -131,15 +144,16 @@ std::shared_ptr<vox_file> VoxParser::read_vox_file(const char *path) {
     }
 
     // If no RGBA chunk was encountered, use default palette
-    if (vox->palette.empty()) {
-    vox->palette.reserve(default_palette.size());
-    for (uint32_t packed : default_palette) {
-        color c;
-        c.r = static_cast<uint8_t>((packed >> 24) & 0xFF);
-        c.g = static_cast<uint8_t>((packed >> 16) & 0xFF);
-        c.b = static_cast<uint8_t>((packed >>  8) & 0xFF);
-        c.a = static_cast<uint8_t>( packed        & 0xFF);
-        vox->palette.push_back(c);
+    if (!sawRGBA) {
+    vox->palette.resize(default_palette.size());
+    for(size_t i = 0; i < default_palette.size(); ++i) {
+        uint32_t c = default_palette[i];
+        vox->palette[i] = {
+            uint8_t(c & 0xFF),
+            uint8_t((c >> 8) & 0xFF),
+            uint8_t((c >> 16) & 0xFF),
+            uint8_t((c >> 24) & 0xFF)
+        };
     }
 }
 
@@ -218,7 +232,7 @@ void VoxParser::parse_XYZI(std::shared_ptr<vox_file> vox, std::ifstream &voxFile
         voxData.colorIndex = ci;
         model.voxels[i] = voxData;
         // Mark voxel in 3D grid and update model bounding box
-        model.voxel_3dGrid[zi][yi][xi] = ci;
+        model.voxel_3dGrid[zi][yi][xi] = static_cast<int>(i);
         model.boundingBox.minX = std::min(model.boundingBox.minX, static_cast<float>(xi));
         model.boundingBox.minY = std::min(model.boundingBox.minY, static_cast<float>(yi));
         model.boundingBox.minZ = std::min(model.boundingBox.minZ, static_cast<float>(zi));
