@@ -1,7 +1,13 @@
 project(voxeller_editor LANGUAGES CXX)
 
+get_filename_component(ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR} DIRECTORY)
+get_filename_component(ROOT_DIR ${ROOT_DIR} DIRECTORY) # go from src/voxeller to project root
+
+
 # Add GLFW source
-add_subdirectory(${CMAKE_SOURCE_DIR}/third/editor/glfw)
+add_subdirectory(${ROOT_DIR}/third/editor/glfw
+${CMAKE_BINARY_DIR}/third_party/glfw
+)
 
 file(GLOB_RECURSE EDITOR_SRC CONFIGURE_DEPENDS
     ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp
@@ -10,11 +16,11 @@ file(GLOB_RECURSE EDITOR_SRC CONFIGURE_DEPENDS
 
 add_executable(voxeller_editor
     ${EDITOR_SRC}
-    ${CMAKE_SOURCE_DIR}/third/editor/gl/glad.cpp
+    ${ROOT_DIR}/third/editor/gl/glad.cpp
 )
 
 target_include_directories(voxeller_editor PRIVATE
-    ${CMAKE_SOURCE_DIR}/third/editor
+    ${ROOT_DIR}/third/editor
 )
 
 target_link_libraries(voxeller_editor PRIVATE

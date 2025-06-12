@@ -211,9 +211,9 @@ std::shared_ptr<vox_scene> vox_mesh_builder::build_mesh_voxel(const std::shared_
 
         const vox_vec3 model_center =
         {
-            (vox_model.boundingBox.maxX + vox_model.boundingBox.minX) / 2.0,
-            (vox_model.boundingBox.maxY + vox_model.boundingBox.minY) / 2.0,
-            (vox_model.boundingBox.maxZ + vox_model.boundingBox.minZ) / 2.0
+            (vox_model.boundingBox.maxX + vox_model.boundingBox.minX) / 2.0f,
+            (vox_model.boundingBox.maxY + vox_model.boundingBox.minY) / 2.0f,
+            (vox_model.boundingBox.maxZ + vox_model.boundingBox.minZ) / 2.0f
         };
 
         if (vox->transforms.size() > 0)
