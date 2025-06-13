@@ -251,8 +251,11 @@ void VoxToProcessView::UpdateGUI()
 	// Sidebar region (no frame)
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 10.0f);
 	bool open = true;
-	ImGui::SetNextWindowSize(ImVec2(std::min(250.0f, ImGui::GetIO().DisplaySize.x - 20), ImGui::GetIO().DisplaySize.y - toolBarHeight - windowsSpacingY - 13), ImGuiCond_Always);
-	ImGui::SetNextWindowPos(ImVec2(std::clamp(ImGui::GetIO().DisplaySize.x - 260.0f, 10.0f, ImGui::GetIO().DisplaySize.x), toolBarHeight + windowsSpacingY * 2), ImGuiCond_Always);
+	f32 posX = std::clamp(ImGui::GetIO().DisplaySize.x - 260.0f, 10.0f, ImGui::GetIO().DisplaySize.x);
+
+	ImGui::SetNextWindowPos(ImVec2(posX, toolBarHeight + windowsSpacingY * 2), ImGuiCond_Always);
+
+	ImGui::SetNextWindowSize(ImVec2(std::min(ImGui::GetIO().DisplaySize.x - posX - 5, ImGui::GetIO().DisplaySize.x - 13), ImGui::GetIO().DisplaySize.y - toolBarHeight - windowsSpacingY - 13), ImGuiCond_Always);
 
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 1.0f);
 	ImGui::PushStyleColor(ImGuiCol_Border, IM_COL32(30, 30, 30, 255));
