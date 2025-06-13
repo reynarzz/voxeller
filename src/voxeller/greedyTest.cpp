@@ -69,11 +69,9 @@ struct FaceRect {
 #include <OpenMesh/Core/Mesh/TriMesh_ArrayKernelT.hh>
 
 struct MyTraits : public OpenMesh::DefaultTraits {
-  VertexTraits {
-    // store one 2D texcoord per vertex
-    OpenMesh::Vec2f  texcoord_;
-    OpenMesh::Vec3f  normal_;     // optionally store normal, too
-  };
+  // turn on per-vertex normals and 2D texcoords
+  VertexAttributes( OpenMesh::Attributes::Normal |
+                    OpenMesh::Attributes::TexCoord2D );
 };
 using TriMesh = OpenMesh::TriMesh_ArrayKernelT<MyTraits>;
 
@@ -213,37 +211,58 @@ static void collapseDuplicateVertices(TriMesh& mesh) {
 
 // Split edges whenever a vertex lies on their interior (i.e. T-junction):
 static void splitTJunctions(TriMesh& mesh) {
-  const float eps2 = 1e-8f;   // squared distance threshold
-  mesh.request_face_normals();
-  mesh.request_vertex_normals();
-  mesh.request_vertex_texcoords2D();
+    const float eps2 = 1e-8f;   // squared‐distance threshold
 
-  for (auto vh : mesh.vertices()) {
-    auto  p = mesh.point(vh);
-    for (auto eh : mesh.edges()) {
-      if (mesh.status(eh).deleted()) continue;
-      auto  heh = mesh.halfedge_handle(eh,0);
-      auto  v0  = mesh.from_vertex_handle(heh);
-      auto  v1  = mesh.to_vertex_handle(heh);
-      if (vh==v0 || vh==v1) continue;
-      auto  p0  = mesh.point(v0);
-      auto  p1  = mesh.point(v1);
-      auto  dir = p1-p0;
-      float d2  = dir.sqrnorm();
-      float t   = ( (p-p0) | dir )/ d2;
-      if (t>0.01f && t<0.99f) {
-        auto proj = p0 + dir * t;
-        if ((proj-p).sqrnorm() < eps2) {
-          mesh.split(eh, vh);
-          // after splitting, restart edge iteration on this vertex
-          goto next_vertex;
+    // Request the attributes we need
+    mesh.request_vertex_normals();
+    mesh.request_vertex_texcoords2D();
+
+    // Iterate every vertex in the mesh
+    for (auto vh : mesh.vertices()) {
+        auto  p = mesh.point(vh);
+
+        // For each edge, see if this vertex lies in its interior
+        for (auto eh : mesh.edges()) {
+            if (mesh.status(eh).deleted()) continue;
+
+            // Get endpoints of the edge
+            auto heh = mesh.halfedge_handle(eh, 0);
+            auto v0  = mesh.from_vertex_handle(heh);
+            auto v1  = mesh.to_vertex_handle(heh);
+            if (vh == v0 || vh == v1) continue;
+
+            auto p0  = mesh.point(v0);
+            auto p1  = mesh.point(v1);
+            auto dir = p1 - p0;
+            float d2 = dir.sqrnorm();
+            if (d2 < 1e-12f) continue;  // avoid degenerate
+
+            // Project p onto the line p0→p1
+            float t = ((p - p0) | dir) / d2;
+            if (t <= 0.0f || t >= 1.0f) continue;
+
+            OpenMesh::Vec3f proj = p0 + dir * t;
+            if ((proj - p).sqrnorm() > eps2) continue;
+
+            // Fetch normals & UVs so we can interpolate them
+            auto n0  = mesh.normal(v0);
+            auto n1  = mesh.normal(v1);
+            auto uv0 = mesh.texcoord2D(v0);
+            auto uv1 = mesh.texcoord2D(v1);
+
+            // *** THIS is the key ***
+            // Call the overload that takes a Point:
+            TriMesh::VertexHandle new_vh = mesh.split(eh, proj);
+
+            // Now fill in the new vertex’s attributes
+            mesh.set_normal   (new_vh, n0  + (n1  - n0 ) * t);
+            mesh.set_texcoord2D(new_vh, uv0 + (uv1 - uv0) * t);
+
+            // since topology changed, you might want to restart the edge‐loop for this vh
+            break;
         }
-      }
     }
-    next_vertex: ;
-  }
 }
-
 static void CleanUpMesh(aiMesh* mesh)
 {
     TriMesh om;
