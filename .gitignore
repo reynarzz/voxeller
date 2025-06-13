@@ -1,5 +1,4 @@
 /build/
-/third/shared/assimp
 /bin/
 cmakefiles
 .vscode/settings.json
