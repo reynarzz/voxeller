@@ -66,7 +66,7 @@ bool RoundedProgressButton(
 }
 
 
-bool CustomCornerButton(
+bool CornerButton(
     const char*    label,
     const ImVec2&  size,
     ImU32          bgColor,
@@ -144,14 +144,14 @@ void VoxToProcessView::UpdateGUI()
     ImGui::SetNextWindowPos(ImVec2(ImGui::GetIO().DisplaySize.x-290,20), ImGuiCond_Always);
 
 ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 1.0f);
-ImGui::PushStyleColor(ImGuiCol_Border, IM_COL32(255,255,255,255)); // whatever color you like
-
+ImGui::PushStyleColor(ImGuiCol_Border, IM_COL32(30,30,30,255)); 
+ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.12f,0.12f,0.12f,1.0f));  
     ImGui::Begin("Sidebar",&open, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize);
 
     TitleLabel("Voxels Bag");
     ImGui::Dummy(ImVec2(0, 30));
-    CustomCornerButton("Button", {70, 30},IM_COL32(255,255,255,255),IM_COL32(255,255,255,255), 20, ImDrawFlags_RoundCornersRight);
 
+   
     RoundedProgressButton("Button2", {150, 30}, 0.2f, ImColor(0x4A90E2FF), IM_COL32(255, 2, 255, 255), IM_COL32(255, 255, 255, 255) );
   
     // ——— Item list ———
@@ -169,10 +169,23 @@ ImGui::PushStyleColor(ImGuiCol_Border, IM_COL32(255,255,255,255)); // whatever c
         }
     }
 
+    ImGui::SetCursorPosY(ImGui::GetWindowSize().y - 45);
+
+    f32 spacing = 1;
+    f32 buttonDownWidth = ImGui::GetContentRegionAvail().x/ 2 - 10;
+    f32 buttonDOwnHeight = 35;
+    ImGui::SetCursorPosX(ImGui::GetContentRegionAvail().x/ 2.0 - buttonDownWidth);
+    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing,     ImVec2(spacing,0));
+    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding,   ImVec2(spacing,0));
+    CornerButton("File", {buttonDownWidth, buttonDOwnHeight},IM_COL32(255,255,255,255),IM_COL32(255,255,255,255), 20, ImDrawFlags_RoundCornersLeft);
+    ImGui::SameLine();
+    CornerButton("Folder", {buttonDownWidth, buttonDOwnHeight},IM_COL32(255,255,255,255),IM_COL32(255,255,255,255), 30, ImDrawFlags_RoundCornersRight);
+    ImGui::PopStyleVar(2);
     ImGui::End();
     ImGui::PopStyleVar();
     ImGui::PopStyleColor();
-ImGui::PopStyleVar();
+    ImGui::PopStyleVar();
+    ImGui::PopStyleColor();
 }
 
 
