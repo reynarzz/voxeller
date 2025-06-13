@@ -149,17 +149,39 @@ ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.12f,0.12f,0.12f,1.0f));
     ImGui::Begin("Sidebar",&open, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize);
 
     TitleLabel("Voxels Bag");
-    ImGui::Dummy(ImVec2(0, 30));
+    ImGui::Dummy(ImVec2(0, 10));
 
-   
-    RoundedProgressButton("Button2", {150, 30}, 0.2f, ImColor(0x4A90E2FF), IM_COL32(255, 2, 255, 255), IM_COL32(255, 255, 255, 255) );
-  
-    // ——— Item list ———
-    for (int i = 0; i < (int)voxTest.size(); ++i)
+     const float footerHeight = 120.0f;   // enough for your two buttons + padding
+
+    // 3) Begin a child that will scroll:
+    //    width = full, height = window height minus footerHeight
+    ImVec2 winSize = ImGui::GetWindowSize();
+ImVec2 winPos     = ImGui::GetCursorScreenPos();
+ImVec2 childSize  = ImVec2(0, winSize.y - footerHeight);
+float rounding    = 12.0f;
+ImU32 bgColor     = IM_COL32(30,30,30,255);
+
+// 2) Draw the rounded background
+ImGui::GetWindowDrawList()->AddRectFilled(
+    winPos,
+    ImVec2(winPos.x + childSize.x, winPos.y + childSize.y),
+    bgColor,
+    rounding
+);
+
+// 3) Push an invisible frame so scrolling still works
+ImGui::PushStyleColor(ImGuiCol_ChildBg, IM_COL32(0,0,0,0));
+ImGui::BeginChild("##ScrollingList",
+                  childSize,
+                  false,                      // no border
+                  ImGuiWindowFlags_None);
+    // Scroll only this list
+    for (int i = 0; i < 20; ++i)
     {
         bool isSelected = (i == currentSelection);
 
         
+     RoundedProgressButton(std::string("Button2" + std::to_string(i)).c_str(), {ImGui::GetContentRegionAvail().x, 30}, 0.2f, IM_COL32(65,105,255,255), IM_COL32(255, 2, 255, 255), IM_COL32(255, 255, 255, 255) );
 
         // Handle click
         if (isSelected && currentSelection != i) {
@@ -168,18 +190,20 @@ ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.12f,0.12f,0.12f,1.0f));
             // your on‐select logic…
         }
     }
-
-    ImGui::SetCursorPosY(ImGui::GetWindowSize().y - 45);
+ ImGui::EndChild();
+ ImGui::PopStyleColor();
+    // Botton buttons THese should not scroll
+    ImGui::SetCursorPosY(ImGui::GetWindowSize().y - 47);
 
     f32 spacing = 1;
-    f32 buttonDownWidth = ImGui::GetContentRegionAvail().x/ 2 - 10;
+    f32 buttonDownWidth = ImGui::GetContentRegionAvail().x/ 2 - 3;
     f32 buttonDOwnHeight = 35;
-    ImGui::SetCursorPosX(ImGui::GetContentRegionAvail().x/ 2.0 - buttonDownWidth);
+    ImGui::SetCursorPosX(ImGui::GetWindowSize().x/ 2.0 - buttonDownWidth);
     ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing,     ImVec2(spacing,0));
     ImGui::PushStyleVar(ImGuiStyleVar_FramePadding,   ImVec2(spacing,0));
-    CornerButton("File", {buttonDownWidth, buttonDOwnHeight},IM_COL32(255,255,255,255),IM_COL32(255,255,255,255), 20, ImDrawFlags_RoundCornersLeft);
+    CornerButton("File", {buttonDownWidth, buttonDOwnHeight},IM_COL32(65,105,255,255),IM_COL32(255,255,255,255), 20, ImDrawFlags_RoundCornersLeft);
     ImGui::SameLine();
-    CornerButton("Folder", {buttonDownWidth, buttonDOwnHeight},IM_COL32(255,255,255,255),IM_COL32(255,255,255,255), 30, ImDrawFlags_RoundCornersRight);
+    CornerButton("Folder", {buttonDownWidth, buttonDOwnHeight},IM_COL32(65,105,255,255),IM_COL32(255,255,255,255), 30, ImDrawFlags_RoundCornersRight);
     ImGui::PopStyleVar(2);
     ImGui::End();
     ImGui::PopStyleVar();
