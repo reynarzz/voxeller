@@ -16,7 +16,9 @@ using namespace VoxellerEditor;
 void Render(GLFWwindow* window)
 {
 glfwPollEvents();
-      glClearColor(0.07, 0.07, 0.07, 1.0);
+f32 color = 0.05f;
+
+      glClearColor(color, color, color, 1.0);
       glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
       imgui.Update();
