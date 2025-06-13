@@ -135,39 +135,124 @@ ImGui::SetCursorScreenPos(ImVec2(offsetX, window->Pos.y + window->WindowPadding.
 // draw text
 ImGui::TextUnformatted(title);
 }
+
+void ImageRounded(
+    ImTextureID tex,
+    const ImVec2& size,
+    float rounding           = 8.0f,
+    const ImVec2& uv0        = ImVec2(0,0),
+    const ImVec2& uv1        = ImVec2(1,1),
+    const ImVec4& tint_col   = ImVec4(1,1,1,1),
+    const ImVec4& border_col = ImVec4(0,0,0,0),
+    ImDrawFlags corners      = ImDrawFlags_RoundCornersAll)
+{
+    ImGuiWindow* window = ImGui::GetCurrentWindow();
+    if (window->SkipItems) return;
+
+    // Reserve the item space
+    ImGuiContext& g = *GImGui;
+    ImVec2 pos = window->DC.CursorPos;
+    ImRect bb(pos, {pos.x +size.x, pos.y+ size.y});
+    ImGui::ItemSize(bb);
+    if (!ImGui::ItemAdd(bb, 0)) return;
+
+    // Draw the image with rounded mask
+    ImDrawList* draw = window->DrawList;
+    draw->AddImageRounded(
+        tex,
+        bb.Min, bb.Max,
+        uv0, uv1,
+        ImGui::GetColorU32(tint_col),
+        rounding,
+        corners
+    );
+
+    // Optional border
+    if (border_col.w > 0.0f)
+        draw->AddRect(bb.Min, bb.Max, ImGui::GetColorU32(border_col), rounding, corners);
+}
+
+void ViewportWindow()
+{
+     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 20.0f);
+    bool open = true;
+    ImGui::SetNextWindowSize({ImGui::GetIO().DisplaySize.x-290.0f, ImGui::GetIO().DisplaySize.y - 20}, ImGuiCond_Always);
+    ImGui::SetNextWindowPos({0, 10}, ImGuiCond_Always);
+
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 1.0f);
+    ImGui::PushStyleColor(ImGuiCol_Border, IM_COL32(30,30,30,0)); 
+    ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.12f,0.12f,0.12f,0));  
+
+    ImGui::Begin("Viewport",&open, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize);
+
+    ImageRounded(0, ImGui::GetContentRegionAvail(),20);
+
+    f32 spacing = 1;
+    f32 buttonDownWidth = 90;
+    f32 buttonDOwnHeight = 35;
+    std::string modelName = "Model converted Name";
+
+    auto textSize = ImGui::CalcTextSize(modelName.c_str());
+     ImGui::SetCursorPosY(ImGui::GetWindowSize().y - 87);
+    ImGui::SetCursorPosX(ImGui::GetWindowSize().x/ 2.0 - textSize.x/2);
+
+    ImGui::Text(modelName.c_str());
+
+    ImGui::SetCursorPosX(ImGui::GetWindowSize().x/ 2.0 - buttonDownWidth);
+     ImGui::SetCursorPosY(20);
+
+    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing,     ImVec2(spacing,0));
+    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding,   ImVec2(spacing,0));
+    CornerButton("3D view", {buttonDownWidth, buttonDOwnHeight},IM_COL32(65,105,255,255),IM_COL32(255,255,255,255), 20, ImDrawFlags_RoundCornersLeft);
+    ImGui::SameLine();
+    CornerButton("Atlas view", {buttonDownWidth, buttonDOwnHeight},IM_COL32(65,105,255,255),IM_COL32(255,255,255,255), 30, ImDrawFlags_RoundCornersRight);
+    ImGui::PopStyleVar(2);
+     ImGui::End();
+    ImGui::PopStyleVar(2);
+    ImGui::PopStyleColor(2);
+}
+
 void VoxToProcessView::UpdateGUI()
 {
+    ViewportWindow();
     // Sidebar region (no frame)
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 30.0f);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 20.0f);
     bool open = true;
-    ImGui::SetNextWindowSize(ImVec2(280, ImGui::GetIO().DisplaySize.y - 30), ImGuiCond_Always);
-    ImGui::SetNextWindowPos(ImVec2(ImGui::GetIO().DisplaySize.x-290,20), ImGuiCond_Always);
+    ImGui::SetNextWindowSize(ImVec2(std::min(280.0f, ImGui::GetIO().DisplaySize.x - 20), ImGui::GetIO().DisplaySize.y - 30), ImGuiCond_Always);
+    ImGui::SetNextWindowPos(ImVec2(std::clamp(ImGui::GetIO().DisplaySize.x-290.0f,10.0f, ImGui::GetIO().DisplaySize.x), 15), ImGuiCond_Always);
 
-ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 1.0f);
-ImGui::PushStyleColor(ImGuiCol_Border, IM_COL32(30,30,30,255)); 
-ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.12f,0.12f,0.12f,1.0f));  
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 1.0f);
+    ImGui::PushStyleColor(ImGuiCol_Border, IM_COL32(30,30,30,255)); 
+    ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.12f,0.12f,0.12f,1.0f));  
+
     ImGui::Begin("Sidebar",&open, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize);
 
     TitleLabel("Voxels Bag");
+    ImGui::SameLine();
+
+    f32 buttonUpWidth = 30;
+    f32 buttonUpHeight = 30;
+    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing,     ImVec2(2,0));
+    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding,   ImVec2(2,0));
+    CornerButton("+", {buttonUpWidth, buttonUpHeight},IM_COL32(65,105,255,255),IM_COL32(255,255,255,255), 20, ImDrawFlags_RoundCornersAll);
+    ImGui::SameLine();
+    CornerButton("++", {buttonUpWidth, buttonUpHeight},IM_COL32(65,105,255,255),IM_COL32(255,255,255,255), 30, ImDrawFlags_RoundCornersAll);
+    ImGui::PopStyleVar(2);
+
+
     ImGui::Dummy(ImVec2(0, 10));
 
-     const float footerHeight = 120.0f;   // enough for your two buttons + padding
+    const float footerHeight = 120.0f;   // enough for your two buttons + padding
 
     // 3) Begin a child that will scroll:
     //    width = full, height = window height minus footerHeight
     ImVec2 winSize = ImGui::GetWindowSize();
-ImVec2 winPos     = ImGui::GetCursorScreenPos();
-ImVec2 childSize  = ImVec2(0, winSize.y - footerHeight);
-float rounding    = 12.0f;
-ImU32 bgColor     = IM_COL32(30,30,30,255);
+    ImVec2 winPos     = ImGui::GetCursorScreenPos();
+    ImVec2 childSize  = ImVec2(0, winSize.y - footerHeight);
+    float rounding    = 30.0f;
+    ImU32 bgColor     = IM_COL32(30,30,30,255);
 
-// 2) Draw the rounded background
-ImGui::GetWindowDrawList()->AddRectFilled(
-    winPos,
-    ImVec2(winPos.x + childSize.x, winPos.y + childSize.y),
-    bgColor,
-    rounding
-);
+
 
 // 3) Push an invisible frame so scrolling still works
 ImGui::PushStyleColor(ImGuiCol_ChildBg, IM_COL32(0,0,0,0));
@@ -175,14 +260,35 @@ ImGui::BeginChild("##ScrollingList",
                   childSize,
                   false,                      // no border
                   ImGuiWindowFlags_None);
+                  // 2) Draw the rounded background
+ImGui::GetWindowDrawList()->AddRectFilled(
+    winPos,
+    ImVec2(winPos.x + childSize.x, winPos.y + childSize.y),
+    bgColor,
+    rounding
+);
     // Scroll only this list
     for (int i = 0; i < 20; ++i)
     {
         bool isSelected = (i == currentSelection);
 
         
-     RoundedProgressButton(std::string("Button2" + std::to_string(i)).c_str(), {ImGui::GetContentRegionAvail().x, 30}, 0.2f, IM_COL32(65,105,255,255), IM_COL32(255, 2, 255, 255), IM_COL32(255, 255, 255, 255) );
+    //RoundedProgressButton(std::string("Button " + std::to_string(i)).c_str(), {ImGui::GetContentRegionAvail().x, 30}, 0.2f, IM_COL32(65,105,255,255), IM_COL32(255, 2, 255, 255), IM_COL32(255, 255, 255, 255) );
+     ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing,     ImVec2(1,3));
+    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding,   ImVec2(1,0));
+    CornerButton(std::string("" + std::to_string(i)).c_str(), {25, 25},IM_COL32(30,30,30,255),IM_COL32(255,255,255,255), 30, ImDrawFlags_RoundCornersAll);
+     ImGui::SameLine();
+   
+    CornerButton(std::string("Vox " + std::to_string(i)).c_str(), {ImGui::GetContentRegionAvail().x - 40, 25},IM_COL32(65,105,255,255),IM_COL32(255,255,255,255), 30, ImDrawFlags_RoundCornersLeft);
+    ImGui::SameLine();
+   
+    CornerButton(std::string("D " + std::to_string(i)).c_str(), {ImGui::GetContentRegionAvail().x, 25},IM_COL32(255,05,55,255),IM_COL32(255,255,255,255), 30, ImDrawFlags_RoundCornersRight);
+   
+    ImGui::PopStyleVar(2);
+    
+    //ImGui::Text(std::string("Vox " + std::to_string(i)).c_str());
 
+  
         // Handle click
         if (isSelected && currentSelection != i) {
             prevSelection = currentSelection;
@@ -191,7 +297,8 @@ ImGui::BeginChild("##ScrollingList",
         }
     }
  ImGui::EndChild();
- ImGui::PopStyleColor();
+    ImGui::PopStyleColor();
+ 
     // Botton buttons THese should not scroll
     ImGui::SetCursorPosY(ImGui::GetWindowSize().y - 47);
 
@@ -201,7 +308,7 @@ ImGui::BeginChild("##ScrollingList",
     ImGui::SetCursorPosX(ImGui::GetWindowSize().x/ 2.0 - buttonDownWidth);
     ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing,     ImVec2(spacing,0));
     ImGui::PushStyleVar(ImGuiStyleVar_FramePadding,   ImVec2(spacing,0));
-    CornerButton("File", {buttonDownWidth, buttonDOwnHeight},IM_COL32(65,105,255,255),IM_COL32(255,255,255,255), 20, ImDrawFlags_RoundCornersLeft);
+    CornerButton("Export All", {buttonDownWidth, buttonDOwnHeight},IM_COL32(65,105,255,255),IM_COL32(255,255,255,255), 20, ImDrawFlags_RoundCornersLeft);
     ImGui::SameLine();
     CornerButton("Folder", {buttonDownWidth, buttonDOwnHeight},IM_COL32(65,105,255,255),IM_COL32(255,255,255,255), 30, ImDrawFlags_RoundCornersRight);
     ImGui::PopStyleVar(2);
@@ -211,6 +318,8 @@ ImGui::BeginChild("##ScrollingList",
     ImGui::PopStyleVar();
     ImGui::PopStyleColor();
 }
+
+
 
 
 void VoxToProcessView::OnCloseView()
