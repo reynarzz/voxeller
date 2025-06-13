@@ -6,7 +6,7 @@
 #include <cmath>
 #include <algorithm>
 #include <cassert>
-#include <voxeller/GreedyTest.h>
+#include <voxeller/GreedyMesher.h>
 #include <assimp/postprocess.h>
 // Include Assimp headers for creating and exporting 3D assets
 #include <assimp/scene.h>
@@ -1264,11 +1264,8 @@ static void GenerateAtlasImage(
     }
 }
 
-bool Run(const std::string& inputPath, const std::string& outputPath)
+bool Run(const vox_file* voxData, const std::string& outputPath, const ConvertOptions& options)
 {
-    
-    // Parse the .vox file
-    std::shared_ptr<vox_file> voxData = VoxParser::read_vox_file(inputPath.c_str());
     if(!voxData || !voxData->isValid) {
         std::cerr << "Failed to read voxel file or file is invalid.\n";
         return 1;
@@ -1292,28 +1289,6 @@ bool Run(const std::string& inputPath, const std::string& outputPath)
         }
     }
 
-    // Ask user about exporting frames
-    bool exportFramesSeparately = false;
-    if(frameCount > 1) {
-        std::cout << "This model has " << frameCount << " frames. Export frames as separate files? (y/n): ";
-        exportFramesSeparately = true;
-    }
-    // Ask user about atlas vs separate textures if multiple meshes will be in one file
-    bool separateTexturesPerMesh = false;
-    if(!exportFramesSeparately && frameCount > 1) {
-        std::cout << "Use separate texture per frame/mesh instead of one atlas? (y/n): ";
-       
-        separateTexturesPerMesh = false;
-    }
-    // Ask about power-of-two texture enforcement
-    bool forcePowerOfTwo = true;
-    std::cout << "Force texture dimensions to power-of-two? (y/n): ";
-   
-    forcePowerOfTwo = true;
-    // Ask about shading (flat or smooth)
-    bool flatShading = true;
-    std::cout << "Flat shading (y) or smooth shading (n)? ";
-    flatShading = true;
 
     // Set up Assimp scene
     aiScene* scene = new aiScene();
@@ -1347,15 +1322,22 @@ bool Run(const std::string& inputPath, const std::string& outputPath)
             return false;
         }
         formatId = selectedFormat->id;
-        aiReturn ret = exporter.Export(scene, formatId.c_str(), outName, aiProcess_JoinIdenticalVertices);
+        u32 preprocess = 0;
+
+        if(options.WeldVertices)
+        {
+            preprocess |= aiProcess_JoinIdenticalVertices;
+        }
+
+        aiReturn ret = exporter.Export(scene, formatId.c_str(), outName, preprocess);
         if(ret != aiReturn_SUCCESS) {
             std::cerr << "Export failed: " << exporter.GetErrorString() << "\n";
             return false;
         }
         return true;
     };
-LOG_EDITOR_INFO("Frames count: {0}, Models: {1}", frameCount, voxData->voxModels.size());
-    if(exportFramesSeparately && frameCount > 1) {
+
+    if(options.ExportFramesSeparatelly && frameCount > 1) {
         // Loop through frames, create scene for each
         for(size_t fi = 0; fi < frameCount; ++fi) {
             // Prepare a new minimal scene for this frame
@@ -1371,7 +1353,7 @@ LOG_EDITOR_INFO("Frames count: {0}, Models: {1}", frameCount, voxData->voxModels
             int atlasDim = 16;
             // Base initial size on number of used colors or face area sum
             // We'll just try increasing POT until success
-            if(forcePowerOfTwo) {
+            if(options.TexturesPOT) {
                 // Start from 16 and double
                 while(true) {
                     if(PackFacesIntoAtlas(atlasDim, faces)) break;
@@ -1419,7 +1401,7 @@ LOG_EDITOR_INFO("Frames count: {0}, Models: {1}", frameCount, voxData->voxModels
             singleScene.mNumMeshes = 1;
             singleScene.mMeshes[0] = new aiMesh();
             aiMesh* mesh = singleScene.mMeshes[0];
-            BuildMeshFromFaces(faces, atlasDim, atlasDim, flatShading, voxData->palette, mesh);
+            BuildMeshFromFaces(faces, atlasDim, atlasDim, options.FlatShading, voxData->palette, mesh);
         
             mesh->mMaterialIndex = 0;
             // Attach mesh to root node
@@ -1465,8 +1447,8 @@ LOG_EDITOR_INFO("Frames count: {0}, Models: {1}", frameCount, voxData->voxModels
         scene->mMeshes = new aiMesh*[meshCount];
         scene->mMaterials = new aiMaterial*[meshCount];
         scene->mNumMeshes = (unsigned int)meshCount;
-        scene->mNumMaterials = (unsigned int)(separateTexturesPerMesh ? meshCount : 1);
-        if(separateTexturesPerMesh) {
+        scene->mNumMaterials = (unsigned int)(options.SeparateTexturesPerMesh ? meshCount : 1);
+        if(options.SeparateTexturesPerMesh) {
             // each mesh gets its own material
             for(size_t i = 0; i < meshCount; ++i) {
                 scene->mMaterials[i] = new aiMaterial();
@@ -1484,7 +1466,7 @@ LOG_EDITOR_INFO("Frames count: {0}, Models: {1}", frameCount, voxData->voxModels
         // Iterate through frames
         int globalAtlasSize = 0;
         std::vector<unsigned char> globalImage;
-        if(!separateTexturesPerMesh) {
+        if(!options.SeparateTexturesPerMesh) {
             // If one atlas for all, gather all faces first
             std::vector<FaceRect> allFaces;
             std::unordered_set<uint8_t> usedColors;
@@ -1496,7 +1478,7 @@ LOG_EDITOR_INFO("Frames count: {0}, Models: {1}", frameCount, voxData->voxModels
             }
             // Pack combined faces
             int dim = 16;
-            if(forcePowerOfTwo) {
+            if(options.TexturesPOT) {
                 while(true) {
                     if(PackFacesIntoAtlas(dim, allFaces)) break;
                     dim *= 2;
@@ -1545,10 +1527,10 @@ LOG_EDITOR_INFO("Frames count: {0}, Models: {1}", frameCount, voxData->voxModels
                 // Create mesh
                 aiMesh* mesh = new aiMesh();
                 scene->mMeshes[i] = mesh;
-                BuildMeshFromFaces(facesForMesh, globalAtlasSize, globalAtlasSize, flatShading, voxData->palette, mesh);
+                BuildMeshFromFaces(facesForMesh, globalAtlasSize, globalAtlasSize, options.FlatShading, voxData->palette, mesh);
            
 
-                mesh->mMaterialIndex = separateTexturesPerMesh ? (int)i : 0;
+                mesh->mMaterialIndex = options.SeparateTexturesPerMesh ? (int)i : 0;
                 // Create node for this mesh
                 aiNode* node = new aiNode();
                 node->mName = aiString("Frame" + std::to_string(i));
@@ -1568,7 +1550,7 @@ LOG_EDITOR_INFO("Frames count: {0}, Models: {1}", frameCount, voxData->voxModels
                 std::unordered_set<uint8_t> used;
                 std::vector<FaceRect> faces = GreedyMeshModel(voxData->voxModels[modelIndex], voxData->sizes[modelIndex], used);
                 int dim = 16;
-                if(forcePowerOfTwo) {
+                if(options.TexturesPOT) {
                     while(true) {
                         if(PackFacesIntoAtlas(dim, faces)) break;
                         dim *= 2;
@@ -1602,7 +1584,7 @@ LOG_EDITOR_INFO("Frames count: {0}, Models: {1}", frameCount, voxData->voxModels
                 // Create mesh geometry
                 aiMesh* mesh = new aiMesh();
                 scene->mMeshes[i] = mesh;
-                BuildMeshFromFaces(faces, dim, dim, flatShading, voxData->palette, mesh);
+                BuildMeshFromFaces(faces, dim, dim, options.FlatShading, voxData->palette, mesh);
            
 
                 mesh->mMaterialIndex = (int)i;
@@ -1621,9 +1603,13 @@ LOG_EDITOR_INFO("Frames count: {0}, Models: {1}", frameCount, voxData->voxModels
         }
         // If there was only one mesh in scene (no children used above), attach it directly to root node
         
-for (unsigned int m = 0; m < scene->mNumMeshes; ++m) {
-    CleanUpMesh(scene->mMeshes[m]);
-}
+        if(options.NoTJunctions)
+        {
+            for (unsigned int m = 0; m < scene->mNumMeshes; ++m) 
+            {
+                CleanUpMesh(scene->mMeshes[m]);
+            }
+        }
 
         // Export combined scene
         if(!exportScene(outputPath)) {
@@ -1635,7 +1621,7 @@ for (unsigned int m = 0; m < scene->mNumMeshes; ++m) {
     }
 
     // Clean up dynamically allocated scene data for combined case
-    if(!exportFramesSeparately) {
+    if(!options.ExportFramesSeparatelly) {
         // Clean materials (if unique)
         std::unordered_set<aiMaterial*> uniqueMats;
         for(unsigned int i = 0; i < scene->mNumMaterials; ++i) {
@@ -1661,4 +1647,58 @@ for (unsigned int m = 0; m < scene->mNumMeshes; ++m) {
         // delete scene;
     }
     return 0;
+}
+
+
+ExportResults GreedyMesher::ExportVoxToModel(const std::string& inVoxPath, const std::string& outExportPath, const ExportOptions& options)
+{
+    std::shared_ptr<vox_file> voxData = VoxParser::read_vox_file(inVoxPath.c_str());
+    const bool ok = Run(voxData.get(), outExportPath, options.ConvertOptions);
+
+    ExportResults results{};
+
+    if(ok)
+    {
+        results.Convert.Msg = ConvertMSG::SUCESS;
+    }
+    else
+    {
+        results.Convert.Msg = ConvertMSG::FAILED;
+    }
+
+    return results;
+}
+
+ExportResults GreedyMesher::ExportVoxToModel(const char* buffer, int size, const ExportOptions& options)
+{
+    LOG_EDITOR_ERROR("Not implemented");
+    throw;
+
+   return {};
+}
+
+MeshingResults GreedyMesher::GetModelFromVOXMesh(const std::string& inVoxPath, const ConvertOptions& options)
+{
+    LOG_EDITOR_ERROR("Not implemented");
+    throw;
+
+   return {};
+
+}
+
+MeshingResults GreedyMesher::GetModelFromVOXMesh(const char* buffer, int size, const ConvertOptions& options)
+{
+    LOG_EDITOR_ERROR("Not implemented");
+    throw;
+   return {};
+}
+
+void GreedyMesher::ExportVoxToModelAsync(const char* buffer, int size, const ExportOptions& options, std::function<void(ExportResults)> callback)
+{
+
+}
+
+void GreedyMesher::GetModelFromVOXMeshAsync(const char* buffer, int size, const ConvertOptions& options, std::function<void(MeshingResults)> callback)
+{
+
 }

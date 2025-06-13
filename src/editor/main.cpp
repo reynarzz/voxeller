@@ -9,7 +9,7 @@
 #include <voxeller/Log/Log.h>
 #include <GUI/ImGuiInit.h>
 
-#include <voxeller/GreedyTest.h>
+#include <voxeller/GreedyMesher.h>
 
 using namespace VoxellerEditor;
 
@@ -48,11 +48,9 @@ int main()
     imgui.Init(win);
     
     
-   //std::shared_ptr<vox_file> file = vox_parser::read_vox_file("testvox/chr_knight.vox");
-   //std::shared_ptr<vox_file> file = vox_parser::read_vox_file("testvox/room.vox");
-
   
-    Run("testvox/T-Rex_anim.vox", "Output.fbx");
+   Voxeller::ExportOptions exportOptions{};
+   Voxeller::GreedyMesher::ExportVoxToModel("testvox/room.vox", "Output.fbx", exportOptions);
 
    LOG_EDITOR_INFO("This is the editor");
     
