@@ -1618,7 +1618,7 @@ const aiScene* Run(const vox_file* voxData, const std::string& outputPath, const
     return nullptr;
 }
 
-bool WriteSceneToFile(const aiScene* scene, const std::string& outPath, const ExportOptions& options)
+static bool WriteSceneToFile(const aiScene* scene, const std::string& outPath, const ExportOptions& options)
 {
     size_t dot = outPath.find_last_of('.');
 
@@ -1669,6 +1669,9 @@ bool WriteSceneToFile(const aiScene* scene, const std::string& outPath, const Ex
         }
 
         const std::string convertedOutName = outPath.substr(0, dot);
+        aiMatrix4x4 scaleMat;
+        aiMatrix4x4::Scaling(aiVector3D(options.ConvertOptions.Scale, options.ConvertOptions.Scale, options.ConvertOptions.Scale), scaleMat);
+        scene->mRootNode->mTransformation = scaleMat * scene->mRootNode->mTransformation;
 
         aiReturn ret = exporter.Export(scene, formatId.c_str(), convertedOutName + "." + ext, preprocess);
         if(ret != aiReturn_SUCCESS) {
@@ -1725,10 +1728,12 @@ MeshingResults GreedyMesher::GetModelFromVOXMesh(const char* buffer, int size, c
 
 void GreedyMesher::ExportVoxToModelAsync(const char* buffer, int size, const ExportOptions& options, std::function<void(ExportResults)> callback)
 {
-
+    LOG_EDITOR_ERROR("Not implemented");
+    throw;
 }
 
 void GreedyMesher::GetModelFromVOXMeshAsync(const char* buffer, int size, const ConvertOptions& options, std::function<void(MeshingResults)> callback)
 {
-
+    LOG_EDITOR_ERROR("Not implemented");
+    throw;
 }

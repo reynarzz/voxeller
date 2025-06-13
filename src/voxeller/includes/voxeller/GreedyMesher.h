@@ -58,8 +58,8 @@ struct VOXELLER_API ConvertOptions
 
     bool ExportFramesSeparatelly = true;
 
-    // Voxel Scale in meters, Ex, if 1.0, every single voxel will take up 1 meter.
-    f32 VoxelScale = 1.0f;
+    // Scale, Ex, if 1.0, every single voxel will take up 1 unit.
+    f32 Scale = 1.0f;
 };
 
 struct VOXELLER_API ExportOptions

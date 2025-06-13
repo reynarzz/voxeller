@@ -11,6 +11,25 @@
 
 using namespace VoxellerEditor;
 
+   ImGuiApp imgui{};
+
+void Render(GLFWwindow* window)
+{
+glfwPollEvents();
+      glClearColor(1.0, 0.2, 0.2, 1.0);
+      glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+      imgui.Update();
+      glfwSwapBuffers(window);
+}
+void framebuffer_size_callback(GLFWwindow* window, int width, int height)
+{
+    
+    // tell OpenGL about it:
+
+     Render(window);
+}
+
 
 int main()
 {
@@ -37,27 +56,24 @@ int main()
 
    // openGL 
    glfwMakeContextCurrent(win);
+   glfwSetFramebufferSizeCallback(win, framebuffer_size_callback);
+
    int status = gladLoadGLLoader((GLADloadproc)glfwGetProcAddress);
    
-   ImGuiApp imgui{};
    imgui.Init(win);
     
    Voxeller::ExportOptions exportOptions{};
-   exportOptions.OutputFormat = Voxeller::ModelFormat::FBX;
+   exportOptions.OutputFormat = Voxeller::ModelFormat::OBJ;
    exportOptions.ConvertOptions.NoTJunctions = true;
    exportOptions.ConvertOptions.WeldVertices = true;
    exportOptions.ConvertOptions.FlatShading = true;
-   Voxeller::GreedyMesher::ExportVoxToModel("testvox/room.vox", "Output.fbx", exportOptions);
+   exportOptions.ConvertOptions.Scale = .01f;
+   
+   //Voxeller::GreedyMesher::ExportVoxToModel("testvox/room.vox", "Output.fbx", exportOptions);
 
    while(!glfwWindowShouldClose(win))
    {
-      glfwPollEvents();
-      glClearColor(1.2, 0.2, 0.2, 1.0);
-      glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-      imgui.Update();
-      glfwSwapBuffers(win);
-
+      Render(win);
    }
 
    glfwTerminate();
