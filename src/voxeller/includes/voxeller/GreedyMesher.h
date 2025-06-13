@@ -3,6 +3,7 @@
 #include <voxeller/Types.h>
 #include <vector>
 #include <functional>
+#include <voxeller/api.h>
 
 namespace Voxeller
 {
@@ -12,7 +13,7 @@ enum class ModelFormat
     FBX, OBJ, 
 };
 
-struct MeshInfo
+struct VOXELLER_API MeshInfo
 {
     s32 Vertices;
     s32 Indices;
@@ -25,19 +26,19 @@ enum class ConvertMSG
     SUCESS,
 };
 
-struct ConvertResult
+struct VOXELLER_API ConvertResult
 {
     ConvertMSG Msg;
     std::vector<MeshInfo> meshes;
 };
 
-struct ExportResults
+struct VOXELLER_API ExportResults
 {
     ConvertResult Convert = {};
-    std::string OutPath;
+    std::string OutPath = "";
 };
 
-struct ConvertOptions
+struct VOXELLER_API ConvertOptions
 {
     // Remove T-Juntions
     bool NoTJunctions = false;
@@ -56,20 +57,23 @@ struct ConvertOptions
 
 
     bool ExportFramesSeparatelly = true;
+
+    // Voxel Scale in meters, Ex, if 1.0, every single voxel will take up 1 meter.
+    f32 VoxelScale = 1.0f;
 };
 
-struct ExportOptions
+struct VOXELLER_API ExportOptions
 {
     ConvertOptions ConvertOptions;
-    ModelFormat OutputFormat;
+    ModelFormat OutputFormat = ModelFormat::FBX;
 };
 
-struct MeshingResults
+struct VOXELLER_API MeshingResults
 {
     ConvertResult Convert;
 };
 
-class GreedyMesher
+class VOXELLER_API GreedyMesher
 {
 public:
     static ExportResults ExportVoxToModel(const std::string& inVoxPath, const std::string& outExportPath, const ExportOptions& options);

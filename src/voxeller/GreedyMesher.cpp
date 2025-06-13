@@ -1264,17 +1264,17 @@ static void GenerateAtlasImage(
     }
 }
 
-bool Run(const vox_file* voxData, const std::string& outputPath, const ConvertOptions& options)
+const aiScene* Run(const vox_file* voxData, const std::string& outputPath, const ConvertOptions& options)
 {
     if(!voxData || !voxData->isValid) {
         std::cerr << "Failed to read voxel file or file is invalid.\n";
-        return 1;
+        return nullptr;
     }
     // Determine if we have multiple frames (multiple models or transform frames)
     size_t frameCount = voxData->voxModels.size();
     if(frameCount == 0) {
         std::cerr << "No voxel models in the file.\n";
-        return 1;
+        return nullptr;
     }
     bool multiFrame = frameCount > 1;
     // If not multiple models, check transforms for framesCount
@@ -1300,43 +1300,9 @@ bool Run(const vox_file* voxData, const std::string& outputPath, const ConvertOp
     // If exporting frames separately, we'll loop and export one scene per frame instead of building one scene with multiple.
     // But we can reuse this code by simply generating one scene at a time inside the loop if separate.
     // For combined output, we build scene once.
+    size_t dot = outputPath.find_last_of('.');
 
-        size_t dot = outputPath.find_last_of('.');
-
-    auto exportScene = [&](const std::string& outName) {
-        Assimp::Exporter exporter;
-        // Determine export format from extension
-        std::string ext;
-        if(dot != std::string::npos) ext = outName.substr(dot+1);
-        std::string formatId;
-        const aiExportFormatDesc* selectedFormat = nullptr;
-        for(size_t i = 0; i < exporter.GetExportFormatCount(); ++i) {
-            const aiExportFormatDesc* fmt = exporter.GetExportFormatDescription(i);
-            if(fmt && fmt->fileExtension == ext) {
-                selectedFormat = fmt;
-                break;
-            }
-        }
-        if(!selectedFormat) {
-            std::cerr << "Unsupported export format: " << ext << "\n";
-            return false;
-        }
-        formatId = selectedFormat->id;
-        u32 preprocess = 0;
-
-        if(options.WeldVertices)
-        {
-            preprocess |= aiProcess_JoinIdenticalVertices;
-        }
-
-        aiReturn ret = exporter.Export(scene, formatId.c_str(), outName, preprocess);
-        if(ret != aiReturn_SUCCESS) {
-            std::cerr << "Export failed: " << exporter.GetErrorString() << "\n";
-            return false;
-        }
-        return true;
-    };
-
+        
     if(options.ExportFramesSeparatelly && frameCount > 1) {
         // Loop through frames, create scene for each
         for(size_t fi = 0; fi < frameCount; ++fi) {
@@ -1387,6 +1353,7 @@ bool Run(const vox_file* voxData, const std::string& outputPath, const ConvertOp
             GenerateAtlasImage(atlasDim, atlasDim, faces,voxData->voxModels[modelIndex], voxData->palette, image);
             // Save image file for this frame
             std::string baseName = outputPath;
+
             if(dot != std::string::npos) baseName = outputPath.substr(0, outputPath.find_last_of('.'));
             std::string imageName = baseName + "_frame" + std::to_string(fi) + ".png";
             SaveAtlasImage(imageName, atlasDim, atlasDim, image);
@@ -1612,12 +1579,14 @@ bool Run(const vox_file* voxData, const std::string& outputPath, const ConvertOp
         }
 
         // Export combined scene
-        if(!exportScene(outputPath)) {
-            std::cerr << "Failed to export scene.\n";
-            return 1;
-        } else {
-            std::cout << "Exported " << outputPath << " successfully.\n";
-        }
+        // if(!exportScene(outputPath)) {
+        //     std::cerr << "Failed to export scene.\n";
+        //     return 1;
+        // } else {
+        //     std::cout << "Exported " << outputPath << " successfully.\n";
+        // }
+
+        return scene;
     }
 
     // Clean up dynamically allocated scene data for combined case
@@ -1646,19 +1615,80 @@ bool Run(const vox_file* voxData, const std::string& outputPath, const ConvertOp
         // delete scene->mRootNode;
         // delete scene;
     }
-    return 0;
+    return nullptr;
 }
 
+bool WriteSceneToFile(const aiScene* scene, const std::string& outPath, const ExportOptions& options)
+{
+    size_t dot = outPath.find_last_of('.');
+
+        Assimp::Exporter exporter;
+        // Determine export format from extension
+
+        std::string ext =  "";
+
+        switch (options.OutputFormat)
+        {
+        case ModelFormat::FBX:
+            ext = "fbx";
+            break;
+        
+            case ModelFormat::OBJ:
+            ext = "obj";
+            break;
+        default:
+        LOG_EDITOR_ERROR("Format not implemented in writeToFile switch.");
+            break;
+        }
+        
+        // if(dot != std::string::npos) 
+        // {
+        //     ext = outName.substr(dot+1);
+        // }
+
+        std::string formatId;
+        const aiExportFormatDesc* selectedFormat = nullptr;
+        for(size_t i = 0; i < exporter.GetExportFormatCount(); ++i) {
+            const aiExportFormatDesc* fmt = exporter.GetExportFormatDescription(i);
+            if(fmt && fmt->fileExtension == ext) {
+                selectedFormat = fmt;
+                break;
+            }
+        }
+        if(!selectedFormat) 
+        {
+            LOG_EDITOR_ERROR("Unsupported export format: {0}", ext);
+            return false;
+        }
+        formatId = selectedFormat->id;
+        u32 preprocess = 0;
+
+        if(options.ConvertOptions.WeldVertices)
+        {
+            preprocess |= aiProcess_JoinIdenticalVertices;
+        }
+
+        const std::string convertedOutName = outPath.substr(0, dot);
+
+        aiReturn ret = exporter.Export(scene, formatId.c_str(), convertedOutName + "." + ext, preprocess);
+        if(ret != aiReturn_SUCCESS) {
+            std::cerr << "Export failed: " << exporter.GetErrorString() << "\n";
+            return false;
+        }
+        return true;
+
+}
 
 ExportResults GreedyMesher::ExportVoxToModel(const std::string& inVoxPath, const std::string& outExportPath, const ExportOptions& options)
 {
     std::shared_ptr<vox_file> voxData = VoxParser::read_vox_file(inVoxPath.c_str());
-    const bool ok = Run(voxData.get(), outExportPath, options.ConvertOptions);
+    const aiScene* scene = Run(voxData.get(), outExportPath, options.ConvertOptions);
 
     ExportResults results{};
 
-    if(ok)
+    if(scene != nullptr)
     {
+        WriteSceneToFile(scene, outExportPath, options);
         results.Convert.Msg = ConvertMSG::SUCESS;
     }
     else

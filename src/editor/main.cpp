@@ -1,8 +1,6 @@
 
 #define VOXELLER_LIB
 
-#include <iostream>
-#include <filesystem>
 #include <voxeller/voxeller.h>
 #include <gl/glad.h>
 #include <GLFW/glfw3.h>
@@ -13,19 +11,19 @@
 
 using namespace VoxellerEditor;
 
+
 int main()
 {
+   VoxellerInit();
+
    if (glfwInit() == GLFW_TRUE)
    {
-      std::cout << "glfw initialization successfull!\n";
+      LOG_EDITOR_INFO("glfw initialization successfull!");
    }
    else
    {
-      std::cout << "glfw init error\n";
+      LOG_EDITOR_ERROR("glfw init error");
    }
-   
-   //vulkan later.
-   //--glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
    
    glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
    
@@ -41,34 +39,16 @@ int main()
    glfwMakeContextCurrent(win);
    int status = gladLoadGLLoader((GLADloadproc)glfwGetProcAddress);
    
+   ImGuiApp imgui{};
+   imgui.Init(win);
     
-    VoxellerInit();
-    
-    ImGuiApp imgui{};
-    imgui.Init(win);
-    
-    
-  
    Voxeller::ExportOptions exportOptions{};
+   exportOptions.OutputFormat = Voxeller::ModelFormat::FBX;
+   exportOptions.ConvertOptions.NoTJunctions = true;
+   exportOptions.ConvertOptions.WeldVertices = true;
+   exportOptions.ConvertOptions.FlatShading = true;
    Voxeller::GreedyMesher::ExportVoxToModel("testvox/room.vox", "Output.fbx", exportOptions);
 
-   LOG_EDITOR_INFO("This is the editor");
-    
-   // if (file != nullptr && file->isValid)
-   // {
-   //     std::cout << "header: " << file->header.id << ", models: " << file->voxModels.size() << ", version: " << file->header.version << '\n';
-   //       LOG_EDITOR_INFO("Valid: {0}, Materials: {1}, Shapes: {2}", file->isValid, file->materials.size(), file->shapes.size());
-   //     mesh_texturizer::export_pallete_png("pallete.png", file->palette);
-   //     //vox_mesh_builder::build_mesh_greedy(file);
-       
-   // }
-   // else 
-   // {
-   //     std::cout << "invalid vox, can't continue.\n";
-   // }
-
-
-   
    while(!glfwWindowShouldClose(win))
    {
       glfwPollEvents();
