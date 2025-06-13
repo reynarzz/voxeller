@@ -1,6 +1,8 @@
 #pragma once
 
-#if defined (WINDOWS)
+#define VOXELLER_API_EXPORT
+
+#if defined (_WIN32)
    #ifndef EXPORT
      #define EXPORT extern "C"
    #endif

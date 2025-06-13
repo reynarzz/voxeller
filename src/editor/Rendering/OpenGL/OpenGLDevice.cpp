@@ -10,6 +10,7 @@ namespace VoxellerEditor
     
     const DeviceInfo &OpenGLDevice::GetInfo() const
     {
+        return {};
     }
     void *OpenGLDevice::CreateTexture(const TextureDescriptor *desc)
     {

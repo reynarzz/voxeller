@@ -1,4 +1,4 @@
-
+//
 #define VOXELLER_LIB
 
 #include <voxeller/voxeller.h>
@@ -37,11 +37,11 @@ int main()
 
    if (glfwInit() == GLFW_TRUE)
    {
-      LOG_EDITOR_INFO("glfw initialization successfull!");
+     // LOG_EDITOR_INFO("glfw initialization successfull!");
    }
    else
    {
-      LOG_EDITOR_ERROR("glfw init error");
+      //LOG_EDITOR_ERROR("glfw init error");
    }
    
    glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);

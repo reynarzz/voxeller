@@ -44,6 +44,8 @@ file(GLOB_RECURSE VOXELLER_SRC
     ${CMAKE_CURRENT_SOURCE_DIR}/*.h
 )
 
+
+
 # optional: organize your IDE/project view
 foreach(FILE ${VOXELLER_SRC})
   file(RELATIVE_PATH REL_PATH "${CMAKE_SOURCE_DIR}" "${FILE}")
@@ -51,7 +53,9 @@ foreach(FILE ${VOXELLER_SRC})
   source_group("${FOLDER}" FILES "${FILE}")
 endforeach()
 
+
 add_library(voxeller SHARED ${VOXELLER_SRC})
+
 
 # -----------------------------------------------------------------------------
 # 4) Include directories

@@ -3,6 +3,9 @@
 #endif
 
 #include <voxeller/vox_math_types.h>
+#ifndef _USE_MATH_DEFINES
+#define _USE_MATH_DEFINES
+#endif
 #include <cmath>
 
 const vox_imat3 vox_imat3::identity = { 1, 0, 0,

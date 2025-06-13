@@ -3,14 +3,15 @@
 #include <memory>
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
+#include <voxeller/api.h>
 
 namespace VoxellerApp
 {
     // Forward declared loggers
-    extern std::shared_ptr<spdlog::logger> core;
-    extern std::shared_ptr<spdlog::logger> editor;
+    VXAPI extern std::shared_ptr<spdlog::logger> core;
+    VXAPI extern std::shared_ptr<spdlog::logger> editor;
 
-    void init();  // Call this once during startup
+    VXAPI void init();  // Call this once during startup
 }
 
 // Logging macros
