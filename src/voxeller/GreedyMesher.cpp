@@ -605,17 +605,15 @@ static void BuildMeshFromFaces(
 	bool flatShading,
 	const std::vector<color>& palette,
 	aiMesh* mesh,
-	const vox_imat3* rotation = nullptr,   // NEW: matrix pointer (can be null)
-	const vox_vec3* translation = nullptr)  // NEW: translation pointer (can be null))
+	const vox_imat3* rotation = nullptr,
+	const vox_vec3* translation = nullptr)
 {
-
-	// TODO: Add option to flip axixes (x, y, z), since some shapes are copies but need to be fliped using a 3x3 matrix
-	std::vector<Vertex> vertices;
-	std::vector<unsigned int> indices;
+	// 1) Gather vertices & indices in MagicaVoxel space
+	std::vector<Vertex>             vertices;
+	std::vector<unsigned int>       indices;
 	vertices.reserve(faces.size() * 4);
 	indices.reserve(faces.size() * 6);
 
-	// map<quantized pos+uv, index> for smooth shading
 	std::unordered_map<VertKey, unsigned int, VertKeyHash> vertMap;
 	vertMap.reserve(faces.size() * 4);
 
@@ -624,7 +622,6 @@ static void BuildMeshFromFaces(
 		float u, float v) -> unsigned int
 		{
 			VertKey key;
-
 			if (!flatShading) {
 				key.px_i = int(std::round(vx * 100.0f));
 				key.py_i = int(std::round(vy * 100.0f));
@@ -633,201 +630,124 @@ static void BuildMeshFromFaces(
 				key.v_i = int(std::round(v * texHeight * 100.0f));
 				auto it = vertMap.find(key);
 				if (it != vertMap.end()) {
+					// accumulate normals
 					unsigned int idx = it->second;
 					vertices[idx].nx += nx;
 					vertices[idx].ny += ny;
 					vertices[idx].nz += nz;
 					return idx;
 				}
-				// else fall through and create new
 			}
 			Vertex vert;
 			vert.px = vx; vert.py = vy; vert.pz = vz;
 			vert.nx = nx; vert.ny = ny; vert.nz = nz;
 			vert.u = u;  vert.v = v;
-			unsigned int idx = vertices.size();
+			unsigned int idx = (unsigned int)vertices.size();
 			vertices.push_back(vert);
 			if (!flatShading) vertMap[key] = idx;
 			return idx;
 		};
 
-	// Precompute some atlas‐space constants
 	const float pixelW = 1.0f / float(texWidth);
 	const float pixelH = 1.0f / float(texHeight);
 	const float border = 1.0f;
 
-	for (auto const& face : faces)
-	{
-		// 1px bleed → inset by 0.5px to sample at centers
+	for (auto const& face : faces) {
+		// compute UVs
 		float u0 = (face.atlasX + border + 0.5f) * pixelW;
 		float v0 = 1.0f - (face.atlasY + border + 0.5f) * pixelH;
 		float u1 = (face.atlasX + border + face.w - 0.5f) * pixelW;
 		float v1 = 1.0f - (face.atlasY + border + face.h - 0.5f) * pixelH;
 
-		// determine face normal & 3D‐coords for corners
+		// determine corners in voxel space
 		float nx = 0, ny = 0, nz = 0;
 		float x0, y0, z0, x1, y1, z1, x2, y2, z2, x3, y3, z3;
 
-		switch (face.orientation)
-		{
-		case 'X':
-		{
+		switch (face.orientation) {
+		case 'X': {
 			nx = +1;
-			float fx = float(face.constantCoord);
-			float zmin = float(face.uMin), zmax = float(face.uMax);
-			float ymin = float(face.vMin), ymax = float(face.vMax);
-			// bottom‐left
-			x0 = fx; y0 = ymin; z0 = zmin;
-			// top‐left
-			x1 = fx; y1 = ymax; z1 = zmin;
-			// top‐right
-			x2 = fx; y2 = ymax; z2 = zmax;
-			// bottom‐right
-			x3 = fx; y3 = ymin; z3 = zmax;
+			float f = face.constantCoord;
+			x0 = f; y0 = face.vMin; z0 = face.uMin;
+			x1 = f; y1 = face.vMax; z1 = face.uMin;
+			x2 = f; y2 = face.vMax; z2 = face.uMax;
+			x3 = f; y3 = face.vMin; z3 = face.uMax;
 		} break;
-		case 'x':
-		{
+		case 'x': {
 			nx = -1;
-			float fx = float(face.constantCoord);
-			float zmin = float(face.uMin), zmax = float(face.uMax);
-			float ymin = float(face.vMin), ymax = float(face.vMax);
-			// reverse U‐axis so pattern stays upright
+			float f = face.constantCoord;
+			float zmin = face.uMin, zmax = face.uMax;
 			std::swap(zmin, zmax);
-			x0 = fx; y0 = ymin; z0 = zmin;
-			x1 = fx; y1 = ymax; z1 = zmin;
-			x2 = fx; y2 = ymax; z2 = zmax;
-			x3 = fx; y3 = ymin; z3 = zmax;
+			x0 = f; y0 = face.vMin; z0 = zmin;
+			x1 = f; y1 = face.vMax; z1 = zmin;
+			x2 = f; y2 = face.vMax; z2 = zmax;
+			x3 = f; y3 = face.vMin; z3 = zmax;
 		} break;
-		case 'Y':
-		{
+		case 'Y': {
 			ny = +1;
-			float fy = float(face.constantCoord);
-			float xmin = float(face.uMin), xmax = float(face.uMax);
-			float zmin = float(face.vMin), zmax = float(face.vMax);
-			x0 = xmin; y0 = fy; z0 = zmin;
-			x1 = xmin; y1 = fy; z1 = zmax;
-			x2 = xmax; y2 = fy; z2 = zmax;
-			x3 = xmax; y3 = fy; z3 = zmin;
+			float f = face.constantCoord;
+			x0 = face.uMin; y0 = f; z0 = face.vMin;
+			x1 = face.uMin; y1 = f; z1 = face.vMax;
+			x2 = face.uMax; y2 = f; z2 = face.vMax;
+			x3 = face.uMax; y3 = f; z3 = face.vMin;
 		} break;
-		case 'y':
-		{
+		case 'y': {
 			ny = -1;
-			float fy = float(face.constantCoord);
-			float xmin = float(face.uMin), xmax = float(face.uMax);
-			float zmin = float(face.vMin), zmax = float(face.vMax);
+			float f = face.constantCoord;
+			float zmin = face.vMin, zmax = face.vMax;
 			std::swap(zmin, zmax);
-			x0 = xmin; y0 = fy; z0 = zmin;
-			x1 = xmin; y1 = fy; z1 = zmax;
-			x2 = xmax; y2 = fy; z2 = zmax;
-			x3 = xmax; y3 = fy; z3 = zmin;
+			x0 = face.uMin; y0 = f; z0 = zmin;
+			x1 = face.uMin; y1 = f; z1 = zmax;
+			x2 = face.uMax; y2 = f; z2 = zmax;
+			x3 = face.uMax; y3 = f; z3 = zmin;
 		} break;
-		case 'Z':
-		{
+		case 'Z': {
 			nz = +1;
-			float fz = float(face.constantCoord);
-			float xmin = float(face.uMin), xmax = float(face.uMax);
-			float ymin = float(face.vMin), ymax = float(face.vMax);
-			x0 = xmin; y0 = ymin; z0 = fz;
-			x1 = xmin; y1 = ymax; z1 = fz;
-			x2 = xmax; y2 = ymax; z2 = fz;
-			x3 = xmax; y3 = ymin; z3 = fz;
+			float f = face.constantCoord;
+			x0 = face.uMin; y0 = face.vMin; z0 = f;
+			x1 = face.uMin; y1 = face.vMax; z1 = f;
+			x2 = face.uMax; y2 = face.vMax; z2 = f;
+			x3 = face.uMax; y3 = face.vMin; z3 = f;
 		} break;
-		case 'z':
-		{
+		case 'z': {
 			nz = -1;
-			float fz = float(face.constantCoord);
-			float xmin = float(face.uMin), xmax = float(face.uMax);
-			float ymin = float(face.vMin), ymax = float(face.vMax);
+			float f = face.constantCoord;
+			float xmin = face.uMin, xmax = face.uMax;
 			std::swap(xmin, xmax);
-			x0 = xmin; y0 = ymin; z0 = fz;
-			x1 = xmin; y1 = ymax; z1 = fz;
-			x2 = xmax; y2 = ymax; z2 = fz;
-			x3 = xmax; y3 = ymin; z3 = fz;
+			x0 = xmin; y0 = face.vMin; z0 = f;
+			x1 = xmin; y1 = face.vMax; z1 = f;
+			x2 = xmax; y2 = face.vMax; z2 = f;
+			x3 = xmax; y3 = face.vMin; z3 = f;
 		} break;
-		default: continue;
+		default:
+			continue;
 		}
 
-		// add the four verts (always using the same u0,v0→u1,v1)
-		unsigned int i0 = addVertex(x0, y0, z0, nx, ny, nz, u0, v0);
-		unsigned int i1 = addVertex(x1, y1, z1, nx, ny, nz, u0, v1);
-		unsigned int i2 = addVertex(x2, y2, z2, nx, ny, nz, u1, v1);
-		unsigned int i3 = addVertex(x3, y3, z3, nx, ny, nz, u1, v0);
-
-		indices.push_back(i0); indices.push_back(i1); indices.push_back(i2);
-		indices.push_back(i0); indices.push_back(i2); indices.push_back(i3);
+		auto i0 = addVertex(x0, y0, z0, nx, ny, nz, u0, v0);
+		auto i1 = addVertex(x1, y1, z1, nx, ny, nz, u0, v1);
+		auto i2 = addVertex(x2, y2, z2, nx, ny, nz, u1, v1);
+		auto i3 = addVertex(x3, y3, z3, nx, ny, nz, u1, v0);
+		indices.insert(indices.end(), { i0, i1, i2, i0, i2, i3 });
 	}
 
 	// normalize normals if smooth
-	if (!flatShading)
-	{
-		for (auto& v : vertices)
-		{
+	if (!flatShading) {
+		for (auto& v : vertices) {
 			float L = std::sqrt(v.nx * v.nx + v.ny * v.ny + v.nz * v.nz);
-			if (L > 0)
-			{
-				v.nx /= L;
-				v.ny /= L;
-				v.nz /= L;
+			if (L > 0) {
+				v.nx /= L; v.ny /= L; v.nz /= L;
 			}
 		}
 	}
 
-	// finally write into aiMesh
+	// 2) Write into aiMesh, applying transform, swap, and handedness fix
 	mesh->mPrimitiveTypes = aiPrimitiveType_TRIANGLE;
-	mesh->mNumVertices = vertices.size();
-
-
+	mesh->mNumVertices = (unsigned int)vertices.size();
 	mesh->mVertices = new aiVector3D[vertices.size()];
 	mesh->mNormals = new aiVector3D[vertices.size()];
 	mesh->mTextureCoords[0] = new aiVector3D[vertices.size()];
 	mesh->mNumUVComponents[0] = 2;
 
-	//for (unsigned int i = 0; i < vertices.size(); ++i)
-	//{
-	//	float x = vertices[i].px, y = vertices[i].py, z = vertices[i].pz;
-	//	float nx = vertices[i].nx, ny = vertices[i].ny, nz = vertices[i].nz;
-
-	//	// Apply rotation/translation to position
-	//	if (rotation) {
-	//		float tx = rotation->m00 * x + rotation->m01 * y + rotation->m02 * z;
-	//		float ty = rotation->m10 * x + rotation->m11 * y + rotation->m12 * z;
-	//		float tz = rotation->m20 * x + rotation->m21 * y + rotation->m22 * z;
-	//		x = tx;  y = ty;  z = tz;
-	//	}
-	//	if (translation) {
-	//		x += translation->x;
-	//		y += translation->y;
-	//		z += translation->z;
-	//	}
-
-	//	// Apply rotation to normals
-	//	if (rotation) {
-	//		float tnx = rotation->m00 * nx + rotation->m01 * ny + rotation->m02 * nz;
-	//		float tny = rotation->m10 * nx + rotation->m11 * ny + rotation->m12 * nz;
-	//		float tnz = rotation->m20 * nx + rotation->m21 * ny + rotation->m22 * nz;
-	//		nx = tnx; 
-	//		ny = tny; 
-	//		nz = tnz;
-	//		// Optional: re-normalize normal here if needed
-	//	}
-
-	//	if (rotation && translation) 
-	//	{
-	//		mesh->mVertices[i] = aiVector3D(x, z, y); // Swap y and z!
-	//		mesh->mNormals[i] = aiVector3D(nx, nz, ny); // Swap y and z in normal too
-	//	}
-	//	else 
-	//	{
-	//		mesh->mVertices[i] = aiVector3D(x, y, z); // Swap y and z!
-	//		mesh->mNormals[i] = aiVector3D(nx, ny, nz); // Swap y and z in normal too
-	//	}
-
-	//	mesh->mTextureCoords[0][i] = aiVector3D(vertices[i].u, vertices[i].v, 0.0f);
-
-	//}
-
 	for (unsigned int i = 0; i < vertices.size(); ++i) {
-		// original voxel‐space position & normal
 		float x = vertices[i].px;
 		float y = vertices[i].py;
 		float z = vertices[i].pz;
@@ -835,42 +755,43 @@ static void BuildMeshFromFaces(
 		float ny = vertices[i].ny;
 		float nz = vertices[i].nz;
 
-		// 1) apply rotation (if any)
+		// A) apply rotation
 		if (rotation) {
 			float tx = rotation->m00 * x + rotation->m01 * y + rotation->m02 * z;
 			float ty = rotation->m10 * x + rotation->m11 * y + rotation->m12 * z;
 			float tz = rotation->m20 * x + rotation->m21 * y + rotation->m22 * z;
 			x = tx; y = ty; z = tz;
+
+			tx = rotation->m00 * nx + rotation->m01 * ny + rotation->m02 * nz;
+			ty = rotation->m10 * nx + rotation->m11 * ny + rotation->m12 * nz;
+			tz = rotation->m20 * nx + rotation->m21 * ny + rotation->m22 * nz;
+			nx = tx; ny = ty; nz = tz;
 		}
 
-		// 2) apply swap-aware translation
-		//    MagicaVoxel Y → Assimp Z, MagicaVoxel Z → Assimp Y
+		// B) apply translation
 		if (translation) {
 			x += translation->x;
-			y += translation->z;
-			z += translation->y;
+			y += translation->y;
+			z += translation->z;
 		}
 
-		// 3) rotate normals if needed
-		if (rotation) {
-			float tnx = rotation->m00 * nx + rotation->m01 * ny + rotation->m02 * nz;
-			float tny = rotation->m10 * nx + rotation->m11 * ny + rotation->m12 * nz;
-			float tnz = rotation->m20 * nx + rotation->m21 * ny + rotation->m22 * nz;
-			nx = tnx; ny = tny; nz = tnz;
-			// (optional: re-normalize)
-		}
+		// C) permute into Assimp’s (X, Z, Y)
+		aiVector3D pos{ x,  z,  y };
+		aiVector3D norm{ nx, nz, ny };
 
-		// 4) write into Assimp mesh using (X, Z, Y) ordering
-		mesh->mVertices[i] = aiVector3D(x, z, y);
-		mesh->mNormals[i] = aiVector3D(nx, nz, ny);
+		// D) fix handedness (un-mirror X)
+		pos.x *= -1.0f;
+		norm.x *= -1.0f;
+
+		mesh->mVertices[i] = pos;
+		mesh->mNormals[i] = norm;
 		mesh->mTextureCoords[0][i] = aiVector3D(vertices[i].u, vertices[i].v, 0.0f);
 	}
 
-	mesh->mNumFaces = indices.size() / 3;
+	// 3) Build faces
+	mesh->mNumFaces = (unsigned int)(indices.size() / 3);
 	mesh->mFaces = new aiFace[mesh->mNumFaces];
-
-	for (unsigned int f = 0; f < mesh->mNumFaces; ++f)
-	{
+	for (unsigned int f = 0; f < mesh->mNumFaces; ++f) {
 		aiFace& face = mesh->mFaces[f];
 		face.mNumIndices = 3;
 		face.mIndices = new unsigned int[3];
