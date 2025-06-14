@@ -88,8 +88,8 @@ int main()
 	exportOptions.ConvertOptions.ExportMeshesSeparatelly = true;
 	exportOptions.ConvertOptions.SeparateTexturesPerMesh = false;
 
-	std::string path = "B:/Projects/voxeller/bin/Debug/testvox/nda/Ambulance_1.vox"; // Test this!
-	//std::string path = "B:/Projects/voxeller/bin/Debug/testvox/room.vox"; 
+	//std::string path = "B:/Projects/voxeller/bin/Debug/testvox/nda/Ambulance_1.vox"; // Test this!
+	std::string path = "B:/Projects/voxeller/bin/Debug/testvox/room.vox"; 
 	//std::string path = "B:/Projects/voxeller/bin/Debug/testvox/nda/Island_7.vox";
 	std::string output = "B:/Projects/voxeller/bin/Debug/testvox/nda/export/Output.fbx";
 	Voxeller::GreedyMesher::ExportVoxToModel(path, output, exportOptions);

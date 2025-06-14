@@ -500,7 +500,9 @@ static void BuildMeshFromFaces(
 	int texHeight,
 	bool flatShading,
 	const std::vector<color>& palette,
-	aiMesh* mesh, vox_vec3 flipPosition = {})
+	aiMesh* mesh,
+	const vox_imat3* rotation = nullptr,   // NEW: matrix pointer (can be null)
+	const vox_vec3* translation = nullptr)  // NEW: translation pointer (can be null))
 {
 
 	// TODO: Add option to flip axixes (x, y, z), since some shapes are copies but need to be fliped using a 3x3 matrix
@@ -669,15 +671,58 @@ static void BuildMeshFromFaces(
 	// finally write into aiMesh
 	mesh->mPrimitiveTypes = aiPrimitiveType_TRIANGLE;
 	mesh->mNumVertices = vertices.size();
+
+
 	mesh->mVertices = new aiVector3D[vertices.size()];
 	mesh->mNormals = new aiVector3D[vertices.size()];
 	mesh->mTextureCoords[0] = new aiVector3D[vertices.size()];
 	mesh->mNumUVComponents[0] = 2;
 
-	for (unsigned int i = 0; i < vertices.size(); ++i) {
+	/*for (unsigned int i = 0; i < vertices.size(); ++i) {
 		mesh->mVertices[i] = aiVector3D(vertices[i].px, vertices[i].py, vertices[i].pz);
 		mesh->mNormals[i] = aiVector3D(vertices[i].nx, vertices[i].ny, vertices[i].nz);
 		mesh->mTextureCoords[0][i] = aiVector3D(vertices[i].u, vertices[i].v, 0.0f);
+	}*/
+
+	for (unsigned int i = 0; i < vertices.size(); ++i) {
+		float x = vertices[i].px, y = vertices[i].py, z = vertices[i].pz;
+		float nx = vertices[i].nx, ny = vertices[i].ny, nz = vertices[i].nz;
+
+		// Apply rotation/translation to position
+		if (rotation) {
+			float tx = rotation->m00 * x + rotation->m01 * y + rotation->m02 * z;
+			float ty = rotation->m10 * x + rotation->m11 * y + rotation->m12 * z;
+			float tz = rotation->m20 * x + rotation->m21 * y + rotation->m22 * z;
+			x = tx; y = ty; z = tz;
+		}
+		if (translation) {
+			x += translation->x;
+			y += translation->y;
+			z += translation->z;
+		}
+
+		// Apply rotation to normals
+		if (rotation) {
+			float tnx = rotation->m00 * nx + rotation->m01 * ny + rotation->m02 * nz;
+			float tny = rotation->m10 * nx + rotation->m11 * ny + rotation->m12 * nz;
+			float tnz = rotation->m20 * nx + rotation->m21 * ny + rotation->m22 * nz;
+			nx = tnx; ny = tny; nz = tnz;
+			// Optional: re-normalize normal here if needed
+		}
+
+		if (rotation && translation) 
+		{
+			mesh->mVertices[i] = aiVector3D(x, z, y); // Swap y and z!
+			mesh->mNormals[i] = aiVector3D(nx, nz, ny); // Swap y and z in normal too
+		}
+		else 
+		{
+			mesh->mVertices[i] = aiVector3D(x, y, z); // Swap y and z!
+			mesh->mNormals[i] = aiVector3D(nx, ny, nz); // Swap y and z in normal too
+		}
+
+		mesh->mTextureCoords[0][i] = aiVector3D(vertices[i].u, vertices[i].v, 0.0f);
+
 	}
 
 	mesh->mNumFaces = indices.size() / 3;
@@ -932,6 +977,7 @@ static std::vector<aiScene*> GetModels(const vox_file* voxData, const s32 frameI
 			std::string name = shpKV.second.attributes.count("_name") ? shpKV.second.attributes.at("_name") : "vox";
 
 			const vox_nSHP& shape = shpKV.second;
+			
 			int modelId = -1;
 
 			if (shape.models.size() == 1)
@@ -954,6 +1000,7 @@ static std::vector<aiScene*> GetModels(const vox_file* voxData, const s32 frameI
 			{
 				continue; // no model for this shape this frame
 			}
+
 
 			// Generate mesh for this shape/model
 			std::vector<FaceRect> faces = GreedyMeshModel(voxData->voxModels[modelId], voxData->sizes[modelId], modelId);
@@ -1028,7 +1075,38 @@ static std::vector<aiScene*> GetModels(const vox_file* voxData, const s32 frameI
 			SaveAtlasImage(imageName, atlasDim, atlasDim, image);
 
 			aiMesh* mesh = new aiMesh();
-			BuildMeshFromFaces(faces, atlasDim, atlasDim, options.FlatShading, voxData->palette, mesh);
+			
+			int shapeNodeId = shape.nodeID;
+			const vox_nTRN* trnNode = nullptr;
+			for (const auto& trnKV : voxData->transforms) 
+			{
+				if (trnKV.second.childNodeID == shapeNodeId) 
+				{
+					trnNode = &trnKV.second;
+					break;
+				}
+			}
+			// If you want to support groups (nGRP), you may have to walk up to the root and find the chain.
+
+			if (trnNode) 
+			{
+				// 2. Get the matrix and translation for this frame
+				const vox_imat3& matrix = trnNode->frameAttrib[frameIndex].rotation;
+				const vox_vec3& translation = trnNode->frameAttrib[frameIndex].translation;
+
+				// 3. Pass them into your mesh builder
+				BuildMeshFromFaces(faces, atlasDim, atlasDim, options.FlatShading, voxData->palette, mesh,
+					&matrix,
+					&translation
+				);
+			}
+			else {
+				// No transform, build with identity matrix/zero translation
+				BuildMeshFromFaces(faces, atlasDim, atlasDim, options.FlatShading, voxData->palette, mesh);
+			}
+
+
+			//--BuildMeshFromFaces(faces, atlasDim, atlasDim, options.FlatShading, voxData->palette, mesh);
 
 			if (options.MaterialPerMesh && !options.ExportMeshesSeparatelly)
 			{
@@ -1179,7 +1257,7 @@ const aiScene* Run(const vox_file* voxData, const std::string& outputPath, const
 	LOG_CORE_INFO("Shapes: {0}", voxData->shapes.size());
 	LOG_CORE_INFO("FrameCount: {0}", frameCount);
 
-	if (frameCount == 0)
+	if (frameCount == 0 && voxData->voxModels.size() == 0 && voxData->shapes.size() == 0)
 	{
 		std::cerr << "No voxel models in the file.\n";
 		return nullptr;
@@ -1197,7 +1275,7 @@ const aiScene* Run(const vox_file* voxData, const std::string& outputPath, const
 
 	size_t dot = outputPath.find_last_of('.');
 	
-	if (options.ExportFramesSeparatelly /*&& frameCount > 1*/)
+	if (options.ExportFramesSeparatelly && frameCount >= 1 && voxData->shapes.size() > 0)
 	{
 
 		// Loop through frames, create scene for each

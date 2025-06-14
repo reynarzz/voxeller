@@ -535,9 +535,9 @@ void VoxParser::parse_nTRN(std::shared_ptr<vox_file> vox, std::ifstream &voxFile
                 if (row2Neg) row2 = row2 * -1;
                 // MagicaVoxel rotation is given as row vectors; convert to column-major matrix
                 vox_imat3 rotMat;
-                rotMat.m00 = row0.x; rotMat.m01 = row1.x; rotMat.m02 = row2.x;
-                rotMat.m10 = row0.y; rotMat.m11 = row1.y; rotMat.m12 = row2.y;
-                rotMat.m20 = row0.z; rotMat.m21 = row1.z; rotMat.m22 = row2.z;
+                rotMat.m00 = row0.x; rotMat.m01 = row0.y; rotMat.m02 = row0.z;
+                rotMat.m10 = row1.x; rotMat.m11 = row1.y; rotMat.m12 = row1.z;
+                rotMat.m20 = row2.x; rotMat.m21 = row2.y; rotMat.m22 = row2.z;
                 frameAttrib.rotation = rotMat;
             } else if (key == "_t") {
                 // Translation (three integers as strings separated by spaces)
