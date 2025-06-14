@@ -308,14 +308,15 @@ static bool SearchBar(std::string& text)
 	ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
 
 	static char buffer[128] = "";
-	strcpy_s(buffer, sizeof(buffer), text.c_str());
-
+	//strcpy_s(buffer, sizeof(buffer), text.c_str());
+    strlcpy(buffer, text.c_str(), sizeof(buffer));
 	const bool active = ImGui::InputTextWithHint("##Search", "Vox Name...", buffer, IM_ARRAYSIZE(buffer));
 
 	if (active) 
 	{
 		text.resize(128);
-		strcpy_s(text.data(), sizeof(buffer), buffer);
+		//strcpy_s(text.data(), sizeof(buffer), buffer);
+        strlcpy(buffer, text.c_str(), sizeof(buffer));
 	}
 
 	// Restore style
