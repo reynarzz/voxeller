@@ -5,7 +5,7 @@
 #include <imgui/imgui_internal.h>
 #include <string>
 #include <algorithm>
-
+#include <functional>
 
 void VoxToProcessView::OnShowView()
 {
@@ -67,56 +67,161 @@ bool RoundedProgressButton(
 	return clicked;
 }
 
+enum class TextAlign {
+	Left,
+	Center,
+	Right
+};
 
 bool CornerButton(
 	const char* label,
+	TextAlign textAlign,
 	const ImVec2& size,
-	ImU32          bgColor,
-	ImU32          textColor,
-	float          rounding,
-	ImDrawFlags    cornerFlags = ImDrawFlags_RoundCornersAll)   // no namespace qualifier
+	ImU32 bgColor,
+	ImU32 textColor,
+	float rounding,
+	ImDrawFlags cornerFlags = ImDrawFlags_RoundCornersAll,
+	ImU32 borderColor = 0,
+	float borderThickness = 1.0f,
+	float fontSize = 0.0f,                   // NEW: font size (0 = default)
+	ImFont* fontOverride = nullptr           // NEW: optional custom font
+)
 {
 	ImGuiWindow* window = ImGui::GetCurrentWindow();
 	if (window->SkipItems) return false;
 
-	// compute bounding box
 	ImGuiContext& g = *GImGui;
-	ImVec2 textSize = ImGui::CalcTextSize(label);
+	ImFont* font = fontOverride ? fontOverride : g.Font;
+	float useFontSize = (fontSize > 0.0f) ? fontSize : 13;
+
+	// Calculate text size with custom font and size
+	ImVec2 textSize = font->CalcTextSizeA(useFontSize, FLT_MAX, 0.0f, label);
+
 	ImVec2 btnSize = ImGui::CalcItemSize(
 		size,
 		textSize.x + g.Style.FramePadding.x * 2,
 		textSize.y + g.Style.FramePadding.y * 2
 	);
-	ImRect bb(window->DC.CursorPos, ImVec2(window->DC.CursorPos.x + btnSize.x, window->DC.CursorPos.y + btnSize.y));
 
+	ImRect bb(window->DC.CursorPos, ImVec2(window->DC.CursorPos.x + btnSize.x, window->DC.CursorPos.y + btnSize.y));
 	ImGui::ItemSize(bb);
 	if (!ImGui::ItemAdd(bb, window->GetID(label))) return false;
 
-	// button logic
+	// Logic
 	bool hovered, held;
 	bool pressed = ImGui::ButtonBehavior(bb, window->GetID(label), &hovered, &held);
 
-	// draw background with selective rounds
-	window->DrawList->AddRectFilled(
-		bb.Min, bb.Max,
-		bgColor,
-		rounding,
-		cornerFlags
-	);
+	// Background
+	ImU32 bg = bgColor;
 
-	// draw label
+	if (held) {
+		bg = ImGui::GetColorU32(ImGuiCol_ButtonActive);  // or a custom color
+	}
+	else if (hovered) {
+		bg = ImGui::GetColorU32(ImGuiCol_ButtonHovered); // or a custom color
+	}
+
+	if ((bg >> 24) > 0) {
+		window->DrawList->AddRectFilled(bb.Min, bb.Max, bg, rounding, cornerFlags);
+	}
+	// Border
+	if ((borderColor >> 24) > 0 && borderThickness > 0.0f) {
+		window->DrawList->AddRect(bb.Min, bb.Max, borderColor, rounding, cornerFlags, borderThickness);
+	}
+
+	// Text position
+	ImVec2 textPos;
+	switch (textAlign) {
+	case TextAlign::Left:
+		textPos.x = bb.Min.x + g.Style.FramePadding.x + 10;
+		break;
+	case TextAlign::Center:
+		textPos.x = bb.Min.x + (btnSize.x - textSize.x) * 0.5f;
+		break;
+	case TextAlign::Right:
+		textPos.x = bb.Max.x - textSize.x - g.Style.FramePadding.x;
+		break;
+	}
+	textPos.y = bb.Min.y + (btnSize.y - textSize.y) * 0.5f;
+
+	// Text color and render
 	ImU32 col = held ? ImGui::GetColorU32(ImGuiCol_TextDisabled)
 		: hovered ? ImGui::GetColorU32(ImGuiCol_Text)
 		: textColor;
-	ImVec2 textPos = {
-		bb.Min.x + (btnSize.x - textSize.x) * 0.5f,
-		bb.Min.y + (btnSize.y - textSize.y) * 0.5f
-	};
-	window->DrawList->AddText(textPos, col, label);
+
+	window->DrawList->AddText(font, useFontSize, textPos, col, label);
 
 	return pressed;
 }
 
+void Label(
+	const char* label,
+	float fontSize = 0.0f,                   // NEW: font size (0 = default)
+	TextAlign textAlign= TextAlign::Left,
+	ImU32 textColor = 0xFFFFFFFF,
+	ImU32 bgColor = 0,
+	float rounding = 0,
+	ImDrawFlags cornerFlags = ImDrawFlags_RoundCornersAll,
+	ImU32 borderColor = 0,
+	float borderThickness = 1.0f,
+	ImFont* fontOverride = nullptr           // NEW: optional custom font
+)
+{
+	const ImVec2 size = ImGui::CalcTextSize(label);
+
+	ImGuiWindow* window = ImGui::GetCurrentWindow();
+	if (window->SkipItems) return;
+
+	ImGuiContext& g = *GImGui;
+	ImFont* font = fontOverride ? fontOverride : g.Font;
+	float useFontSize = (fontSize > 0.0f) ? fontSize : 13;
+
+	// Calculate text size with custom font and size
+	ImVec2 textSize = font->CalcTextSizeA(useFontSize, FLT_MAX, 0.0f, label);
+
+	ImVec2 btnSize = ImGui::CalcItemSize(
+		size,
+		textSize.x + g.Style.FramePadding.x * 2,
+		textSize.y + g.Style.FramePadding.y * 2
+	);
+
+	ImRect bb(window->DC.CursorPos, ImVec2(window->DC.CursorPos.x + btnSize.x, window->DC.CursorPos.y + btnSize.y));
+	ImGui::ItemSize(bb);
+	if (!ImGui::ItemAdd(bb, window->GetID(label))) return;
+
+	// Background
+	ImU32 bg = bgColor;
+
+	if ((bg >> 24) > 0) {
+		window->DrawList->AddRectFilled(bb.Min, bb.Max, bg, rounding, cornerFlags);
+	}
+	// Border
+	if ((borderColor >> 24) > 0 && borderThickness > 0.0f) {
+		window->DrawList->AddRect(bb.Min, bb.Max, borderColor, rounding, cornerFlags, borderThickness);
+	}
+
+	// Text position
+	ImVec2 textPos;
+	switch (textAlign) {
+	case TextAlign::Left:
+		textPos.x = bb.Min.x + g.Style.FramePadding.x + 10;
+		break;
+	case TextAlign::Center:
+		textPos.x = bb.Min.x + (btnSize.x - textSize.x) * 0.5f;
+		break;
+	case TextAlign::Right:
+		textPos.x = bb.Max.x - textSize.x - g.Style.FramePadding.x;
+		break;
+	}
+	textPos.y = bb.Min.y + (btnSize.y - textSize.y) * 0.5f;
+
+	// Text color and render
+	ImU32 col = ImGui::GetColorU32(ImGuiCol_Text);
+
+	window->DrawList->AddText(font, useFontSize, textPos, col, label);
+
+	return;
+}
 
 void TitleLabel(const char* title)
 {
@@ -130,7 +235,8 @@ void TitleLabel(const char* title)
 	float availW = window->ContentRegionRect.Max.x - window->ContentRegionRect.Min.x;
 
 	// calculate starting X so text is centered
-	float offsetX = window->Pos.x + window->WindowPadding.x + (availW - textSize.x) * 0.5f;
+	//float offsetX = window->Pos.x + window->WindowPadding.x + (availW - textSize.x) * 0.5f;
+	float offsetX = window->Pos.x + 10;
 
 	// set cursor
 	ImGui::SetCursorScreenPos(ImVec2(offsetX, window->Pos.y + window->WindowPadding.y + 10));
@@ -177,7 +283,39 @@ void ImageRounded(
 const f32 toolBarHeight = 40;
 const f32 windowsSpacingY = 6;
 const f32 windowsSpacingX = 5;
+//const ImVec4 WindowsBgColor = ImVec4(34.0f / 255.0f, 39.0f / 255.0f, 44.0f / 255.0f, 1.0f);
+const ImVec4 WindowsBgColor = ImVec4(0.12f, 0.12f, 0.12f, 1.0f);
 
+
+static bool SearchBar(std::string& text) 
+{
+	// Style tweaks for rounded edges
+	ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 10.0f);            // full round
+	ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(10, 6));     // extra padding
+	ImGui::PushStyleColor(ImGuiCol_FrameBg, IM_COL32(30, 30, 30, 255)); // dark background
+	ImGui::PushStyleColor(ImGuiCol_Border, IM_COL32(70, 70, 70, 255));  // subtle border
+	ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 1.0f);
+
+	// Optional: set width
+	ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+
+	static char buffer[128] = "";
+	strcpy_s(buffer, sizeof(buffer), text.c_str());
+
+	const bool active = ImGui::InputTextWithHint("##Search", "Vox Name...", buffer, IM_ARRAYSIZE(buffer));
+
+	if (active) 
+	{
+		text.resize(128);
+		strcpy_s(text.data(), sizeof(buffer), buffer);
+	}
+
+	// Restore style
+	ImGui::PopStyleVar(3);
+	ImGui::PopStyleColor(2);
+
+	return active;
+}
 void ToolBar() 
 {
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 10.0f);
@@ -187,15 +325,17 @@ void ToolBar()
 
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 1.0f);
 	ImGui::PushStyleColor(ImGuiCol_Border, IM_COL32(30, 30, 30, 0));
-	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.12f, 0.12f, 0.12f, 1.0f));
+	ImGui::PushStyleColor(ImGuiCol_WindowBg, WindowsBgColor);
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
 
 	ImGui::Begin("Toolbar", &open, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize);
-	ImGui::SetCursorPosY(toolBarHeight / 4.0f);
+	const f32 elementsHeight = 25.0f;
+	ImGui::SetCursorPosY((toolBarHeight - elementsHeight) / 2.0f);
 	ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 15);
 
-	ImGui::Text("View: Vox name");
+
+	
 	ImGui::End();
 	ImGui::PopStyleVar(4);
 	ImGui::PopStyleColor(2);
@@ -210,7 +350,7 @@ void ViewportWindow()
 
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 1.0f);
 	ImGui::PushStyleColor(ImGuiCol_Border, IM_COL32(30, 30, 30, 0));
-	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.12f, 0.12f, 0.12f, 1.0f));
+	ImGui::PushStyleColor(ImGuiCol_WindowBg, WindowsBgColor);
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
 
@@ -235,17 +375,65 @@ void ViewportWindow()
 
 	ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(spacing, 0));
 	ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(spacing, 0));
-	CornerButton("3D view", { buttonDownWidth, buttonDOwnHeight }, IM_COL32(65, 105, 255, 255), IM_COL32(255, 255, 255, 255), 20, ImDrawFlags_RoundCornersLeft);
+	CornerButton("3D view", TextAlign::Center,{ buttonDownWidth, buttonDOwnHeight }, IM_COL32(65, 105, 255, 255), IM_COL32(255, 255, 255, 255), 20, ImDrawFlags_RoundCornersLeft);
 	ImGui::SameLine();
-	CornerButton("Atlas view", { buttonDownWidth, buttonDOwnHeight }, IM_COL32(65, 105, 255, 255), IM_COL32(255, 255, 255, 255), 30, ImDrawFlags_RoundCornersRight);
+	CornerButton("Atlas view", TextAlign::Center, { buttonDownWidth, buttonDOwnHeight }, IM_COL32(65, 105, 255, 255), IM_COL32(255, 255, 255, 255), 30, ImDrawFlags_RoundCornersRight);
 	ImGui::PopStyleVar(2);
 	ImGui::End();
 	ImGui::PopStyleVar(4);
 	ImGui::PopStyleColor(2);
 }
 
+void RoundedChild(const char* id, std::function<void()> content, ImVec2 size, float rounding, ImU32 bgColor, ImGuiWindowFlags flags = ImGuiWindowFlags_NoBackground, ImU32 borderColor = 0, float borderThickness = 1.0f)
+{
+	ImGuiWindow* window = ImGui::GetCurrentWindow();
+	ImDrawList* drawList = window->DrawList;
+	ImVec2 pos = ImGui::GetCursorScreenPos();
+
+	// Draw rounded background
+	 auto backgroundPos = pos;
+	 const float offset = 3;
+	backgroundPos.y -= offset;
+	drawList->AddRectFilled(backgroundPos, ImVec2(backgroundPos.x + size.x, backgroundPos.y + size.y+ offset), bgColor, rounding);
+
+	// Optional border
+	if ((borderColor >> 24) > 0 && borderThickness > 0.0f) {
+		drawList->AddRect(pos, ImVec2(pos.x + size.x, pos.y + size.y), borderColor, rounding, 0, borderThickness);
+	}
+
+	// Push style to disable ImGui child background and border
+	ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0, 0, 0, 0));  // transparent
+	ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, rounding);     // will have no effect directly
+	ImGui::BeginChild(id, size, false, flags);
+	ImGui::Dummy({ 0, 4 });
+	content();
+	
+	ImGui::EndChild();
+	ImGui::PopStyleVar();
+	ImGui::PopStyleColor();
+}
+
+
+std::string searchBar = "";
 void VoxToProcessView::UpdateGUI()
 {
+	ImGuiStyle& style = ImGui::GetStyle();
+
+	// Remove scrollbar roundness
+	style.ScrollbarRounding = 0.0f;
+
+	// Make scrollbar thinner
+	style.ScrollbarSize = 4.0f;  // default is 16.0f
+
+	// Remove background color
+	style.Colors[ImGuiCol_ScrollbarBg] = ImVec4(0, 0, 0, 0);  // Fully transparent
+
+	// Optional: also remove grab roundness and change grab color
+	style.Colors[ImGuiCol_ScrollbarGrab] = ImVec4(1, 1, 1, 0.7f);  // White
+	style.Colors[ImGuiCol_ScrollbarGrabHovered] = ImVec4(1, 1, 1, 0.5f);
+	style.Colors[ImGuiCol_ScrollbarGrabActive] = ImVec4(1, 1, 1, 1.0f);
+
+
 	ToolBar();
 	ViewportWindow();
 	// Sidebar region (no frame)
@@ -254,26 +442,21 @@ void VoxToProcessView::UpdateGUI()
 	f32 posX = std::clamp(ImGui::GetIO().DisplaySize.x - 260.0f, 10.0f, ImGui::GetIO().DisplaySize.x);
 
 	ImGui::SetNextWindowPos(ImVec2(posX, toolBarHeight + windowsSpacingY * 2), ImGuiCond_Always);
+	const f32 height = ImGui::GetIO().DisplaySize.y - 70;//ImGui::GetIO().DisplaySize.y - toolBarHeight - windowsSpacingY - 13;
 
-	ImGui::SetNextWindowSize(ImVec2(std::min(ImGui::GetIO().DisplaySize.x - posX - 5, ImGui::GetIO().DisplaySize.x - 13), ImGui::GetIO().DisplaySize.y - toolBarHeight - windowsSpacingY - 13), ImGuiCond_Always);
+	ImGui::SetNextWindowSize(ImVec2(std::min(ImGui::GetIO().DisplaySize.x - posX - 5, ImGui::GetIO().DisplaySize.x - 13), height), ImGuiCond_Always);
 
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 1.0f);
 	ImGui::PushStyleColor(ImGuiCol_Border, IM_COL32(30, 30, 30, 255));
-	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.12f, 0.12f, 0.12f, 1.0f));
+	ImGui::PushStyleColor(ImGuiCol_WindowBg, WindowsBgColor);
 
 	ImGui::Begin("Sidebar", &open, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize);
 
 	TitleLabel("Voxels Bag");
-	ImGui::SameLine();
-
-	f32 buttonUpWidth = 30;
-	f32 buttonUpHeight = 30;
-	ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(2, 0));
-	ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(2, 0));
-	CornerButton("+", { buttonUpWidth, buttonUpHeight }, IM_COL32(65, 105, 255, 255), IM_COL32(255, 255, 255, 255), 20, ImDrawFlags_RoundCornersAll);
-	ImGui::SameLine();
-	CornerButton("++", { buttonUpWidth, buttonUpHeight }, IM_COL32(65, 105, 255, 255), IM_COL32(255, 255, 255, 255), 30, ImDrawFlags_RoundCornersAll);
-	ImGui::PopStyleVar(2);
+	if (SearchBar(searchBar)) 
+	{
+		
+	}
 
 
 	ImGui::Dummy(ImVec2(0, 10));
@@ -284,70 +467,73 @@ void VoxToProcessView::UpdateGUI()
 	//    width = full, height = window height minus footerHeight
 	ImVec2 winSize = ImGui::GetWindowSize();
 	ImVec2 winPos = ImGui::GetCursorScreenPos();
-	ImVec2 childSize = ImVec2(0, winSize.y - footerHeight);
-	float rounding = 30.0f;
+	ImVec2 childSize = ImVec2(ImGui::GetContentRegionAvail().x, winSize.y - footerHeight);
+	float rounding = 10.0f;
 	ImU32 bgColor = IM_COL32(30, 30, 30, 255);
 
+	RoundedChild("##ScrollingList", []()
+		{
+			// Scroll only this list
+			for (int i = 0; i < 30; ++i)
+			{
+				bool isSelected = (i == currentSelection);
 
 
-	// 3) Push an invisible frame so scrolling still works
-	ImGui::PushStyleColor(ImGuiCol_ChildBg, IM_COL32(0, 0, 0, 0));
-	ImGui::BeginChild("##ScrollingList",
-		childSize,
-		false,                      // no border
-		ImGuiWindowFlags_None);
-	// 2) Draw the rounded background
-	ImGui::GetWindowDrawList()->AddRectFilled(
-		winPos,
-		ImVec2(winPos.x + childSize.x, winPos.y + childSize.y),
-		bgColor,
-		rounding
-	);
-	// Scroll only this list
-	for (int i = 0; i < 20; ++i)
-	{
-		bool isSelected = (i == currentSelection);
+				//RoundedProgressButton(std::string("Button " + std::to_string(i)).c_str(), {ImGui::GetContentRegionAvail().x, 30}, 0.2f, IM_COL32(65,105,255,255), IM_COL32(255, 2, 255, 255), IM_COL32(255, 255, 255, 255) );
+				ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(1, 3));
+				ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(1, 0));
+
+				Label(std::string("Vox " + std::to_string(i)).c_str());
+				ImGui::SameLine();
+				ImGui::SetCursorPosX(ImGui::GetWindowSize().x - 50);
+				CornerButton(std::string("D " + std::to_string(i)).c_str(), TextAlign::Center, { 25, 25 }, IM_COL32(255, 05, 55, 255), IM_COL32(255, 255, 255, 255), 10, ImDrawFlags_RoundCornersAll);
+
+				ImGui::PopStyleVar(2);
+
+				//ImGui::Text(std::string("Vox " + std::to_string(i)).c_str());
 
 
-		//RoundedProgressButton(std::string("Button " + std::to_string(i)).c_str(), {ImGui::GetContentRegionAvail().x, 30}, 0.2f, IM_COL32(65,105,255,255), IM_COL32(255, 2, 255, 255), IM_COL32(255, 255, 255, 255) );
-		ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(1, 3));
-		ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(1, 0));
-		CornerButton(std::string("" + std::to_string(i)).c_str(), { 25, 25 }, IM_COL32(30, 30, 30, 255), IM_COL32(255, 255, 255, 255), 30, ImDrawFlags_RoundCornersAll);
-		ImGui::SameLine();
+					// Handle click
+				if (isSelected && currentSelection != i) {
+					prevSelection = currentSelection;
+					currentSelection = i;
+					// your on‐select logic…
+				}
+			}
+		}, childSize, rounding, IM_COL32(25, 25, 25, 255));
 
-		CornerButton(std::string("Vox " + std::to_string(i)).c_str(), { ImGui::GetContentRegionAvail().x - 40, 25 }, IM_COL32(65, 105, 255, 255), IM_COL32(255, 255, 255, 255), 30, ImDrawFlags_RoundCornersLeft);
-		ImGui::SameLine();
-
-		CornerButton(std::string("D " + std::to_string(i)).c_str(), { ImGui::GetContentRegionAvail().x, 25 }, IM_COL32(255, 05, 55, 255), IM_COL32(255, 255, 255, 255), 30, ImDrawFlags_RoundCornersRight);
-
-		ImGui::PopStyleVar(2);
-
-		//ImGui::Text(std::string("Vox " + std::to_string(i)).c_str());
-
-
-			// Handle click
-		if (isSelected && currentSelection != i) {
-			prevSelection = currentSelection;
-			currentSelection = i;
-			// your on‐select logic…
-		}
-	}
-	ImGui::EndChild();
-	ImGui::PopStyleColor();
 
 	// Botton buttons THese should not scroll
-	ImGui::SetCursorPosY(ImGui::GetWindowSize().y - 47);
-
+	
+	/*std::vector<std::string> items = { "A", "B", "C" };
+	std::vector<const char*> item_ptrs;
+	for (auto& s : items) item_ptrs.push_back(s.c_str());
+	static int current_item = 0;
+	ImGui::Combo("Dynamic", &current_item, item_ptrs.data(), item_ptrs.size());*/
 	f32 spacing = 1;
-	f32 buttonDownWidth = ImGui::GetContentRegionAvail().x / 2 - 3;
-	f32 buttonDOwnHeight = 35;
+	f32 buttonDownWidth = 25;
+	f32 buttonDOwnHeight = 25;
 	ImGui::SetCursorPosX(ImGui::GetWindowSize().x / 2.0 - buttonDownWidth);
 	ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(spacing, 0));
 	ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(spacing, 0));
-	CornerButton("Export All", { buttonDownWidth, buttonDOwnHeight }, IM_COL32(65, 105, 255, 255), IM_COL32(255, 255, 255, 255), 20, ImDrawFlags_RoundCornersLeft);
+	CornerButton("Ex", TextAlign::Center, { buttonDownWidth, buttonDOwnHeight }, IM_COL32(65, 105, 255, 255), IM_COL32(255, 255, 255, 255), 10, ImDrawFlags_RoundCornersLeft);
 	ImGui::SameLine();
-	CornerButton("Folder", { buttonDownWidth, buttonDOwnHeight }, IM_COL32(65, 105, 255, 255), IM_COL32(255, 255, 255, 255), 30, ImDrawFlags_RoundCornersRight);
+	CornerButton("Op", TextAlign::Center, { buttonDownWidth, buttonDOwnHeight }, IM_COL32(65, 105, 255, 255), IM_COL32(255, 255, 255, 255), 10, ImDrawFlags_RoundCornersRight);
 	ImGui::PopStyleVar(2);
+
+
+	ImGui::SameLine();
+	f32 buttonUpWidth = 25;
+	f32 buttonUpHeight = 25;
+	ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(2, 0));
+	ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(2, 0));
+	CornerButton("+", TextAlign::Center, { buttonUpWidth, buttonUpHeight }, IM_COL32(65, 105, 255, 255), IM_COL32(255, 255, 255, 255), 20, ImDrawFlags_RoundCornersAll);
+	ImGui::SameLine();
+	CornerButton("++", TextAlign::Center, { buttonUpWidth, buttonUpHeight }, IM_COL32(65, 105, 255, 255), IM_COL32(255, 255, 255, 255), 30, ImDrawFlags_RoundCornersAll);
+	ImGui::SameLine();
+	CornerButton("-", TextAlign::Center, { buttonUpWidth, buttonUpHeight }, IM_COL32(65, 105, 255, 255), IM_COL32(255, 255, 255, 255), 30, ImDrawFlags_RoundCornersAll);
+	ImGui::PopStyleVar(2);
+
 	ImGui::End();
 	ImGui::PopStyleVar();
 	ImGui::PopStyleColor();
