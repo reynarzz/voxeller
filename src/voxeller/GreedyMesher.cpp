@@ -65,6 +65,7 @@ struct FaceRect {
     int uMin, uMax;  // min and max along face's U-axis (in world coords, face boundary)
     int vMin, vMax;  // min and max along face's V-axis
     int constantCoord; // the coordinate of the face plane (e.g., x or y or z value for the face)
+    s32 modelIndex;
 };
 
 
@@ -289,7 +290,7 @@ convertOpenMeshToAiMesh(om, mesh);
 
 static std::vector<FaceRect> GreedyMeshModel(
     const vox_model& model,
-    const vox_size&  size, std::unordered_set<uint8_t>& usedColors)
+    const vox_size&  size, std::unordered_set<uint8_t>& usedColors, s32 modelIndex)
 {
     const int X = size.x;
     const int Y = size.y;
@@ -359,6 +360,7 @@ static std::vector<FaceRect> GreedyMeshModel(
                 f.vMin = v;     f.vMax = v + wV;
                 f.w    = wU;    f.h    = wV;
                 f.colorIndex = 0;            // unused for merging
+                f.modelIndex = modelIndex;
                 faces.push_back(f);
             }
         }
@@ -1132,7 +1134,7 @@ static void GenerateAtlasImage(
     int texWidth,
     int texHeight,
     const std::vector<FaceRect>& faces,
-    const vox_model& model,
+    const std::vector<vox_model>& models,
     const std::vector<color>& palette,
     std::vector<unsigned char>& outImage)
 {
@@ -1147,10 +1149,10 @@ static void GenerateAtlasImage(
     };
 
     // Sample the colorIndex at a given (x,y,z)
-    auto sampleCI = [&](int x, int y, int z)->uint8_t {
-        int cell = model.voxel_3dGrid[z][y][x];
+    auto sampleCI = [&](int x, int y, int z, s32 modelIndex)->uint8_t {
+        int cell = models[modelIndex].voxel_3dGrid[z][y][x];
         if (cell < 0) return 0;
-        return model.voxels[cell].colorIndex;
+        return models[modelIndex].voxels[cell].colorIndex;
     };
 
     for (auto& face : faces) {
@@ -1198,7 +1200,7 @@ static void GenerateAtlasImage(
                     continue;
                 }
 
-                uint8_t ci = sampleCI(vx, vy, vz);
+                uint8_t ci = sampleCI(vx, vy, vz, face.modelIndex);
                 auto col = getRGBA(ci);
 
                 int px = x0 + border + ix;
@@ -1267,6 +1269,70 @@ static void GenerateAtlasImage(
     }
 }
 
+static bool WriteSceneToFile(const aiScene* scene, const std::string& outPath, const ExportOptions& options)
+{
+    size_t dot = outPath.find_last_of('.');
+
+    Assimp::Exporter exporter;
+    // Determine export format from extension
+
+    std::string ext = "";
+
+    switch (options.OutputFormat)
+    {
+    case ModelFormat::FBX:
+        ext = "fbx";
+        break;
+
+    case ModelFormat::OBJ:
+        ext = "obj";
+        break;
+    default:
+        LOG_EDITOR_ERROR("Format not implemented in writeToFile switch.");
+        break;
+    }
+
+    // if(dot != std::string::npos) 
+    // {
+    //     ext = outName.substr(dot+1);
+    // }
+
+    std::string formatId;
+    const aiExportFormatDesc* selectedFormat = nullptr;
+    for (size_t i = 0; i < exporter.GetExportFormatCount(); ++i) {
+        const aiExportFormatDesc* fmt = exporter.GetExportFormatDescription(i);
+        if (fmt && fmt->fileExtension == ext) {
+            selectedFormat = fmt;
+            break;
+        }
+    }
+    if (!selectedFormat)
+    {
+        LOG_EDITOR_ERROR("Unsupported export format: {0}", ext);
+        return false;
+    }
+    formatId = selectedFormat->id;
+    u32 preprocess = 0;
+
+    if (options.ConvertOptions.WeldVertices)
+    {
+        preprocess |= aiProcess_JoinIdenticalVertices;
+    }
+
+    const std::string convertedOutName = outPath.substr(0, dot);
+    aiMatrix4x4 scaleMat;
+    aiMatrix4x4::Scaling(aiVector3D(options.ConvertOptions.Scale, options.ConvertOptions.Scale, options.ConvertOptions.Scale), scaleMat);
+    scene->mRootNode->mTransformation = scaleMat * scene->mRootNode->mTransformation;
+
+    aiReturn ret = exporter.Export(scene, formatId.c_str(), convertedOutName + "." + ext, preprocess);
+    if (ret != aiReturn_SUCCESS) {
+        std::cerr << "Export failed: " << exporter.GetErrorString() << "\n";
+        return false;
+    }
+    return true;
+
+}
+
 const aiScene* Run(const vox_file* voxData, const std::string& outputPath, const ConvertOptions& options)
 {
     if(!voxData || !voxData->isValid) {
@@ -1317,7 +1383,7 @@ const aiScene* Run(const vox_file* voxData, const std::string& outputPath, const
             // If voxModels has multiple entries, use that directly
             size_t modelIndex = fi;
             if(modelIndex >= voxData->voxModels.size()) modelIndex = voxData->voxModels.size() - 1;
-            std::vector<FaceRect> faces = GreedyMeshModel(voxData->voxModels[modelIndex], voxData->sizes[modelIndex], usedColors);
+            std::vector<FaceRect> faces = GreedyMeshModel(voxData->voxModels[modelIndex], voxData->sizes[modelIndex], usedColors, modelIndex);
             // Determine atlas size
             int atlasDim = 16;
             // Base initial size on number of used colors or face area sum
@@ -1353,7 +1419,7 @@ const aiScene* Run(const vox_file* voxData, const std::string& outputPath, const
             }
             // Create image
             std::vector<unsigned char> image;
-            GenerateAtlasImage(atlasDim, atlasDim, faces,voxData->voxModels[modelIndex], voxData->palette, image);
+            GenerateAtlasImage(atlasDim, atlasDim, faces,voxData->voxModels, voxData->palette, image);
             // Save image file for this frame
             std::string baseName = outputPath;
 
@@ -1386,10 +1452,13 @@ const aiScene* Run(const vox_file* voxData, const std::string& outputPath, const
             } else {
                 frameOut = outputPath + "_frame" + std::to_string(fi);
             }
+
+            
             Assimp::Exporter exporter;
             const aiExportFormatDesc* fmtDesc = nullptr;
             for(size_t ii = 0; ii < exporter.GetExportFormatCount(); ++ii) {
                 auto fdesc = exporter.GetExportFormatDescription(ii);
+                LOG_EDITOR_INFO("Export ext: {0}", fdesc->fileExtension);
                 if(fdesc && outputPath.size() >= strlen(fdesc->fileExtension) &&
                    outputPath.substr(outputPath.size()-strlen(fdesc->fileExtension)) == fdesc->fileExtension) {
                     fmtDesc = fdesc;
@@ -1397,19 +1466,22 @@ const aiScene* Run(const vox_file* voxData, const std::string& outputPath, const
                 }
             }
             std::string fmtId = fmtDesc ? fmtDesc->id : "fbx";
-            if(exporter.Export(&singleScene, fmtId.c_str(), frameOut) != aiReturn_SUCCESS) {
+            if(exporter.Export(&singleScene, "fbx", frameOut) != aiReturn_SUCCESS) {
                 std::cerr << "Failed to export frame " << fi << ": " << exporter.GetErrorString() << "\n";
             } else {
                 std::cout << "Exported " << frameOut << "\n";
             }
+
+
+
             // Clean up allocated data in singleScene
             // (Note: It's a stack aiScene, but we allocated materials and meshes)
-            delete singleScene.mMeshes[0];
+            /*delete singleScene.mMeshes[0];
             delete [] singleScene.mMeshes;
             delete singleScene.mMaterials[0];
             delete [] singleScene.mMaterials;
-            delete [] singleScene.mRootNode->mMeshes;
-            delete singleScene.mRootNode;
+            delete [] singleScene.mRootNode->mMeshes;*/
+            //delete singleScene.mRootNode;
         }
     } else {
         // Combined scene (either single frame or multiple frames in one file)
@@ -1442,7 +1514,7 @@ const aiScene* Run(const vox_file* voxData, const std::string& outputPath, const
             std::unordered_set<uint8_t> usedColors;
             for(size_t i = 0; i < meshCount; ++i) {
                 size_t modelIndex = (i < voxData->voxModels.size() ? i : voxData->voxModels.size()-1);
-                std::vector<FaceRect> faces = GreedyMeshModel(voxData->voxModels[modelIndex], voxData->sizes[modelIndex], usedColors);
+                std::vector<FaceRect> faces = GreedyMeshModel(voxData->voxModels[modelIndex], voxData->sizes[modelIndex], usedColors, modelIndex);
                 // Tag faces with an offset or id if needed (not needed for atlas, we just combine)
                 allFaces.insert(allFaces.end(), faces.begin(), faces.end());
             }
@@ -1470,13 +1542,16 @@ const aiScene* Run(const vox_file* voxData, const std::string& outputPath, const
             }
             globalAtlasSize = dim;
             //GenerateAtlasImage(dim, dim, allFaces, voxData->palette, globalImage);
-            GenerateAtlasImage(dim, dim, allFaces,voxData->voxModels[0], voxData->palette, globalImage);
+            GenerateAtlasImage(dim, dim, allFaces, voxData->voxModels, voxData->palette, globalImage);
 
             // Save atlas image
             std::string baseName = outputPath;
             if(dot != std::string::npos) baseName = outputPath.substr(0, outputPath.find_last_of('.'));
             std::string atlasName = baseName + "_atlas.png";
             SaveAtlasImage(atlasName, dim, dim, globalImage);
+
+            LOG_CORE_INFO("Atlas saved");
+
             // Assign this texture to the single material
             aiString texPath(atlasName);
             scene->mMaterials[0]->AddProperty(&texPath, AI_MATKEY_TEXTURE(aiTextureType_DIFFUSE, 0));
@@ -1489,7 +1564,7 @@ const aiScene* Run(const vox_file* voxData, const std::string& outputPath, const
                 size_t modelIndex = (i < voxData->voxModels.size() ? i : voxData->voxModels.size()-1);
                 // Remesh the frame to get number of faces:
                 std::unordered_set<uint8_t> dummy;
-                std::vector<FaceRect> frameFaces = GreedyMeshModel(voxData->voxModels[modelIndex], voxData->sizes[modelIndex], dummy);
+                std::vector<FaceRect> frameFaces = GreedyMeshModel(voxData->voxModels[modelIndex], voxData->sizes[modelIndex], dummy, modelIndex);
                 // Now copy that many faces from allFaces (they should correspond in order to this frame).
                 std::vector<FaceRect> facesForMesh;
                 facesForMesh.insert(facesForMesh.end(), allFaces.begin() + faceOffset, allFaces.begin() + faceOffset + frameFaces.size());
@@ -1498,7 +1573,8 @@ const aiScene* Run(const vox_file* voxData, const std::string& outputPath, const
                 aiMesh* mesh = new aiMesh();
                 scene->mMeshes[i] = mesh;
                 BuildMeshFromFaces(facesForMesh, globalAtlasSize, globalAtlasSize, options.FlatShading, voxData->palette, mesh);
-           
+                LOG_CORE_INFO("Build meshes from faces, mesh: {0}", i);
+
 
                 mesh->mMaterialIndex = options.SeparateTexturesPerMesh ? (int)i : 0;
                 // Create node for this mesh
@@ -1512,13 +1588,16 @@ const aiScene* Run(const vox_file* voxData, const std::string& outputPath, const
                 node->mTransformation = rot;
 
                 scene->mRootNode->mChildren[i] = node;
+
+                LOG_CORE_INFO("Completed mesh: {0}", i);
+
             }
         } else {
             // separateTexturesPerMesh case:
             for(size_t i = 0; i < meshCount; ++i) {
                 size_t modelIndex = (i < voxData->voxModels.size() ? i : voxData->voxModels.size()-1);
                 std::unordered_set<uint8_t> used;
-                std::vector<FaceRect> faces = GreedyMeshModel(voxData->voxModels[modelIndex], voxData->sizes[modelIndex], used);
+                std::vector<FaceRect> faces = GreedyMeshModel(voxData->voxModels[modelIndex], voxData->sizes[modelIndex], used, modelIndex);
                 int dim = 16;
                 if(options.TexturesPOT) {
                     while(true) {
@@ -1543,12 +1622,15 @@ const aiScene* Run(const vox_file* voxData, const std::string& outputPath, const
                 // Create atlas for this mesh
                 std::vector<unsigned char> img;
                 //GenerateAtlasImage(dim, dim, faces, voxData->palette, img);
-            GenerateAtlasImage(dim, dim, faces,voxData->voxModels[modelIndex], voxData->palette, img);
+                GenerateAtlasImage(dim, dim, faces, voxData->voxModels, voxData->palette, img);
 
                 std::string baseName = outputPath;
                 if(dot != std::string::npos) baseName = outputPath.substr(0, outputPath.find_last_of('.'));
                 std::string imageName = baseName + "_mesh" + std::to_string(i) + ".png";
                 SaveAtlasImage(imageName, dim, dim, img);
+
+                LOG_CORE_INFO("Atlas saved");
+
                 aiString texPath(imageName);
                 scene->mMaterials[i]->AddProperty(&texPath, AI_MATKEY_TEXTURE(aiTextureType_DIFFUSE, 0));
                 // Create mesh geometry
@@ -1556,6 +1638,7 @@ const aiScene* Run(const vox_file* voxData, const std::string& outputPath, const
                 scene->mMeshes[i] = mesh;
                 BuildMeshFromFaces(faces, dim, dim, options.FlatShading, voxData->palette, mesh);
            
+                LOG_CORE_INFO("After building faces");
 
                 mesh->mMaterialIndex = (int)i;
                 // Node
@@ -1573,13 +1656,19 @@ const aiScene* Run(const vox_file* voxData, const std::string& outputPath, const
         }
         // If there was only one mesh in scene (no children used above), attach it directly to root node
         
+        LOG_CORE_INFO("TJuntctions: {0}", options.NoTJunctions);
+
+        // TODO: This makes the algorithm freeze when a vox has multiple frames, and is exported as no separated
         if(options.NoTJunctions)
         {
             for (unsigned int m = 0; m < scene->mNumMeshes; ++m) 
             {
                 CleanUpMesh(scene->mMeshes[m]);
             }
+         
+            LOG_CORE_INFO("Done cleaning up meshes count: {0}", scene->mNumMeshes);
         }
+
 
         // Export combined scene
         // if(!exportScene(outputPath)) {
@@ -1621,69 +1710,7 @@ const aiScene* Run(const vox_file* voxData, const std::string& outputPath, const
     return nullptr;
 }
 
-static bool WriteSceneToFile(const aiScene* scene, const std::string& outPath, const ExportOptions& options)
-{
-    size_t dot = outPath.find_last_of('.');
 
-        Assimp::Exporter exporter;
-        // Determine export format from extension
-
-        std::string ext =  "";
-
-        switch (options.OutputFormat)
-        {
-        case ModelFormat::FBX:
-            ext = "fbx";
-            break;
-        
-            case ModelFormat::OBJ:
-            ext = "obj";
-            break;
-        default:
-        LOG_EDITOR_ERROR("Format not implemented in writeToFile switch.");
-            break;
-        }
-        
-        // if(dot != std::string::npos) 
-        // {
-        //     ext = outName.substr(dot+1);
-        // }
-
-        std::string formatId;
-        const aiExportFormatDesc* selectedFormat = nullptr;
-        for(size_t i = 0; i < exporter.GetExportFormatCount(); ++i) {
-            const aiExportFormatDesc* fmt = exporter.GetExportFormatDescription(i);
-            if(fmt && fmt->fileExtension == ext) {
-                selectedFormat = fmt;
-                break;
-            }
-        }
-        if(!selectedFormat) 
-        {
-            LOG_EDITOR_ERROR("Unsupported export format: {0}", ext);
-            return false;
-        }
-        formatId = selectedFormat->id;
-        u32 preprocess = 0;
-
-        if(options.ConvertOptions.WeldVertices)
-        {
-            preprocess |= aiProcess_JoinIdenticalVertices;
-        }
-
-        const std::string convertedOutName = outPath.substr(0, dot);
-        aiMatrix4x4 scaleMat;
-        aiMatrix4x4::Scaling(aiVector3D(options.ConvertOptions.Scale, options.ConvertOptions.Scale, options.ConvertOptions.Scale), scaleMat);
-        scene->mRootNode->mTransformation = scaleMat * scene->mRootNode->mTransformation;
-
-        aiReturn ret = exporter.Export(scene, formatId.c_str(), convertedOutName + "." + ext, preprocess);
-        if(ret != aiReturn_SUCCESS) {
-            std::cerr << "Export failed: " << exporter.GetErrorString() << "\n";
-            return false;
-        }
-        return true;
-
-}
 
 ExportResults GreedyMesher::ExportVoxToModel(const std::string& inVoxPath, const std::string& outExportPath, const ExportOptions& options)
 {

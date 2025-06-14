@@ -56,7 +56,7 @@ int main()
 	}
 	else
 	{
-		//LOG_EDITOR_ERROR("glfw init error");
+		LOG_EDITOR_ERROR("glfw init error");
 	}
 
 	glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
@@ -79,13 +79,17 @@ int main()
 	imgui.Init(win);
 
 	Voxeller::ExportOptions exportOptions{};
-	exportOptions.OutputFormat = Voxeller::ModelFormat::OBJ;
-	exportOptions.ConvertOptions.NoTJunctions = true;
+	exportOptions.OutputFormat = Voxeller::ModelFormat::FBX;
+	exportOptions.ConvertOptions.NoTJunctions = false;
 	exportOptions.ConvertOptions.WeldVertices = true;
 	exportOptions.ConvertOptions.FlatShading = true;
-	exportOptions.ConvertOptions.Scale = .01f;
+	//exportOptions.ConvertOptions.Scale = .01f;
+	exportOptions.ConvertOptions.ExportFramesSeparatelly = false;
 
-	//Voxeller::GreedyMesher::ExportVoxToModel("testvox/room.vox", "Output.fbx", exportOptions);
+	 std::string path = "B:/Projects/voxeller/bin/Debug/testvox/nda/Ambulance_1.vox"; // Test this!
+	//std::string path = "B:/Projects/voxeller/bin/Debug/testvox/nda/Island_7.vox";
+	std::string output = "B:/Projects/voxeller/bin/Debug/testvox/nda/export/Output.fbx";
+	Voxeller::GreedyMesher::ExportVoxToModel(path, output, exportOptions);
 
 	while (!glfwWindowShouldClose(win))
 	{
