@@ -1,10 +1,9 @@
 #pragma once
 
 #include "api.h"
-#include "vox_types.h"
 #include <voxeller/VoxParser.h>
 
-EXPORT class VOXELLER_API mesh_texturizer 
+class VOXELLER_API mesh_texturizer 
 {
 public:
 

@@ -1,20 +1,27 @@
 #pragma once
 
-#define VOXELLER_API_EXPORT
+// C linkage macro
+// VOXELLER_API / VXAPI handling
+#if defined(_WIN32)
 
-#if defined (_WIN32)
-   #ifndef EXPORT
-     #define EXPORT extern "C"
-   #endif
-   #if defined(VOXELLER_API_EXPORT)
-     #define VOXELLER_API __declspec(dllexport)
-     #define VXAPI extern "C" __declspec(dllexport)
-   #elif defined(VOXELLER_LIB)
-     #define VOXELLER_API __declspec(dllimport)
-     #define VXAPI __declspec(dllimport)
-   #endif
+  // When building the DLL (inside voxeller project)
+#ifdef VOXELLER_API_EXPORT
+#define VOXELLER_API __declspec(dllexport)
+#define VXAPI extern "C" __declspec(dllexport)
+
+// When consuming the DLL (outside)
+#elif defined(VOXELLER_LIB)
+#define VOXELLER_API __declspec(dllimport)
+#define VXAPI extern "C" __declspec(dllimport)
+
+// If neither defined — fallback (still valid)
 #else
-    #define EXPORT
-    #define VOXELLER_API
-    #define VXAPI
+#define VOXELLER_API
+#define VXAPI
+#endif
+
+#else
+  // Non-Windows platforms (Linux/macOS)
+#define VOXELLER_API
+#define VXAPI
 #endif

@@ -56,6 +56,7 @@ endforeach()
 
 add_library(voxeller SHARED ${VOXELLER_SRC})
 
+target_compile_definitions(voxeller PRIVATE VOXELLER_BUILD_DLL VOXELLER_API_EXPORT)
 
 # -----------------------------------------------------------------------------
 # 4) Include directories

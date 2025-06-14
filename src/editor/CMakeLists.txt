@@ -48,6 +48,7 @@ endforeach()
 add_executable(voxeller_editor
     ${EDITOR_SRC}
     ${ROOT_DIR}/third/editor/gl/glad.cpp
+    $<$<BOOL:WIN32>:${CMAKE_CURRENT_SOURCE_DIR}/resources/app.rc>
 )
 
 set_target_properties(voxeller_editor PROPERTIES

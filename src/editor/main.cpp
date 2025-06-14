@@ -52,7 +52,7 @@ int main()
 
 	if (glfwInit() == GLFW_TRUE)
 	{
-		// LOG_EDITOR_INFO("glfw initialization successfull!");
+		 LOG_EDITOR_INFO("glfw initialization successfull!");
 	}
 	else
 	{
