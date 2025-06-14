@@ -83,8 +83,8 @@ bool CornerButton(
 	ImDrawFlags cornerFlags = ImDrawFlags_RoundCornersAll,
 	ImU32 borderColor = 0,
 	float borderThickness = 1.0f,
-	float fontSize = 0.0f,                   // NEW: font size (0 = default)
-	ImFont* fontOverride = nullptr           // NEW: optional custom font
+	float fontSize = 0.0f,
+	ImFont* fontOverride = nullptr
 )
 {
 	ImGuiWindow* window = ImGui::GetCurrentWindow();
@@ -94,7 +94,6 @@ bool CornerButton(
 	ImFont* font = fontOverride ? fontOverride : g.Font;
 	float useFontSize = (fontSize > 0.0f) ? fontSize : 13;
 
-	// Calculate text size with custom font and size
 	ImVec2 textSize = font->CalcTextSizeA(useFontSize, FLT_MAX, 0.0f, label);
 
 	ImVec2 btnSize = ImGui::CalcItemSize(
@@ -107,29 +106,35 @@ bool CornerButton(
 	ImGui::ItemSize(bb);
 	if (!ImGui::ItemAdd(bb, window->GetID(label))) return false;
 
-	// Logic
 	bool hovered, held;
 	bool pressed = ImGui::ButtonBehavior(bb, window->GetID(label), &hovered, &held);
 
-	// Background
-	ImU32 bg = bgColor;
+	// Animated hover color blending
+	static std::unordered_map<ImGuiID, float> hoverLerp;
+	ImGuiID id = window->GetID(label);
+	float& t = hoverLerp[id];
+	float delta = ImGui::GetIO().DeltaTime;
+	float fadeSpeed = 6.0f;
+	t = hovered ? ImMin(1.0f, t + delta * fadeSpeed) : ImMax(0.0f, t - delta * fadeSpeed);
 
-	if (held) {
-		bg = ImGui::GetColorU32(ImGuiCol_ButtonActive);  // or a custom color
-	}
-	else if (hovered) {
-		bg = ImGui::GetColorU32(ImGuiCol_ButtonHovered); // or a custom color
-	}
+	auto LerpColor = [](ImU32 a, ImU32 b, float t) {
+		ImVec4 ca = ImGui::ColorConvertU32ToFloat4(a);
+		ImVec4 cb = ImGui::ColorConvertU32ToFloat4(b);
+		ImVec4 cc = ImLerp(ca, cb, t);
+		return ImGui::ColorConvertFloat4ToU32(cc);
+		};
+
+	ImU32 bg = (held ? ImGui::GetColorU32(ImGuiCol_ButtonActive)
+		: LerpColor(bgColor, ImGui::GetColorU32(ImGuiCol_ButtonHovered), t));
 
 	if ((bg >> 24) > 0) {
 		window->DrawList->AddRectFilled(bb.Min, bb.Max, bg, rounding, cornerFlags);
 	}
-	// Border
+
 	if ((borderColor >> 24) > 0 && borderThickness > 0.0f) {
 		window->DrawList->AddRect(bb.Min, bb.Max, borderColor, rounding, cornerFlags, borderThickness);
 	}
 
-	// Text position
 	ImVec2 textPos;
 	switch (textAlign) {
 	case TextAlign::Left:
@@ -144,7 +149,6 @@ bool CornerButton(
 	}
 	textPos.y = bb.Min.y + (btnSize.y - textSize.y) * 0.5f;
 
-	// Text color and render
 	ImU32 col = held ? ImGui::GetColorU32(ImGuiCol_TextDisabled)
 		: hovered ? ImGui::GetColorU32(ImGuiCol_Text)
 		: textColor;
@@ -440,8 +444,10 @@ void ProgressBar(float fraction, const ImVec2& size, float rounding, ImU32 bgCol
 	ImGui::Dummy(size);
 }
 
-bool PrettyDropdown(const char* label, int* currentIndex, const std::vector<std::string>& items,
-	float rounding = 8.0f, float desiredComboWidth = 200.0f)
+bool Dropdown(const char* label, int* currentIndex, const std::vector<std::string>& items,
+	float rounding = 8.0f,
+	float desiredComboWidth = 200.0f,
+	float labelToComboSpacing = 10.0f)
 {
 	if (items.empty()) return false;
 
@@ -454,34 +460,33 @@ bool PrettyDropdown(const char* label, int* currentIndex, const std::vector<std:
 	ImU32 arrowColor = IM_COL32(200, 200, 200, 255);
 
 	ImGuiStyle& style = ImGui::GetStyle();
-	float spacingX = style.ItemSpacing.x;
-	float paddingX = style.FramePadding.x;
 	float paddingY = style.FramePadding.y;
 
 	// 1. Save Y cursor for alignment
 	float cursorY = ImGui::GetCursorPosY();
 
-	// 2. Draw label at left, flush with left edge
+	// 2. Draw label
 	ImGui::SetCursorPosY(cursorY);
 	ImGui::TextUnformatted(label);
 
-	// 3. Position combo aligned in Y and with consistent spacing
-	ImGui::SameLine();
+	// 3. Compute vertical alignment
 	float labelHeight = ImGui::GetTextLineHeight();
 	float comboHeight = ImGui::GetFrameHeight();
 	float verticalOffset = (labelHeight - comboHeight) * 0.5f;
 
+	// 4. Place combo box with custom margin
+	ImGui::SameLine(0.0f, labelToComboSpacing);
 	ImGui::SetCursorPosY(cursorY + verticalOffset);
 
 	float available = ImGui::GetContentRegionAvail().x;
 	float comboWidth = ImMin(desiredComboWidth, available);
 	ImGui::SetNextItemWidth(comboWidth);
 
-	// 4. Track button position
+	// 5. Track position
 	ImVec2 buttonPos = ImGui::GetCursorScreenPos();
 	float buttonHeight = ImGui::GetFrameHeight();
 
-	// 5. Style
+	// 6. Style
 	ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, rounding);
 	ImGui::PushStyleVar(ImGuiStyleVar_PopupRounding, 0.0f);
 	ImGui::PushStyleColor(ImGuiCol_FrameBg, bgColor);
@@ -491,9 +496,12 @@ bool PrettyDropdown(const char* label, int* currentIndex, const std::vector<std:
 	ImGui::PushStyleColor(ImGuiCol_Border, borderColor);
 
 	bool changed = false;
-	const char* preview = items[*currentIndex].c_str();
 
-	// 6. Clamp popup to visible area
+	// 7. Add text padding
+	std::string paddedPreview = "  " + items[*currentIndex];
+	const char* preview = paddedPreview.c_str();
+
+	// 8. Clamp popup to visible area
 	ImVec2 popupPos = ImVec2(buttonPos.x, buttonPos.y + buttonHeight - 1.0f);
 	float safePopupX = popupPos.x + comboWidth;
 	float maxX = ImGui::GetMainViewport()->WorkSize.x - 10.0f;
@@ -503,15 +511,15 @@ bool PrettyDropdown(const char* label, int* currentIndex, const std::vector<std:
 
 	ImGui::SetNextWindowPos(popupPos);
 
-	// 7. Combo
+	// 9. Combo
 	if (ImGui::BeginCombo("##combo", preview, ImGuiComboFlags_NoArrowButton)) {
 		ImGuiWindow* popup = ImGui::GetCurrentWindow();
 		ImDrawList* draw = popup->DrawList;
 
 		ImVec2 bgMin = popup->Pos;
 		ImVec2 bgMax = ImVec2(bgMin.x + popup->Size.x, bgMin.y + popup->Size.y);
-
 		draw->AddRectFilled(bgMin, bgMax, popupBgColor, rounding, ImDrawFlags_RoundCornersBottom);
+
 		ImGui::SetCursorPosY(ImGui::GetCursorPosY() - 2.0f);
 
 		for (int i = 0; i < items.size(); ++i) {
@@ -527,7 +535,7 @@ bool PrettyDropdown(const char* label, int* currentIndex, const std::vector<std:
 		ImGui::EndCombo();
 	}
 
-	// 8. Draw arrow
+	// 10. Draw arrow
 	ImDrawList* drawList = ImGui::GetWindowDrawList();
 	float arrowSize = buttonHeight * 0.35f;
 	float arrowPadding = (buttonHeight - arrowSize) * 0.5f;
@@ -544,7 +552,7 @@ bool PrettyDropdown(const char* label, int* currentIndex, const std::vector<std:
 		arrowColor
 	);
 
-	// 9. Cleanup
+	// 11. Cleanup
 	ImGui::PopStyleColor(5);
 	ImGui::PopStyleVar(2);
 
@@ -578,7 +586,7 @@ void ExportWin()
 	f32 buttonDOwnHeight = 25;
 	std::vector<std::string> options = { "Fbx", "Obj" };
 
-	PrettyDropdown("Format selector", &selectedIndex, options, 10);
+	Dropdown("Format selector", &selectedIndex, options, 10, 200, 40);
 
 	ImGui::SetCursorPosY(ImGui::GetWindowSize().y - buttonDOwnHeight - 40);
 	ProgressBar(0.2f, { ImGui::GetContentRegionAvail().x / 1.7f, 7 }, 12, ImColor(20, 20, 20, 255), ImColor(0, 220, 150, 255));
