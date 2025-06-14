@@ -58,6 +58,12 @@ struct VOXELLER_API ConvertOptions
 
     bool ExportFramesSeparatelly = true;
 
+
+    bool ExportMeshesSeparatelly = false;
+
+
+    bool MaterialPerMesh = true;
+
     // Scale, Ex, if 1.0, every single voxel will take up 1 unit.
     f32 Scale = 1.0f;
 };

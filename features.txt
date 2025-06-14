@@ -4,13 +4,14 @@ The last voxel convert tool you will ever need.
 [#Features]
 -read ".vox" files from magicaVoxel [Done]
 -Export fbx and obj [Done]
--Export .vox info as json .txt (num of meshes, colors count, frames, etc...)
+-Export convert info as json .txt (num of meshes, colors count, frames, meshes names, etc...)
 -Single and multi threaded processing, fully thread safe library.
+-Cull faces that a "virtual camera" (manipulated by user) can't see
 
 [#Voxeller lib]
 -Libs for Unity, full package (Custom importer for .vox)
 -C# bindings
--C++ shared lib (Windows, Macos, Android, IOS, Linux)
+-C++ shared lib (Windows, Macos, Android, IOS, Linux), multiple compilers. (Clang, MSVC, MinGW)
 
 [#Editor]
 -Single executable, no dependencies (Release)
