@@ -2,4 +2,4 @@
 
 #include "api.h"
 
-VXAPI void VoxellerInit();
+VOXELLER_API void VoxellerInit();

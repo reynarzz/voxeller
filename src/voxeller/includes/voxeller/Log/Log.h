@@ -8,10 +8,10 @@
 namespace VoxellerApp
 {
     // Forward declared loggers
-    VXAPI extern std::shared_ptr<spdlog::logger> core;
-    VXAPI extern std::shared_ptr<spdlog::logger> editor;
+    VOXELLER_API extern std::shared_ptr<spdlog::logger> core;
+    VOXELLER_API extern std::shared_ptr<spdlog::logger> editor;
 
-    VXAPI void init();  // Call this once during startup
+    VOXELLER_API void init();  // Call this once during startup
 }
 
 // Logging macros
