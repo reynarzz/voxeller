@@ -1023,7 +1023,7 @@ static std::vector<aiScene*> GetModels(const vox_file* voxData, const s32 frameI
 			aiMesh* mesh = new aiMesh();
 			BuildMeshFromFaces(faces, atlasDim, atlasDim, options.FlatShading, voxData->palette, mesh);
 
-			if (options.MaterialPerMesh)
+			if (options.MaterialPerMesh && !options.ExportMeshesSeparatelly)
 			{
 				mesh->mMaterialIndex = materialIndex;
 				materialIndex++;
@@ -1064,19 +1064,28 @@ static std::vector<aiScene*> GetModels(const vox_file* voxData, const s32 frameI
 		for (size_t i = 0; i < meshes.size(); i++)
 		{
 			aiScene* sceneSplit = new aiScene();
+			sceneSplit->mRootNode = new aiNode();
+
+		
 			sceneSplit->mNumMeshes = 1;
 			sceneSplit->mMeshes = new aiMesh * [1] { meshes[i].Mesh };
-
-			sceneSplit->mRootNode = new aiNode();
+			
+			
 			sceneSplit->mRootNode->mNumChildren = 1;
 			sceneSplit->mRootNode->mChildren = new aiNode * [1] { shapeNodes[i] };
-			scenes.push_back(sceneSplit);
+			sceneSplit->mRootNode->mChildren[0]->mMeshes[0] = 0; // Overwrite to set the index to 0
 
 
 			aiString texPath(meshes[i].imageName);
 			aiMaterial* mat = new aiMaterial();
 			mat->AddProperty(&texPath, AI_MATKEY_TEXTURE(aiTextureType_DIFFUSE, 0));
-			sceneSplit->mMaterials[meshes[i].Mesh->mMaterialIndex] = mat;
+
+			// Since the meshes will be exported separatelly, always create a material per mesh
+		
+			sceneSplit->mNumMaterials = 1;
+			sceneSplit->mMaterials = new aiMaterial * [1] { mat };
+
+			scenes.push_back(sceneSplit);
 		}
 	}
 	else
@@ -1180,8 +1189,8 @@ const aiScene* Run(const vox_file* voxData, const std::string& outputPath, const
 	// For combined output, we build scene once.
 
 	size_t dot = outputPath.find_last_of('.');
-
-	if (options.ExportFramesSeparatelly && frameCount > 1)
+	
+	if (options.ExportFramesSeparatelly /*&& frameCount > 1*/)
 	{
 
 		// Loop through frames, create scene for each
