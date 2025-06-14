@@ -12,15 +12,17 @@ namespace VoxellerEditor
     {
         return {};
     }
-    void *OpenGLDevice::CreateTexture(const TextureDescriptor *desc)
+    void* OpenGLDevice::CreateTexture(const TextureDescriptor *desc)
     {
         return nullptr;
     }
-    void *OpenGLDevice::CreateShader(const ShaderDescriptor *desc)
+
+    void* OpenGLDevice::CreateShader(const ShaderDescriptor *desc)
     {
         return nullptr;
     }
-    void *OpenGLDevice::CreateMesh(const MeshDescriptor *desc)
+
+    void* OpenGLDevice::CreateMesh(const MeshDescriptor *desc)
     {
         return nullptr;
     }
