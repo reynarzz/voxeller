@@ -1335,6 +1335,7 @@ static bool WriteSceneToFile(const aiScene* scene, const std::string& outPath, c
 
 const aiScene* Run(const vox_file* voxData, const std::string& outputPath, const ConvertOptions& options)
 {
+
     if(!voxData || !voxData->isValid) {
         std::cerr << "Failed to read voxel file or file is invalid.\n";
         return nullptr;
@@ -1575,6 +1576,11 @@ const aiScene* Run(const vox_file* voxData, const std::string& outputPath, const
                 BuildMeshFromFaces(facesForMesh, globalAtlasSize, globalAtlasSize, options.FlatShading, voxData->palette, mesh);
                 LOG_CORE_INFO("Build meshes from faces, mesh: {0}", i);
 
+                // TODO: position origin issue, take into account the position of the objects, this should be used, reynardo
+                //--voxData->transforms.at(0).frameAttrib[0].translation;
+                //--voxData->transforms.at(0).frameAttrib[0].rotation;
+                //-----
+
 
                 mesh->mMaterialIndex = options.SeparateTexturesPerMesh ? (int)i : 0;
                 // Create node for this mesh
@@ -1629,8 +1635,6 @@ const aiScene* Run(const vox_file* voxData, const std::string& outputPath, const
                 std::string imageName = baseName + "_mesh" + std::to_string(i) + ".png";
                 SaveAtlasImage(imageName, dim, dim, img);
 
-                LOG_CORE_INFO("Atlas saved");
-
                 aiString texPath(imageName);
                 scene->mMaterials[i]->AddProperty(&texPath, AI_MATKEY_TEXTURE(aiTextureType_DIFFUSE, 0));
                 // Create mesh geometry
@@ -1638,8 +1642,6 @@ const aiScene* Run(const vox_file* voxData, const std::string& outputPath, const
                 scene->mMeshes[i] = mesh;
                 BuildMeshFromFaces(faces, dim, dim, options.FlatShading, voxData->palette, mesh);
            
-                LOG_CORE_INFO("After building faces");
-
                 mesh->mMaterialIndex = (int)i;
                 // Node
                 aiNode* node = new aiNode();
