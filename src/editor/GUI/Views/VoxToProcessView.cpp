@@ -85,8 +85,7 @@ bool CornerButton(
 	float borderThickness = 1.0f,
 	float fontSize = 0.0f,
 	ImFont* fontOverride = nullptr
-)
-{
+) {
 	ImGuiWindow* window = ImGui::GetCurrentWindow();
 	if (window->SkipItems) return false;
 
@@ -95,7 +94,6 @@ bool CornerButton(
 	float useFontSize = (fontSize > 0.0f) ? fontSize : 13;
 
 	ImVec2 textSize = font->CalcTextSizeA(useFontSize, FLT_MAX, 0.0f, label);
-
 	ImVec2 btnSize = ImGui::CalcItemSize(
 		size,
 		textSize.x + g.Style.FramePadding.x * 2,
@@ -109,7 +107,7 @@ bool CornerButton(
 	bool hovered, held;
 	bool pressed = ImGui::ButtonBehavior(bb, window->GetID(label), &hovered, &held);
 
-	// Animated hover color blending
+	// Animated hover transition
 	static std::unordered_map<ImGuiID, float> hoverLerp;
 	ImGuiID id = window->GetID(label);
 	float& t = hoverLerp[id];
@@ -124,8 +122,9 @@ bool CornerButton(
 		return ImGui::ColorConvertFloat4ToU32(cc);
 		};
 
-	ImU32 bg = (held ? ImGui::GetColorU32(ImGuiCol_ButtonActive)
-		: LerpColor(bgColor, ImGui::GetColorU32(ImGuiCol_ButtonHovered), t));
+	ImU32 bg = held
+		? ImGui::GetColorU32(ImGuiCol_ButtonActive)
+		: LerpColor(bgColor, ImGui::GetColorU32(ImGuiCol_ButtonHovered), t);
 
 	if ((bg >> 24) > 0) {
 		window->DrawList->AddRectFilled(bb.Min, bb.Max, bg, rounding, cornerFlags);
@@ -135,6 +134,7 @@ bool CornerButton(
 		window->DrawList->AddRect(bb.Min, bb.Max, borderColor, rounding, cornerFlags, borderThickness);
 	}
 
+	// Text alignment
 	ImVec2 textPos;
 	switch (textAlign) {
 	case TextAlign::Left:
@@ -149,9 +149,13 @@ bool CornerButton(
 	}
 	textPos.y = bb.Min.y + (btnSize.y - textSize.y) * 0.5f;
 
-	ImU32 col = held ? ImGui::GetColorU32(ImGuiCol_TextDisabled)
-		: hovered ? ImGui::GetColorU32(ImGuiCol_Text)
-		: textColor;
+	// Smooth text color with opacity on press
+	ImVec4 textCol = ImGui::ColorConvertU32ToFloat4(textColor);
+	if (held)
+		textCol.w *= 0.7f; // reduce opacity when pressed
+	else if (hovered)
+		textCol = ImGui::GetStyleColorVec4(ImGuiCol_Text);
+	ImU32 col = ImGui::ColorConvertFloat4ToU32(textCol);
 
 	window->DrawList->AddText(font, useFontSize, textPos, col, label);
 
@@ -586,7 +590,7 @@ void ExportWin()
 	f32 buttonDOwnHeight = 25;
 	std::vector<std::string> options = { "Fbx", "Obj" };
 
-	Dropdown("Format selector", &selectedIndex, options, 10, 200, 40);
+	Dropdown("Format", &selectedIndex, options, 10, 200, 70);
 
 	ImGui::SetCursorPosY(ImGui::GetWindowSize().y - buttonDOwnHeight - 40);
 	ProgressBar(0.2f, { ImGui::GetContentRegionAvail().x / 1.7f, 7 }, 12, ImColor(20, 20, 20, 255), ImColor(0, 220, 150, 255));
