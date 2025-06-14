@@ -1,7 +1,20 @@
--read ".vox" files from magicaVoxel
-   -
-multi threaded processing.
+[#Slogan]
+The last voxel convert tool you will ever need.
 
+[#Features]
+-read ".vox" files from magicaVoxel [Done]
+-Export fbx and obj [Done]
+-Export .vox info as json .txt (num of meshes, colors count, frames, etc...)
+-Single and multi threaded processing, fully thread safe library.
+
+[#Voxeller lib]
+-Libs for Unity, full package (Custom importer for .vox)
+-C# bindings
+-C++ shared lib (Windows, Macos, Android, IOS, Linux)
+
+[#Editor]
+-Single executable, no dependencies (Release)
+-Platforms: Windows, Mac, Linux
 
 [Fix]
 -reader, when saving from magical voxel using the the disk icon, the format changed, is like the file used for edition
