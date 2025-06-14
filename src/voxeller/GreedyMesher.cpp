@@ -77,6 +77,7 @@ struct FaceRect
 
 #include <OpenMesh/Core/IO/MeshIO.hh>
 #include <OpenMesh/Core/Mesh/TriMesh_ArrayKernelT.hh>
+#include <stack>
 
 struct MyTraits : public OpenMesh::DefaultTraits {
 	// turn on per-vertex normals and 2D texcoords
@@ -493,6 +494,109 @@ static bool PackFacesIntoAtlas(int atlasSize, std::vector<FaceRect>& rects)
 	return true;
 }
 
+inline vox_imat3 decode_rotation(uint8_t r)
+{
+	int idx[3], sign[3];
+	idx[0] = (r >> 0) & 0x3;
+	idx[1] = (r >> 2) & 0x3;
+	idx[2] = 3 - idx[0] - idx[1]; // (since idx[0], idx[1], idx[2] is a permutation of 0,1,2)
+	sign[0] = ((r >> 4) & 0x1) ? -1 : 1;
+	sign[1] = ((r >> 5) & 0x1) ? -1 : 1;
+	sign[2] = ((r >> 6) & 0x1) ? -1 : 1;
+
+	float m[3][3] = {};
+	m[0][idx[0]] = sign[0];
+	m[1][idx[1]] = sign[1];
+	m[2][idx[2]] = sign[2];
+
+	return
+	{
+		m[0][0], m[0][1], m[0][2],
+		m[1][0], m[1][1], m[1][2],
+		m[2][0], m[2][1], m[2][2]
+	};
+}
+
+
+inline vox_transform AccumulateWorldTransform(
+	int shapeNodeID,
+	int frameIndex,
+	const vox_file& voxData)
+{
+	// Find the nTRN node that points to this shape
+	// (Usually: look for nTRN with childNodeID == shapeNodeID)
+	int currentNodeID = -1;
+	for (const auto& kv : voxData.transforms) {
+		if (kv.second.childNodeID == shapeNodeID) {
+			currentNodeID = kv.first;
+			break;
+		}
+	}
+	if (currentNodeID < 0)
+		return vox_transform(); // identity
+
+	// Compose transforms up to root
+	std::stack<vox_transform> stack;
+	int trnID = currentNodeID;
+	while (trnID != -1) {
+		auto it = voxData.transforms.find(trnID);
+		if (it == voxData.transforms.end())
+			break;
+
+		const vox_nTRN& trn = it->second;
+
+		// Safety: Clamp frameIndex
+		int fidx = 0;
+		if (trn.framesCount > 0 && frameIndex < trn.framesCount)
+			fidx = frameIndex;
+
+		const vox_frame_attrib& attr = trn.frameAttrib.empty() ? vox_frame_attrib{} : trn.frameAttrib[fidx];
+
+		// Push this transform
+		stack.push(vox_transform(attr.rotation, attr.translation));
+		// Next: parent of this transform node
+		// (Find the parent from the nTRN node: sometimes it's in attributes, sometimes needs .parentNodeID)
+		auto attrIt = trn.attributes.find("_parent");
+		int parentID = -1;
+		if (attrIt != trn.attributes.end()) {
+			parentID = std::stoi(attrIt->second);
+		}
+		else if (trn.attributes.count("_parent_id")) {
+			parentID = std::stoi(trn.attributes.at("_parent_id"));
+		}
+		else if (trn.attributes.count("_parentID")) {
+			parentID = std::stoi(trn.attributes.at("_parentID"));
+		}
+		else {
+			// sometimes it's the node that points to this trn as a child
+			// try to find nGRP that lists this trn as a child
+			for (const auto& gkv : voxData.groups) {
+				for (int c : gkv.second.childrenIDs) {
+					if (c == trnID) {
+						parentID = gkv.first;
+						break;
+					}
+				}
+				if (parentID != -1) break;
+			}
+			// For root, parentID == -1
+		}
+		trnID = parentID;
+		// If parent is a group, the group may be the child of a transform, so we need to walk up
+		// through groups to next parent nTRN. (This is only needed for scenes with nested nGRP)
+		// We simply keep going up until -1.
+	}
+
+	// Multiply transforms in parent-first order
+	vox_transform t;
+	while (!stack.empty()) {
+		t = t * stack.top();
+		stack.pop();
+	}
+	return t;
+}
+
+
 // Build the actual geometry (vertices and indices) for a mesh from the FaceRect list and a given texture atlas configuration.
 static void BuildMeshFromFaces(
 	const std::vector<FaceRect>& faces,
@@ -678,51 +782,88 @@ static void BuildMeshFromFaces(
 	mesh->mTextureCoords[0] = new aiVector3D[vertices.size()];
 	mesh->mNumUVComponents[0] = 2;
 
-	/*for (unsigned int i = 0; i < vertices.size(); ++i) {
-		mesh->mVertices[i] = aiVector3D(vertices[i].px, vertices[i].py, vertices[i].pz);
-		mesh->mNormals[i] = aiVector3D(vertices[i].nx, vertices[i].ny, vertices[i].nz);
-		mesh->mTextureCoords[0][i] = aiVector3D(vertices[i].u, vertices[i].v, 0.0f);
-	}*/
+	//for (unsigned int i = 0; i < vertices.size(); ++i)
+	//{
+	//	float x = vertices[i].px, y = vertices[i].py, z = vertices[i].pz;
+	//	float nx = vertices[i].nx, ny = vertices[i].ny, nz = vertices[i].nz;
+
+	//	// Apply rotation/translation to position
+	//	if (rotation) {
+	//		float tx = rotation->m00 * x + rotation->m01 * y + rotation->m02 * z;
+	//		float ty = rotation->m10 * x + rotation->m11 * y + rotation->m12 * z;
+	//		float tz = rotation->m20 * x + rotation->m21 * y + rotation->m22 * z;
+	//		x = tx;  y = ty;  z = tz;
+	//	}
+	//	if (translation) {
+	//		x += translation->x;
+	//		y += translation->y;
+	//		z += translation->z;
+	//	}
+
+	//	// Apply rotation to normals
+	//	if (rotation) {
+	//		float tnx = rotation->m00 * nx + rotation->m01 * ny + rotation->m02 * nz;
+	//		float tny = rotation->m10 * nx + rotation->m11 * ny + rotation->m12 * nz;
+	//		float tnz = rotation->m20 * nx + rotation->m21 * ny + rotation->m22 * nz;
+	//		nx = tnx; 
+	//		ny = tny; 
+	//		nz = tnz;
+	//		// Optional: re-normalize normal here if needed
+	//	}
+
+	//	if (rotation && translation) 
+	//	{
+	//		mesh->mVertices[i] = aiVector3D(x, z, y); // Swap y and z!
+	//		mesh->mNormals[i] = aiVector3D(nx, nz, ny); // Swap y and z in normal too
+	//	}
+	//	else 
+	//	{
+	//		mesh->mVertices[i] = aiVector3D(x, y, z); // Swap y and z!
+	//		mesh->mNormals[i] = aiVector3D(nx, ny, nz); // Swap y and z in normal too
+	//	}
+
+	//	mesh->mTextureCoords[0][i] = aiVector3D(vertices[i].u, vertices[i].v, 0.0f);
+
+	//}
 
 	for (unsigned int i = 0; i < vertices.size(); ++i) {
-		float x = vertices[i].px, y = vertices[i].py, z = vertices[i].pz;
-		float nx = vertices[i].nx, ny = vertices[i].ny, nz = vertices[i].nz;
+		// original voxel‐space position & normal
+		float x = vertices[i].px;
+		float y = vertices[i].py;
+		float z = vertices[i].pz;
+		float nx = vertices[i].nx;
+		float ny = vertices[i].ny;
+		float nz = vertices[i].nz;
 
-		// Apply rotation/translation to position
+		// 1) apply rotation (if any)
 		if (rotation) {
 			float tx = rotation->m00 * x + rotation->m01 * y + rotation->m02 * z;
 			float ty = rotation->m10 * x + rotation->m11 * y + rotation->m12 * z;
 			float tz = rotation->m20 * x + rotation->m21 * y + rotation->m22 * z;
 			x = tx; y = ty; z = tz;
 		}
+
+		// 2) apply swap-aware translation
+		//    MagicaVoxel Y → Assimp Z, MagicaVoxel Z → Assimp Y
 		if (translation) {
 			x += translation->x;
-			y += translation->y;
-			z += translation->z;
+			y += translation->z;
+			z += translation->y;
 		}
 
-		// Apply rotation to normals
+		// 3) rotate normals if needed
 		if (rotation) {
 			float tnx = rotation->m00 * nx + rotation->m01 * ny + rotation->m02 * nz;
 			float tny = rotation->m10 * nx + rotation->m11 * ny + rotation->m12 * nz;
 			float tnz = rotation->m20 * nx + rotation->m21 * ny + rotation->m22 * nz;
 			nx = tnx; ny = tny; nz = tnz;
-			// Optional: re-normalize normal here if needed
+			// (optional: re-normalize)
 		}
 
-		if (rotation && translation) 
-		{
-			mesh->mVertices[i] = aiVector3D(x, z, y); // Swap y and z!
-			mesh->mNormals[i] = aiVector3D(nx, nz, ny); // Swap y and z in normal too
-		}
-		else 
-		{
-			mesh->mVertices[i] = aiVector3D(x, y, z); // Swap y and z!
-			mesh->mNormals[i] = aiVector3D(nx, ny, nz); // Swap y and z in normal too
-		}
-
+		// 4) write into Assimp mesh using (X, Z, Y) ordering
+		mesh->mVertices[i] = aiVector3D(x, z, y);
+		mesh->mNormals[i] = aiVector3D(nx, nz, ny);
 		mesh->mTextureCoords[0][i] = aiVector3D(vertices[i].u, vertices[i].v, 0.0f);
-
 	}
 
 	mesh->mNumFaces = indices.size() / 3;
@@ -1091,14 +1232,17 @@ static std::vector<aiScene*> GetModels(const vox_file* voxData, const s32 frameI
 			if (trnNode) 
 			{
 				// 2. Get the matrix and translation for this frame
-				const vox_imat3& matrix = trnNode->frameAttrib[frameIndex].rotation;
-				const vox_vec3& translation = trnNode->frameAttrib[frameIndex].translation;
+				//const vox_imat3& matrix = trnNode->frameAttrib[frameIndex].rotation;
+				//const vox_vec3& translation = trnNode->frameAttrib[frameIndex].translation;
 
-				// 3. Pass them into your mesh builder
-				BuildMeshFromFaces(faces, atlasDim, atlasDim, options.FlatShading, voxData->palette, mesh,
-					&matrix,
-					&translation
-				);
+				//// 3. Pass them into your mesh builder
+				//BuildMeshFromFaces(faces, atlasDim, atlasDim, options.FlatShading, voxData->palette, mesh,
+				//	&matrix,
+				//	&translation
+				//);
+
+				vox_transform worldXf = AccumulateWorldTransform(shape.nodeID, frameIndex, *voxData);
+				BuildMeshFromFaces(faces, atlasDim, atlasDim, options.FlatShading, voxData->palette, mesh, &worldXf.rot, &worldXf.trans);
 			}
 			else {
 				// No transform, build with identity matrix/zero translation

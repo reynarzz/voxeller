@@ -443,6 +443,27 @@ void VoxParser::parse_MATL(std::shared_ptr<vox_file> vox, std::ifstream &voxFile
     }
 }
 
+inline vox_imat3 decode_vox_rotation(uint8_t rot) 
+{
+    int idx[3];
+    int sign[3];
+    idx[0] = (rot >> 0) & 0x3;
+    idx[1] = (rot >> 2) & 0x3;
+    idx[2] = 3 - idx[0] - idx[1];
+    sign[0] = ((rot >> 4) & 0x1) ? -1 : 1;
+    sign[1] = ((rot >> 5) & 0x1) ? -1 : 1;
+    sign[2] = ((rot >> 6) & 0x1) ? -1 : 1;
+    float m[3][3] = {};
+    m[0][idx[0]] = sign[0];
+    m[1][idx[1]] = sign[1];
+    m[2][idx[2]] = sign[2];
+    return {
+        m[0][0], m[0][1], m[0][2],
+        m[1][0], m[1][1], m[1][2],
+        m[2][0], m[2][1], m[2][2]
+    };
+}
+
 void VoxParser::parse_nTRN(std::shared_ptr<vox_file> vox, std::ifstream &voxFile, uint32_t contentBytes, uint32_t childrenBytes)
 {
     // nTRN (Transform Node) chunk structure:
@@ -490,66 +511,36 @@ void VoxParser::parse_nTRN(std::shared_ptr<vox_file> vox, std::ifstream &voxFile
         // Read frame attributes dictionary
         uint32_t frameKvCount;
         voxFile.read(reinterpret_cast<char*>(&frameKvCount), 4);
-        for (uint32_t i = 0; i < frameKvCount; ++i) {
+        for (uint32_t i = 0; i < frameKvCount; ++i) 
+        {
             uint32_t keyLen;
             voxFile.read(reinterpret_cast<char*>(&keyLen), 4);
             std::string key(keyLen, '\0');
             voxFile.read(&key[0], keyLen);
             uint32_t valLen;
             voxFile.read(reinterpret_cast<char*>(&valLen), 4);
+            
             if (key == "_r") {
-                // Rotation (stored as string of an integer)
-                std::string rotStr(valLen, '\0');
-                voxFile.read(&rotStr[0], valLen);
-                uint32_t rotBits = std::atoi(rotStr.c_str());
-                // Decode rotation from bits (MagicaVoxel uses a packed 3-bit representation)
-                // Determine which basis vectors correspond to the rows
-                uint32_t row0Index =  rotBits        & 0x3;
-                uint32_t row1Index = (rotBits >> 2) & 0x3;
-                // The third row index can be deduced (0,1,2 are axes)
-                static const uint32_t kRow2IndexLUT[8] = { 
-                    UINT32_MAX, 2, 1, UINT32_MAX, 
-                    0, UINT32_MAX, UINT32_MAX, UINT32_MAX 
-                };
-                uint32_t mask = (1u << row0Index) | (1u << row1Index);
-                uint32_t row2Index = 0;
-                // find index not in mask (0x7=0b111 for axes 0,1,2)
-                for (uint32_t bit = 0; bit < 3; ++bit) {
-                    if (!(mask & (1u << bit))) { row2Index = bit; break; }
-                }
-                // Sign bits
-                bool row0Neg = (rotBits >> 4) & 1;
-                bool row1Neg = (rotBits >> 5) & 1;
-                bool row2Neg = (rotBits >> 6) & 1;
-                // Basis vectors for axes
-                vox_vec3 basis[3] = {
-                    {1.0f, 0.0f, 0.0f},
-                    {0.0f, 1.0f, 0.0f},
-                    {0.0f, 0.0f, 1.0f}
-                };
-                vox_vec3 row0 = basis[row0Index];
-                vox_vec3 row1 = basis[row1Index];
-                vox_vec3 row2 = basis[row2Index];
-                if (row0Neg) row0 = row0 * -1;
-                if (row1Neg) row1 = row1 * -1;
-                if (row2Neg) row2 = row2 * -1;
-                // MagicaVoxel rotation is given as row vectors; convert to column-major matrix
-                vox_imat3 rotMat;
-                rotMat.m00 = row0.x; rotMat.m01 = row0.y; rotMat.m02 = row0.z;
-                rotMat.m10 = row1.x; rotMat.m11 = row1.y; rotMat.m12 = row1.z;
-                rotMat.m20 = row2.x; rotMat.m21 = row2.y; rotMat.m22 = row2.z;
-                frameAttrib.rotation = rotMat;
-            } else if (key == "_t") {
-                // Translation (three integers as strings separated by spaces)
-                std::string tStr(valLen, '\0');
-                voxFile.read(&tStr[0], valLen);
-                // Parse three integers from tStr
-                int tx = 0, ty = 0, tz = 0;
-                std::sscanf(tStr.c_str(), "%d %d %d", &tx, &ty, &tz);
-                frameAttrib.translation.x = tx;
-                frameAttrib.translation.y = ty;
-                frameAttrib.translation.z = tz;
-            } else if (key == "_f") {
+                // read exactly one byte of rotation bits
+                uint8_t r;
+                voxFile.read(reinterpret_cast<char*>(&r), 1);
+                frameAttrib.rotation = decode_vox_rotation(r);
+                // skip any padding (shouldn't be any, but valLen could be >1)
+                if (valLen > 1) voxFile.seekg(valLen - 1, std::ios::cur);
+
+            }
+            else if (key == "_t") {
+                // read three binary int32s directly
+                int32_t tx, ty, tz;
+                voxFile.read(reinterpret_cast<char*>(&tx), 4);
+                voxFile.read(reinterpret_cast<char*>(&ty), 4);
+                voxFile.read(reinterpret_cast<char*>(&tz), 4);
+                frameAttrib.translation = { float(tx), float(ty), float(tz) };
+                // if valLen > 12, skip extra
+                if (valLen > 12) voxFile.seekg(valLen - 12, std::ios::cur);
+
+            }
+            else if (key == "_f") {
                 // Frame index (usually -1 or 0, not used in current versions as numFrames is typically 1)
                 std::string fStr(valLen, '\0');
                 voxFile.read(&fStr[0], valLen);
