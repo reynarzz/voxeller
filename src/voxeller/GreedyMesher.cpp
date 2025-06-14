@@ -926,6 +926,7 @@ static std::vector<aiScene*> GetModels(const vox_file* voxData, const s32 frameI
 
 	if (voxData->shapes.size() > 0)
 	{
+		s32 shapeIndex{};
 		for (auto& shpKV : voxData->shapes)
 		{
 			std::string name = shpKV.second.attributes.count("_name") ? shpKV.second.attributes.at("_name") : "vox";
@@ -1016,8 +1017,14 @@ static std::vector<aiScene*> GetModels(const vox_file* voxData, const s32 frameI
 			// Save image file for this frame
 			std::string baseName = outputPath;
 
-			if (dot != std::string::npos) baseName = outputPath.substr(0, outputPath.find_last_of('.'));
-			std::string imageName = baseName + "_frame" + std::to_string(frameIndex) + ".png";
+			if (dot != std::string::npos) 
+			{
+				baseName = outputPath.substr(0, outputPath.find_last_of('.'));
+			}
+			
+			// TODO: If exporting separated textures.
+			
+			std::string imageName = baseName + "_frame" + std::to_string(shapeIndex++) + ".png";
 			SaveAtlasImage(imageName, atlasDim, atlasDim, image);
 
 			aiMesh* mesh = new aiMesh();
@@ -1209,11 +1216,11 @@ const aiScene* Run(const vox_file* voxData, const std::string& outputPath, const
 				// Insert frame number before extension
 				if (dot != std::string::npos)
 				{
-					frameOut = outputPath.substr(0, outputPath.find_last_of('.')) + "_frame" + std::to_string(fi) + outputPath.substr(outputPath.find_last_of('.'));
+					frameOut = outputPath.substr(0, outputPath.find_last_of('.')) + "_frame" + std::to_string(j) + outputPath.substr(outputPath.find_last_of('.'));
 				}
 				else
 				{
-					frameOut = outputPath + "_frame" + std::to_string(fi);
+					frameOut = outputPath + "_frame" + std::to_string(j);
 				}
 
 				Assimp::Exporter exporter;
@@ -1237,7 +1244,7 @@ const aiScene* Run(const vox_file* voxData, const std::string& outputPath, const
 
 				if (exporter.Export(scene, "fbx", frameOut) != aiReturn_SUCCESS)
 				{
-					std::cerr << "Failed to export frame " << fi << ": " << exporter.GetErrorString() << "\n";
+					std::cerr << "Failed to export mesh " << j << ": " << exporter.GetErrorString() << "\n";
 				}
 				else
 				{

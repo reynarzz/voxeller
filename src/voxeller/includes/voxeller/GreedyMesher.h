@@ -61,6 +61,7 @@ struct VOXELLER_API ConvertOptions
 
     bool ExportMeshesSeparatelly = false;
 
+    bool PreserveMeshesOrigins = true;
 
     bool MaterialPerMesh = true;
 
