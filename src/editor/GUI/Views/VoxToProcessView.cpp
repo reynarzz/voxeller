@@ -309,14 +309,25 @@ static bool SearchBar(std::string& text)
 
 	static char buffer[128] = "";
 	//strcpy_s(buffer, sizeof(buffer), text.c_str());
-    strlcpy(buffer, text.c_str(), sizeof(buffer));
+
+#ifdef _WIN32
+	strcpy_s(buffer, sizeof(buffer), text.c_str());
+#else
+	strlcpy(buffer, text.c_str(), sizeof(buffer));
+#endif
+
 	const bool active = ImGui::InputTextWithHint("##Search", "Vox Name...", buffer, IM_ARRAYSIZE(buffer));
 
 	if (active) 
 	{
 		text.resize(128);
-		//strcpy_s(text.data(), sizeof(buffer), buffer);
-        strlcpy(buffer, text.c_str(), sizeof(buffer));
+
+#ifdef _WIN32
+		strcpy_s(text.data(), sizeof(buffer), buffer);
+#else
+		strlcpy(buffer, text.c_str(), sizeof(buffer));
+#endif
+
 	}
 
 	// Restore style
