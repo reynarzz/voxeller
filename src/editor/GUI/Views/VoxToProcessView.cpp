@@ -413,6 +413,194 @@ void RoundedChild(const char* id, std::function<void()> content, ImVec2 size, fl
 	ImGui::PopStyleColor();
 }
 
+void ProgressBar(float fraction, const ImVec2& size, float rounding, ImU32 bgColor, ImU32 fillColor)
+{
+	ImGuiWindow* window = ImGui::GetCurrentWindow();
+	if (window->SkipItems)
+		return;
+
+	ImVec2 pos = ImGui::GetCursorScreenPos();
+	ImDrawList* drawList = window->DrawList;
+
+	// Clamp fraction [0,1]
+	fraction = ImClamp(fraction, 0.0f, 1.0f);
+
+	// Background bar
+	drawList->AddRectFilled(pos, ImVec2(pos.x + size.x, pos.y + size.y), bgColor, rounding);
+
+	// Filled portion
+	float fillWidth = size.x * fraction;
+	if (fillWidth > 0.0f) {
+		ImVec2 fillEnd = ImVec2(pos.x + fillWidth, pos.y + size.y);
+		drawList->AddRectFilled(pos, fillEnd, fillColor, rounding,
+			fraction >= 1.0f ? ImDrawFlags_RoundCornersAll : ImDrawFlags_RoundCornersLeft);
+	}
+
+	// Space reservation
+	ImGui::Dummy(size);
+}
+
+bool PrettyDropdown(const char* label, int* currentIndex, const std::vector<std::string>& items,
+	float rounding = 8.0f, float desiredComboWidth = 200.0f)
+{
+	if (items.empty()) return false;
+
+	// Colors
+	ImU32 bgColor = IM_COL32(40, 40, 40, 255);
+	ImU32 popupBgColor = IM_COL32(25, 25, 25, 240);
+	ImU32 hoverColor = IM_COL32(60, 60, 60, 255);
+	ImU32 activeColor = IM_COL32(80, 80, 80, 255);
+	ImU32 borderColor = IM_COL32(0, 0, 0, 0);
+	ImU32 arrowColor = IM_COL32(200, 200, 200, 255);
+
+	ImGuiStyle& style = ImGui::GetStyle();
+	float spacingX = style.ItemSpacing.x;
+	float paddingX = style.FramePadding.x;
+	float paddingY = style.FramePadding.y;
+
+	// 1. Save Y cursor for alignment
+	float cursorY = ImGui::GetCursorPosY();
+
+	// 2. Draw label at left, flush with left edge
+	ImGui::SetCursorPosY(cursorY);
+	ImGui::TextUnformatted(label);
+
+	// 3. Position combo aligned in Y and with consistent spacing
+	ImGui::SameLine();
+	float labelHeight = ImGui::GetTextLineHeight();
+	float comboHeight = ImGui::GetFrameHeight();
+	float verticalOffset = (labelHeight - comboHeight) * 0.5f;
+
+	ImGui::SetCursorPosY(cursorY + verticalOffset);
+
+	float available = ImGui::GetContentRegionAvail().x;
+	float comboWidth = ImMin(desiredComboWidth, available);
+	ImGui::SetNextItemWidth(comboWidth);
+
+	// 4. Track button position
+	ImVec2 buttonPos = ImGui::GetCursorScreenPos();
+	float buttonHeight = ImGui::GetFrameHeight();
+
+	// 5. Style
+	ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, rounding);
+	ImGui::PushStyleVar(ImGuiStyleVar_PopupRounding, 0.0f);
+	ImGui::PushStyleColor(ImGuiCol_FrameBg, bgColor);
+	ImGui::PushStyleColor(ImGuiCol_ButtonHovered, hoverColor);
+	ImGui::PushStyleColor(ImGuiCol_ButtonActive, activeColor);
+	ImGui::PushStyleColor(ImGuiCol_PopupBg, IM_COL32(0, 0, 0, 0));
+	ImGui::PushStyleColor(ImGuiCol_Border, borderColor);
+
+	bool changed = false;
+	const char* preview = items[*currentIndex].c_str();
+
+	// 6. Clamp popup to visible area
+	ImVec2 popupPos = ImVec2(buttonPos.x, buttonPos.y + buttonHeight - 1.0f);
+	float safePopupX = popupPos.x + comboWidth;
+	float maxX = ImGui::GetMainViewport()->WorkSize.x - 10.0f;
+
+	if (safePopupX > maxX)
+		popupPos.x = maxX - comboWidth;
+
+	ImGui::SetNextWindowPos(popupPos);
+
+	// 7. Combo
+	if (ImGui::BeginCombo("##combo", preview, ImGuiComboFlags_NoArrowButton)) {
+		ImGuiWindow* popup = ImGui::GetCurrentWindow();
+		ImDrawList* draw = popup->DrawList;
+
+		ImVec2 bgMin = popup->Pos;
+		ImVec2 bgMax = ImVec2(bgMin.x + popup->Size.x, bgMin.y + popup->Size.y);
+
+		draw->AddRectFilled(bgMin, bgMax, popupBgColor, rounding, ImDrawFlags_RoundCornersBottom);
+		ImGui::SetCursorPosY(ImGui::GetCursorPosY() - 2.0f);
+
+		for (int i = 0; i < items.size(); ++i) {
+			bool isSelected = (i == *currentIndex);
+			if (ImGui::Selectable(items[i].c_str(), isSelected)) {
+				*currentIndex = i;
+				changed = true;
+			}
+			if (isSelected)
+				ImGui::SetItemDefaultFocus();
+		}
+
+		ImGui::EndCombo();
+	}
+
+	// 8. Draw arrow
+	ImDrawList* drawList = ImGui::GetWindowDrawList();
+	float arrowSize = buttonHeight * 0.35f;
+	float arrowPadding = (buttonHeight - arrowSize) * 0.5f;
+
+	ImVec2 arrowCenter = ImVec2(
+		buttonPos.x + comboWidth - arrowPadding - arrowSize * 0.5f,
+		buttonPos.y + buttonHeight * 0.5f
+	);
+
+	drawList->AddTriangleFilled(
+		ImVec2(arrowCenter.x - arrowSize * 0.5f, arrowCenter.y - arrowSize * 0.3f),
+		ImVec2(arrowCenter.x + arrowSize * 0.5f, arrowCenter.y - arrowSize * 0.3f),
+		ImVec2(arrowCenter.x, arrowCenter.y + arrowSize * 0.4f),
+		arrowColor
+	);
+
+	// 9. Cleanup
+	ImGui::PopStyleColor(5);
+	ImGui::PopStyleVar(2);
+
+	return changed;
+}
+
+
+int selectedIndex = 0;
+void ExportWin() 
+{
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 10.0f);
+	bool open = true;
+	f32 posX = std::clamp(ImGui::GetIO().DisplaySize.x - 260.0f, 10.0f, ImGui::GetIO().DisplaySize.x);
+
+	ImGui::SetNextWindowPos(ImVec2(posX, ImGui::GetIO().DisplaySize.y - 125 + windowsSpacingY * 2), ImGuiCond_Always);
+	const f32 height = ImGui::GetIO().DisplaySize.y - toolBarHeight - windowsSpacingY - (ImGui::GetIO().DisplaySize.y - 170) - 20;//ImGui::GetIO().DisplaySize.y - toolBarHeight - windowsSpacingY - 13;
+
+	ImGui::SetNextWindowSize(ImVec2(std::min(ImGui::GetIO().DisplaySize.x - posX - 5, ImGui::GetIO().DisplaySize.x - 13), height), ImGuiCond_Always);
+
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 1.0f);
+	ImGui::PushStyleColor(ImGuiCol_Border, IM_COL32(30, 30, 30, 255));
+	ImGui::PushStyleColor(ImGuiCol_WindowBg, WindowsBgColor);
+
+	ImGui::Begin("##ExportWin", &open, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize);
+	
+
+
+
+	f32 spacing = 1;
+	f32 buttonDownWidth = 75;
+	f32 buttonDOwnHeight = 25;
+	std::vector<std::string> options = { "Fbx", "Obj" };
+
+	PrettyDropdown("Format selector", &selectedIndex, options, 10);
+
+	ImGui::SetCursorPosY(ImGui::GetWindowSize().y - buttonDOwnHeight - 40);
+	ProgressBar(0.2f, { ImGui::GetContentRegionAvail().x / 1.7f, 7 }, 12, ImColor(20, 20, 20, 255), ImColor(0, 220, 150, 255));
+	ProgressBar(0.2f, { ImGui::GetContentRegionAvail().x / 1.7f, 7 }, 12, ImColor(20, 20, 20, 255), ImColor(0, 220, 150, 255));
+
+	ImGui::SetCursorPosX(ImGui::GetWindowSize().x / 2.0 - buttonDownWidth / 2);
+	ImGui::SetCursorPosY(ImGui::GetWindowSize().y - buttonDOwnHeight - 10);
+
+	ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(spacing, 0));
+	ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(spacing, 0));
+	CornerButton("Export", TextAlign::Center, { buttonDownWidth, buttonDOwnHeight }, IM_COL32(65, 105, 255, 255), IM_COL32(255, 255, 255, 255), 10, ImDrawFlags_RoundCornersAll);
+
+	ImGui::PopStyleVar(2);
+
+
+	ImGui::End();
+
+	ImGui::PopStyleVar(2);
+	ImGui::PopStyleColor(2);
+}
+
+
 
 std::string searchBar = "";
 void VoxToProcessView::UpdateGUI()
@@ -420,10 +608,10 @@ void VoxToProcessView::UpdateGUI()
 	ImGuiStyle& style = ImGui::GetStyle();
 
 	// Remove scrollbar roundness
-	style.ScrollbarRounding = 0.0f;
+	style.ScrollbarRounding = 10.0f;
 
 	// Make scrollbar thinner
-	style.ScrollbarSize = 4.0f;  // default is 16.0f
+	style.ScrollbarSize = 8.0f;  // default is 16.0f
 
 	// Remove background color
 	style.Colors[ImGuiCol_ScrollbarBg] = ImVec4(0, 0, 0, 0);  // Fully transparent
@@ -433,7 +621,7 @@ void VoxToProcessView::UpdateGUI()
 	style.Colors[ImGuiCol_ScrollbarGrabHovered] = ImVec4(1, 1, 1, 0.5f);
 	style.Colors[ImGuiCol_ScrollbarGrabActive] = ImVec4(1, 1, 1, 1.0f);
 
-
+	ExportWin();
 	ToolBar();
 	ViewportWindow();
 	// Sidebar region (no frame)
@@ -442,7 +630,7 @@ void VoxToProcessView::UpdateGUI()
 	f32 posX = std::clamp(ImGui::GetIO().DisplaySize.x - 260.0f, 10.0f, ImGui::GetIO().DisplaySize.x);
 
 	ImGui::SetNextWindowPos(ImVec2(posX, toolBarHeight + windowsSpacingY * 2), ImGuiCond_Always);
-	const f32 height = ImGui::GetIO().DisplaySize.y - 70;//ImGui::GetIO().DisplaySize.y - toolBarHeight - windowsSpacingY - 13;
+	const f32 height = ImGui::GetIO().DisplaySize.y - 170;//ImGui::GetIO().DisplaySize.y - toolBarHeight - windowsSpacingY - 13;
 
 	ImGui::SetNextWindowSize(ImVec2(std::min(ImGui::GetIO().DisplaySize.x - posX - 5, ImGui::GetIO().DisplaySize.x - 13), height), ImGuiCond_Always);
 
@@ -510,23 +698,16 @@ void VoxToProcessView::UpdateGUI()
 	for (auto& s : items) item_ptrs.push_back(s.c_str());
 	static int current_item = 0;
 	ImGui::Combo("Dynamic", &current_item, item_ptrs.data(), item_ptrs.size());*/
-	f32 spacing = 1;
-	f32 buttonDownWidth = 25;
-	f32 buttonDOwnHeight = 25;
-	ImGui::SetCursorPosX(ImGui::GetWindowSize().x / 2.0 - buttonDownWidth);
-	ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(spacing, 0));
-	ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(spacing, 0));
-	CornerButton("Ex", TextAlign::Center, { buttonDownWidth, buttonDOwnHeight }, IM_COL32(65, 105, 255, 255), IM_COL32(255, 255, 255, 255), 10, ImDrawFlags_RoundCornersLeft);
-	ImGui::SameLine();
-	CornerButton("Op", TextAlign::Center, { buttonDownWidth, buttonDOwnHeight }, IM_COL32(65, 105, 255, 255), IM_COL32(255, 255, 255, 255), 10, ImDrawFlags_RoundCornersRight);
-	ImGui::PopStyleVar(2);
-
-
-	ImGui::SameLine();
+	
 	f32 buttonUpWidth = 25;
 	f32 buttonUpHeight = 25;
 	ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(2, 0));
 	ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(2, 0));
+
+	f32 spacing = 1;
+	f32 buttonDownWidth = 25;
+	f32 buttonDOwnHeight = 25;
+	ImGui::SetCursorPosX(ImGui::GetWindowSize().x / 2.0 - buttonDownWidth);
 	CornerButton("+", TextAlign::Center, { buttonUpWidth, buttonUpHeight }, IM_COL32(65, 105, 255, 255), IM_COL32(255, 255, 255, 255), 20, ImDrawFlags_RoundCornersAll);
 	ImGui::SameLine();
 	CornerButton("++", TextAlign::Center, { buttonUpWidth, buttonUpHeight }, IM_COL32(65, 105, 255, 255), IM_COL32(255, 255, 255, 255), 30, ImDrawFlags_RoundCornersAll);
