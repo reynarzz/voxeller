@@ -1419,14 +1419,14 @@ const aiScene* Run(const vox_file* voxData, const std::string& outputPath, const
 
 	size_t dot = outputPath.find_last_of('.');
 	
-	if (options.ExportFramesSeparatelly && frameCount >= 1 && voxData->shapes.size() > 0)
+	if (options.ExportFramesSeparatelly /*&& frameCount >= 1 && voxData->shapes.size() > 0*/)
 	{
 
 		// Loop through frames, create scene for each
 		for (s32 fi = 0; fi < frameCount; ++fi)
 		{
 			// Prepare a new minimal scene for this frame
-
+			LOG_CORE_INFO("Frame processing: {0}", fi);
 			auto scenes = GetModels(voxData, fi, outputPath, options);
 
 			for (size_t j = 0; j < scenes.size(); j++)
