@@ -848,7 +848,8 @@ static void BuildMeshFromFaces(
 }
 
 // Create and save a PNG texture from the atlas data
-static bool SaveAtlasImage(const std::string& filename, int width, int height, const std::vector<unsigned char>& rgbaData) {
+static bool SaveAtlasImage(const std::string& filename, int width, int height, const std::vector<unsigned char>& rgbaData) 
+{
 	// Use stb_image_write to write PNG
 	if (stbi_write_png(filename.c_str(), width, height, 4, rgbaData.data(), width * 4) == 0) {
 		return false;
@@ -1795,7 +1796,7 @@ ExportResults GreedyMesher::ExportVoxToModel(const char* buffer, int size, const
 	return {};
 }
 
-MeshingResults GreedyMesher::GetModelFromVOXMesh(const std::string& inVoxPath, const ConvertOptions& options)
+MemData GreedyMesher::VoxToMem(const std::string& inVoxPath, const ConvertOptions& options)
 {
 	LOG_EDITOR_ERROR("Not implemented");
 	throw;
@@ -1804,7 +1805,7 @@ MeshingResults GreedyMesher::GetModelFromVOXMesh(const std::string& inVoxPath, c
 
 }
 
-MeshingResults GreedyMesher::GetModelFromVOXMesh(const char* buffer, int size, const ConvertOptions& options)
+MemData GreedyMesher::VoxToMem(const char* buffer, int size, const ConvertOptions& options)
 {
 	LOG_EDITOR_ERROR("Not implemented");
 	throw;
@@ -1817,7 +1818,7 @@ void GreedyMesher::ExportVoxToModelAsync(const char* buffer, int size, const Exp
 	throw;
 }
 
-void GreedyMesher::GetModelFromVOXMeshAsync(const char* buffer, int size, const ConvertOptions& options, std::function<void(MeshingResults)> callback)
+void GreedyMesher::GetModelFromVOXMeshAsync(const char* buffer, int size, const ConvertOptions& options, std::function<void(MemData)> callback)
 {
 	LOG_EDITOR_ERROR("Not implemented");
 	throw;

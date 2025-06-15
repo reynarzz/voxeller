@@ -26,10 +26,21 @@ enum class ConvertMSG
     SUCESS,
 };
 
+
+struct VOXELLER_API TextureData
+{
+    const char* Buffer = nullptr;
+    TextureFormat format;
+    f32 Width;
+    f32 Height;
+};
+
 struct VOXELLER_API ConvertResult
 {
     ConvertMSG Msg;
     std::vector<MeshInfo> meshes;
+
+    std::vector<TextureData> Textures;
 };
 
 struct VOXELLER_API ExportResults
@@ -37,6 +48,15 @@ struct VOXELLER_API ExportResults
     ConvertResult Convert = {};
     std::string OutPath = "";
 };
+
+enum class TextureFormat 
+{
+    RGBA8,
+    PGN,
+    JPG,
+    TGA,
+};
+
 
 struct VOXELLER_API ConvertOptions
 {
@@ -96,7 +116,7 @@ struct VOXELLER_API ExportOptions
     ModelFormat OutputFormat = ModelFormat::FBX;
 };
 
-struct VOXELLER_API MeshingResults
+struct VOXELLER_API MemData
 {
     ConvertResult Convert;
 };
@@ -107,12 +127,12 @@ public:
     static ExportResults ExportVoxToModel(const std::string& inVoxPath, const std::string& outExportPath, const ExportOptions& options);
     static ExportResults ExportVoxToModel(const char* buffer, int size, const ExportOptions& options);
 
-    static MeshingResults GetModelFromVOXMesh(const std::string& inVoxPath, const ConvertOptions& options);
-    static MeshingResults GetModelFromVOXMesh(const char* buffer, int size, const ConvertOptions& options);
+    static MemData VoxToMem(const std::string& inVoxPath, const ConvertOptions& options);
+    static MemData VoxToMem(const char* buffer, int size, const ConvertOptions& options);
 
 
     static void ExportVoxToModelAsync(const char* buffer, int size, const ExportOptions& options, std::function<void(ExportResults)> callback);
-    static void GetModelFromVOXMeshAsync(const char* buffer, int size, const ConvertOptions& options, std::function<void(MeshingResults)> callback);
+    static void GetModelFromVOXMeshAsync(const char* buffer, int size, const ConvertOptions& options, std::function<void(MemData)> callback);
 
 private:
 };
