@@ -1180,6 +1180,84 @@ inline ConvertOptions::VXVector Rotate(const vox_imat3& m, const ConvertOptions:
     };
 }
 
+
+
+std::shared_ptr<TextureData> GetTexture(std::vector<FaceRect>& faces, const std::vector<color>& palette, 
+									  const std::vector<vox_model>& models, const bool texturesPOT)
+{
+	 
+// Determine atlas size
+			int atlasDim = 16;
+
+			// TODO: if textures were said to be exported in a large atlas, then, deffer this pack, and joint all the faces together?
+			// Base initial size on number of used colors or face area sum
+			// We'll just try increasing POT until success
+
+			int usedW = 0;
+			int usedH = 0;
+
+			if (texturesPOT)
+			{
+				// Start from 16 and double
+				while (true)
+				{
+					if (PackFacesIntoAtlas(atlasDim, faces))
+					{
+						break;
+					}
+					atlasDim *= 2;
+					if (atlasDim > 4096)
+					{ // safety break
+						LOG_CORE_ERROR("Could not pack texture atlas up to 4096 for frame ");// << frameIndex << "\n";
+						break;
+					}
+				}
+
+				usedW = atlasDim;
+				usedH = atlasDim;
+			}
+			else
+			{
+				// Start with 16 and grow by 16 steps or double as needed (non-POT allowed)
+				while (true)
+				{
+					if (PackFacesIntoAtlas(atlasDim, faces))
+					{
+						break;
+					}
+
+					atlasDim += 16;
+
+					if (atlasDim > 4096)
+					{
+						LOG_CORE_ERROR("Could not pack texture atlas up to 4096 for frame ");
+						break;
+					}
+				}
+				// Shrink to actual used size
+				// We can compute used width and height from faces placement
+				for (auto& fr : faces)
+				{
+					usedW = std::max(usedW, fr.atlasX + fr.w + 2);
+					usedH = std::max(usedH, fr.atlasY + fr.h + 2);
+				}
+
+				atlasDim = std::max(usedW, usedH);
+			}
+
+				// Create image
+				auto textureData = std::make_shared<TextureData>();
+				textureData->Width = usedW;
+				textureData->Height = usedH;
+
+				LOG_CORE_INFO("Texture size: ({0}, {1})", textureData->Width, textureData->Height);
+
+				GenerateAtlasImage(atlasDim, atlasDim, faces, models, palette, textureData->Buffer);
+
+				return textureData;
+}
+
+
 // TODO: start simple, from the begining, the whole code base has a problem of code duplication.
 static std::vector<aiScene*> GetModels(const vox_file* voxData, const s32 frameIndex, const std::string& outputPath, const ConvertOptions& options)
 {
@@ -1234,66 +1312,14 @@ static std::vector<aiScene*> GetModels(const vox_file* voxData, const s32 frameI
 			// Generate mesh for this shape/model
 			std::vector<FaceRect> faces = GreedyMeshModel(voxData->voxModels[modelId], voxData->sizes[modelId], modelId);
 
-			// Determine atlas size
-			int atlasDim = 16;
-
-			// TODO: if textures were said to be exported in a large atlas, then, deffer this pack, and joint all the faces together?
-			// Base initial size on number of used colors or face area sum
-			// We'll just try increasing POT until success
-			if (options.TexturesPOT)
-			{
-				// Start from 16 and double
-				while (true)
-				{
-					if (PackFacesIntoAtlas(atlasDim, faces))
-					{
-						break;
-					}
-					atlasDim *= 2;
-					if (atlasDim > 4096)
-					{ // safety break
-						std::cerr << "Could not pack texture atlas up to 4096 for frame " << frameIndex << "\n";
-						break;
-					}
-				}
-			}
-			else
-			{
-				// Start with 16 and grow by 16 steps or double as needed (non-POT allowed)
-				while (true)
-				{
-					if (PackFacesIntoAtlas(atlasDim, faces))
-					{
-						break;
-					}
-
-					atlasDim += 16;
-
-					if (atlasDim > 4096)
-					{
-						std::cerr << "Could not pack texture atlas within 4096 for frame " << frameIndex << "\n";
-						break;
-					}
-				}
-				// Optionally shrink to actual used size
-				// We can compute used width and height from faces placement
-				int usedW = 0, usedH = 0;
-				for (auto& fr : faces)
-				{
-					usedW = std::max(usedW, fr.atlasX + fr.w + 2);
-					usedH = std::max(usedH, fr.atlasY + fr.h + 2);
-				}
-				atlasDim = std::max(usedW, usedH);
-			}
-
 			std::string imageName = "";
-			if (options.GenerateTextures)
-			{
-				// Create image
-				std::vector<unsigned char> image;
-				GenerateAtlasImage(atlasDim, atlasDim, faces, voxData->voxModels, voxData->palette, image);
 
-				// Save image file for this frame
+			s32 texWidth = 16, texHeight = 16;
+			if(options.GenerateTextures)
+			{
+				// TODO: to create an atlas of all the meshes, the property colorIndex, in face should be updated.
+				const auto textureData = GetTexture(faces, voxData->palette, voxData->voxModels, options.TexturesPOT);
+
 				std::string baseName = outputPath;
 
 				if (dot != std::string::npos)
@@ -1301,10 +1327,11 @@ static std::vector<aiScene*> GetModels(const vox_file* voxData, const s32 frameI
 					baseName = outputPath.substr(0, outputPath.find_last_of('.'));
 				}
 
-				// TODO: If exporting separated textures.
-
 				imageName = baseName + "_frame" + std::to_string(shapeIndex++) + ".png";
-				SaveAtlasImage(imageName, atlasDim, atlasDim, image);
+				SaveAtlasImage(imageName, textureData->Width, textureData->Height, textureData->Buffer);
+
+				texWidth = textureData->Width;
+				texHeight = textureData->Height;
 			}
 
 			aiMesh* mesh = new aiMesh();
@@ -1329,7 +1356,7 @@ static std::vector<aiScene*> GetModels(const vox_file* voxData, const s32 frameI
 			// Build mesh and apply MagicaVoxel rotation+translation directly into vertices:
 			BuildMeshFromFaces(
 				faces,
-				atlasDim, atlasDim,
+				texWidth, texHeight,
 				options.FlatShading,
 				voxData->palette,
 				mesh,

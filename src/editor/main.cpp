@@ -86,13 +86,14 @@ int main()
 	exportOptions.ConvertOptions.SeparateTexturesPerMesh = false;
 	exportOptions.ConvertOptions.MaterialPerMesh = true;
 	exportOptions.ConvertOptions.Scale = { 12.3f, 12.3f, 12.3f };
-	exportOptions.ConvertOptions.Pivot = { 0.0f, 0.0f, 0.5f };
+	//exportOptions.ConvertOptions.Pivot = { 0.5f, 0.0f, 0.5f };
 	exportOptions.ConvertOptions.ExportFramesSeparatelly = true;
 	exportOptions.ConvertOptions.ExportMeshesSeparatelly = false;
 	
 	exportOptions.ConvertOptions.GenerateMaterials = true;
 	exportOptions.ConvertOptions.MeshesToWorldCenter = false;
-
+   exportOptions.ConvertOptions.TexturesPOT = true;
+   
 	//Chicken_van_2.vox
 	//std::string path = "B:/Projects/voxeller/bin/Debug/testvox/nda/Ambulance_1.vox"; // Test this!
 	//std::string path = "B:/Projects/voxeller/bin/Debug/testvox/room.vox"; 

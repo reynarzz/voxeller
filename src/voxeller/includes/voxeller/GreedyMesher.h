@@ -37,8 +37,8 @@ enum class TextureFormat
 
 struct VOXELLER_API TextureData
 {
-    const char* Buffer = nullptr;
-    TextureFormat format;
+    std::vector<unsigned char> Buffer;
+    TextureFormat Format;
     f32 Width;
     f32 Height;
 };
