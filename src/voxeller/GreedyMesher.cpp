@@ -751,11 +751,6 @@ static void BuildMeshFromFaces(
 		aiVector3D pos{ x, z, y };
 		aiVector3D norm{ nx, nz, ny };
 
-		// add back pivot in Assimp axes
-		pos.x += pivot.x;
-		pos.y += pivot.z;
-		pos.z += pivot.y;
-
 		if (translation) {
 			pos.x += translation->x;
 			pos.y += translation->z;
@@ -1150,6 +1145,19 @@ static std::vector<aiScene*> GetModels(const vox_file* voxData, const s32 frameI
 				&wxf.trans    // MagicaVoxel translation
 			);
 
+			
+
+				float cx = (box.minX + box.maxX) * 0.5f;
+			float cy = (box.minY + box.maxY) * 0.5f;
+			float cz = (box.minZ + box.maxZ) * 0.5f;
+			aiVector3D center(cx, cy, cz);
+
+			// 3) Recenter every vertex so that the mesh’s center is at the origin
+			for (unsigned int i = 0; i < mesh->mNumVertices; ++i) {
+				mesh->mVertices[i] -= center;
+			}
+
+
 			// Assign material index...
 			mesh->mMaterialIndex = options.MaterialPerMesh ? materialIndex++ : 0;
 
@@ -1161,6 +1169,12 @@ static std::vector<aiScene*> GetModels(const vox_file* voxData, const s32 frameI
 			node->mName = aiString(name);
 			node->mNumMeshes = 1;
 			node->mMeshes = new unsigned int[1] { meshIndex };
+
+			aiMatrix4x4 C;
+			aiMatrix4x4::Translation(center, C);
+			// if your existing nodeXf is M * T3 * T2 * R * T1, then:
+			node->mTransformation = C * node->mTransformation;
+
 			// Leave node->mTransformation as identity (baked already)
 			shapeNodes.push_back(node);
 
