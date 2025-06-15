@@ -94,8 +94,8 @@ struct VOXELLER_API ConvertOptions
     bool MaterialPerMesh = true;
 
     // Overwrite meshes positions, this will put all the meshes in the center of the world (0, 0, 0)
-    // If a file has multiples meshes, then their position will be (0, 0, 0)
-    bool MeshesPosToCenterWorld = false;
+    // If a file has multiples meshes, then all their position will be (0, 0, 0)
+    bool MeshesToWorldCenter = false;
 
     // Generate All Materials, otherwise a default (empty) one will be used for all meshes.
     bool GenerateMaterials = true;

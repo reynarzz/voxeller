@@ -1097,6 +1097,89 @@ bbox ComputeMeshBoundingBox(const aiMesh* mesh) {
     return boundingBox;
 }
 
+vox_vec3 TransformToMeshSpace(const vox_vec3& p,
+                              const vox_vec3& voxCenter,
+                              const vox_imat3& rot,
+                              const vox_vec3& trans)
+{
+    // 1. Translate so pivot is at origin (pivot recentering)
+    vox_vec3 v = p - voxCenter;
+
+    // 2. Apply MagicaVoxel's rotation
+    v = rot * v;
+
+    // 3. Swizzle axes to (x, z, y) to match Assimp's coordinate system
+    vox_vec3 sw{ v.x, v.z, v.y };
+
+    // 4. Apply translation (note Y↔Z swap)
+    sw.x += trans.x;
+    sw.y += trans.z;
+    sw.z += trans.y;
+
+    // 5. Mirror the X-axis to restore right-handedness
+    sw.x = -sw.x;
+
+    return sw;
+}
+
+// Function to transform the voxel AABB into mesh space after rotation/translation/mirroring
+bbox TransformAABB(
+    const bbox& box,
+    const vox_imat3& rot,
+    const vox_vec3& trans
+) {
+    // Helper to transform a single corner
+    auto transformCorner = [&](const vox_vec3& p) {
+        // 1. Apply rotation
+        vox_vec3 v = rot * p;
+        // 2. Swap axes (x, z, y)
+        vox_vec3 sw{ v.x, v.z, v.y };
+        // 3. Apply translation (Y↔Z swap)
+        sw.x += trans.x;
+        sw.y += trans.z;
+        sw.z += trans.y;
+        // 4. Mirror X axis
+        sw.x = -sw.x;
+        return sw;
+    };
+
+    // Determine all 8 corners of the voxel AABB
+    std::array<vox_vec3, 8> corners = {
+        vox_vec3{box.minX, box.minY, box.minZ},
+        vox_vec3{box.minX, box.minY, box.maxZ},
+        vox_vec3{box.minX, box.maxY, box.minZ},
+        vox_vec3{box.minX, box.maxY, box.maxZ},
+        vox_vec3{box.maxX, box.minY, box.minZ},
+        vox_vec3{box.maxX, box.minY, box.maxZ},
+        vox_vec3{box.maxX, box.maxY, box.minZ},
+        vox_vec3{box.maxX, box.maxY, box.maxZ},
+    };
+
+    // Transform each corner, tracking min/max
+    bbox result = {
+        std::numeric_limits<float>::max(),
+        std::numeric_limits<float>::max(),
+        std::numeric_limits<float>::max(),
+        std::numeric_limits<float>::lowest(),
+        std::numeric_limits<float>::lowest(),
+        std::numeric_limits<float>::lowest()
+    };
+
+    for (const auto& c : corners) {
+        vox_vec3 tc = transformCorner(c);
+
+        result.minX = std::min(result.minX, tc.x);
+        result.minY = std::min(result.minY, tc.y);
+        result.minZ = std::min(result.minZ, tc.z);
+        result.maxX = std::max(result.maxX, tc.x);
+        result.maxY = std::max(result.maxY, tc.y);
+        result.maxZ = std::max(result.maxZ, tc.z);
+    }
+
+    return result;
+}
+
+
 // TODO: start simple, from the begining, the whole code base has a problem of code duplication.
 static std::vector<aiScene*> GetModels(const vox_file* voxData, const s32 frameIndex, const std::string& outputPath, const ConvertOptions& options)
 {
@@ -1238,7 +1321,7 @@ static std::vector<aiScene*> GetModels(const vox_file* voxData, const s32 frameI
 			}
 
 			// TODO: This bounding box seems off
-			auto& box = voxData->voxModels[modelId].boundingBox;
+			auto box = voxData->voxModels[modelId].boundingBox;
 
 			// If you want to support groups (nGRP), you may have to walk up to the root and find the chain.
 			vox_transform wxf = AccumulateWorldTransform(shape.nodeID, frameIndex, *voxData);
@@ -1285,26 +1368,20 @@ static std::vector<aiScene*> GetModels(const vox_file* voxData, const s32 frameI
 				node->mMeshes = new unsigned int[1] { meshIndex };
 			}
 
-			float cx = (box.minX + box.maxX) * 0.5f;
-			float cy = (box.minY + box.maxY) * 0.5f;
-			float cz = (box.minZ + box.maxZ) * 0.5f;
-			//box = ComputeMeshBoundingBox(mesh);
-
-			// float cx = box.minX + (box.maxX - box.minX) * options.Pivot.x;
-			// float cy = box.minY + (box.maxY - box.minY) * options.Pivot.y;
-			// float cz = box.minZ + (box.maxZ - box.minZ) * options.Pivot.z;
-
-			aiVector3D center(cx, cy, cz);
+			
+			// box = TransformAABB(box, wxf.rot, wxf.trans);
+			//  float cxx = box.minX + (box.maxX - box.minX) * options.Pivot.x;
+			//  float cyy = box.minY + (box.maxY - box.minY) * options.Pivot.y;
+			//  float czz = box.minZ + (box.maxZ - box.minZ) * options.Pivot.z;
 
 			auto bbbox = ComputeMeshBoundingBox(mesh);
-
-			float cxx = (bbbox.minX + bbbox.maxX) * 0.5f;
-			float cyy = (bbbox.minY + bbbox.maxY) * 0.5f;
-			float czz = (bbbox.minZ + bbbox.maxZ) * 0.5f;
+			float cxx = bbbox.minX + (bbbox.maxX - bbbox.minX) * options.Pivot.x;
+			float cyy = bbbox.minY + (bbbox.maxY - bbbox.minY) * options.Pivot.y;
+			float czz = bbbox.minZ + (bbbox.maxZ - bbbox.minZ) * options.Pivot.z;
 			
 			aiVector3D cent(cxx, cyy, czz);
-			
-			if(options.MeshesPosToCenterWorld)
+
+			if(options.MeshesToWorldCenter)
 			{
 				for (unsigned int i = 0; i < mesh->mNumVertices; ++i)
 				{
@@ -1319,7 +1396,8 @@ static std::vector<aiScene*> GetModels(const vox_file* voxData, const s32 frameI
 				}
 				
 				aiMatrix4x4 C;
-				aiMatrix4x4::Translation(cent, C);
+				aiMatrix4x4::Translation({cent.x,cent.y,cent.z}, C);
+				//aiMatrix4x4::Translation(cent, C);
 				node->mTransformation = C * node->mTransformation;
 			}
 			

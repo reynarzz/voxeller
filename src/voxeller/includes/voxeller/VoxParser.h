@@ -71,6 +71,10 @@ struct vox_vec3 {
     friend vox_vec3 operator*(float scalar, const vox_vec3 &v) {
         return v * scalar;
     }
+
+     friend vox_vec3 operator-(const vox_vec3 &a, const vox_vec3 &v) {
+        return { a.x - v.x, a.y - v.y, a.z - v.z};
+    }
 };
 
 //–– 3×3 integer matrix
