@@ -57,11 +57,16 @@ struct VOXELLER_API ExportResults
     std::string OutPath = "";
 };
 
+enum class MeshOrigin
+{
+    LocalOrigin,
+    WorldOrigin
+};
 
 
 struct VOXELLER_API ConvertOptions
 {
-    struct Scale 
+    struct VXVector 
     {
         f32 x, y, z, xyz = 0;
     };
@@ -85,9 +90,12 @@ struct VOXELLER_API ConvertOptions
 
     bool ExportMeshesSeparatelly = false; // Move this to export options
 
-    bool PreserveMeshesOrigins = true;
-
+    
     bool MaterialPerMesh = true;
+
+    // Overwrite meshes positions, this will put all the meshes in the center of the world (0, 0, 0)
+    // If a file has multiples meshes, then their position will be (0, 0, 0)
+    bool MeshesPosToCenterWorld = false;
 
     // Generate All Materials, otherwise a default (empty) one will be used for all meshes.
     bool GenerateMaterials = true;
@@ -107,8 +115,12 @@ struct VOXELLER_API ConvertOptions
     // When using texture atlas, faces will reuse the same uv locations.
     bool OptimizeTextures = false;
 
+    MeshOrigin Origin;
+
     // Scale, Ex, if 1.0, every single voxel will take up 1 unit.
-    Scale Scale = { 1.0f, 1.0f, 1.0f };
+    VXVector Scale = { 1.0f, 1.0f, 1.0f };
+
+    VXVector Pivot { 0.5f, 0.5f, 0.5f };
 };
 
 struct VOXELLER_API ExportOptions

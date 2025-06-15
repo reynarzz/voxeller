@@ -18,6 +18,7 @@
 #include <assimp/material.h>
 #include <voxeller/VoxParser.h>
 #include <voxeller/Log/Log.h>
+#include <voxeller/VertexMerger.h>
 
 // Include stb_image_write for saving texture atlas as PNG
 //#define STB_IMAGE_WRITE_IMPLEMENTATION
@@ -999,9 +1000,7 @@ static void GenerateAtlasImage(
 
 static bool WriteSceneToFile(const std::vector<aiScene*> scenes, const std::string& outPath, const ExportOptions& options)
 {
-	size_t dot = outPath.find_last_of('.');
-
-	Assimp::Exporter exporter;
+	
 	// Determine export format from extension
 
 	std::string ext = "";
@@ -1020,11 +1019,8 @@ static bool WriteSceneToFile(const std::vector<aiScene*> scenes, const std::stri
 		break;
 	}
 
-	// if(dot != std::string::npos) 
-	// {
-	//     ext = outName.substr(dot+1);
-	// }
 
+	Assimp::Exporter exporter;
 	std::string formatId;
 	const aiExportFormatDesc* selectedFormat = nullptr;
 	for (size_t i = 0; i < exporter.GetExportFormatCount(); ++i) {
@@ -1040,21 +1036,27 @@ static bool WriteSceneToFile(const std::vector<aiScene*> scenes, const std::stri
 		return false;
 	}
 	formatId = selectedFormat->id;
-	u32 preprocess = 0;
 
-	if (options.ConvertOptions.WeldVertices)
-	{
-		preprocess |= aiProcess_JoinIdenticalVertices;
-	}
+	u32 preprocess = 0;
 
 	aiMatrix4x4 scaleMat;
 	aiMatrix4x4::Scaling(aiVector3D(options.ConvertOptions.Scale.x, options.ConvertOptions.Scale.y, options.ConvertOptions.Scale.z), scaleMat);
-	
+
+	size_t dot = outPath.find_last_of('.');
 
 	for (size_t i = 0; i < scenes.size(); i++)
 	{
 		auto scene = scenes[i];
 
+		if (options.ConvertOptions.WeldVertices)
+		{
+			preprocess = aiProcess_JoinIdenticalVertices;
+			// for (size_t i = 0; i < scene->mNumMeshes; i++)
+			// {
+			// 	MergeIdenticalVertices(scene->mMeshes[i]);
+			// }
+		}
+		
 		const std::string convertedOutName = outPath.substr(0, dot) + (scenes.size() > 1? "_" + std::to_string(i): "");
 		scene->mRootNode->mTransformation = scaleMat * scene->mRootNode->mTransformation;
 		aiReturn ret = exporter.Export(scene, formatId.c_str(), convertedOutName + "." + ext, preprocess);
@@ -1068,6 +1070,31 @@ static bool WriteSceneToFile(const std::vector<aiScene*> scenes, const std::stri
 
 	return true;
 
+}
+
+bbox ComputeMeshBoundingBox(const aiMesh* mesh) {
+    bbox boundingBox = {
+        std::numeric_limits<float>::max(),
+        std::numeric_limits<float>::max(),
+        std::numeric_limits<float>::max(),
+        std::numeric_limits<float>::lowest(),
+        std::numeric_limits<float>::lowest(),
+        std::numeric_limits<float>::lowest()
+    };
+    if (!mesh || mesh->mNumVertices == 0)
+        return boundingBox;
+
+    for (unsigned i = 0; i < mesh->mNumVertices; ++i) {
+        const aiVector3D& v = mesh->mVertices[i];
+        boundingBox.minX = std::min(boundingBox.minX, v.x);
+        boundingBox.minY = std::min(boundingBox.minY, v.y);
+        boundingBox.minZ = std::min(boundingBox.minZ, v.z);
+
+        boundingBox.maxX = std::max(boundingBox.maxX, v.x);
+        boundingBox.maxY = std::max(boundingBox.maxY, v.y);
+        boundingBox.maxZ = std::max(boundingBox.maxZ, v.z);
+    }
+    return boundingBox;
 }
 
 // TODO: start simple, from the begining, the whole code base has a problem of code duplication.
@@ -1210,6 +1237,7 @@ static std::vector<aiScene*> GetModels(const vox_file* voxData, const s32 frameI
 				}
 			}
 
+			// TODO: This bounding box seems off
 			auto& box = voxData->voxModels[modelId].boundingBox;
 
 			// If you want to support groups (nGRP), you may have to walk up to the root and find the chain.
@@ -1227,17 +1255,10 @@ static std::vector<aiScene*> GetModels(const vox_file* voxData, const s32 frameI
 				&wxf.trans    // MagicaVoxel translation
 			);
 
-			float cx = (box.minX + box.maxX) * 0.5f;
-			float cy = (box.minY + box.maxY) * 0.5f;
-			float cz = (box.minZ + box.maxZ) * 0.5f;
-			aiVector3D center(cx, cy, cz);
-
+			
 			// 3) Recenter every vertex so that the mesh’s center is at the origin
-			for (unsigned int i = 0; i < mesh->mNumVertices; ++i)
-			{
-				mesh->mVertices[i] -= center;
-			}
-
+			
+			
 			// Assign material index...
 
 			if (options.GenerateMaterials)
@@ -1264,12 +1285,46 @@ static std::vector<aiScene*> GetModels(const vox_file* voxData, const s32 frameI
 				node->mMeshes = new unsigned int[1] { meshIndex };
 			}
 
-			aiMatrix4x4 C;
-			aiMatrix4x4::Translation(center, C);
-			// if your existing nodeXf is M * T3 * T2 * R * T1, then:
-			node->mTransformation = C * node->mTransformation;
-			// ----------------------------------------------------------------------------------------------------------------------------------------------------------
+			float cx = (box.minX + box.maxX) * 0.5f;
+			float cy = (box.minY + box.maxY) * 0.5f;
+			float cz = (box.minZ + box.maxZ) * 0.5f;
+			//box = ComputeMeshBoundingBox(mesh);
 
+			// float cx = box.minX + (box.maxX - box.minX) * options.Pivot.x;
+			// float cy = box.minY + (box.maxY - box.minY) * options.Pivot.y;
+			// float cz = box.minZ + (box.maxZ - box.minZ) * options.Pivot.z;
+
+			aiVector3D center(cx, cy, cz);
+
+			auto bbbox = ComputeMeshBoundingBox(mesh);
+
+			float cxx = (bbbox.minX + bbbox.maxX) * 0.5f;
+			float cyy = (bbbox.minY + bbbox.maxY) * 0.5f;
+			float czz = (bbbox.minZ + bbbox.maxZ) * 0.5f;
+			
+			aiVector3D cent(cxx, cyy, czz);
+			
+			if(options.MeshesPosToCenterWorld)
+			{
+				for (unsigned int i = 0; i < mesh->mNumVertices; ++i)
+				{
+					mesh->mVertices[i] -= cent;
+				}
+			}
+			else
+			{
+				for (unsigned int i = 0; i < mesh->mNumVertices; ++i)
+				{
+					mesh->mVertices[i] -= cent;
+				}
+				
+				aiMatrix4x4 C;
+				aiMatrix4x4::Translation(cent, C);
+				node->mTransformation = C * node->mTransformation;
+			}
+			
+			// ----------------------------------------------------------------------------------------------------------------------------------------------------------
+			
 			meshes.push_back({ mesh, imageName });
 			shapeNodes.push_back(node);
 		}
@@ -1413,6 +1468,7 @@ static std::vector<aiScene*> GetModels(const vox_file* voxData, const s32 frameI
 }
 
 
+
 const std::vector<aiScene*> Run(const vox_file* voxData, const std::string& outputPath, const ConvertOptions& options)
 {
 	if (!voxData || !voxData->isValid)
@@ -1464,8 +1520,7 @@ const std::vector<aiScene*> Run(const vox_file* voxData, const std::string& outp
 			// Prepare a new minimal scene for this frame
 			LOG_CORE_INFO("Frame processing: {0}", fi);
 			auto scenes = GetModels(voxData, fi, outputPath, options);
-			scenesOut.insert(scenesOut.end(), scenes.begin(), scenes.end());
-//std::make_move_iterator(
+
 			for (size_t j = 0; j < scenes.size(); j++)
 			{
 				// Export this scene
@@ -1482,6 +1537,8 @@ const std::vector<aiScene*> Run(const vox_file* voxData, const std::string& outp
 
 				scenes[j]->mName = frameOut;
 			}
+
+			scenesOut.insert(scenesOut.end(), std::make_move_iterator(scenes.begin()), std::make_move_iterator(scenes.end()));
 		}
 
 		return scenesOut;

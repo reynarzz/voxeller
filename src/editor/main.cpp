@@ -81,15 +81,16 @@ int main()
 	Voxeller::ExportOptions exportOptions{};
 	exportOptions.OutputFormat = Voxeller::ModelFormat::FBX;
 	exportOptions.ConvertOptions.RemoveTJunctions = false;
-	exportOptions.ConvertOptions.WeldVertices = true;
+	exportOptions.ConvertOptions.WeldVertices = false;
 	exportOptions.ConvertOptions.FlatShading = true;
 	exportOptions.ConvertOptions.SeparateTexturesPerMesh = false;
 	exportOptions.ConvertOptions.MaterialPerMesh = true;
-	exportOptions.ConvertOptions.Scale = { 1.0f, 1.0f, 1.0f };
+	exportOptions.ConvertOptions.Scale = { 12.3f, 12.3f, 12.3f };
 	exportOptions.ConvertOptions.ExportFramesSeparatelly = true;
-	exportOptions.ConvertOptions.ExportMeshesSeparatelly = true;
+	exportOptions.ConvertOptions.ExportMeshesSeparatelly = false;
 	
 	exportOptions.ConvertOptions.GenerateMaterials = true;
+	exportOptions.ConvertOptions.MeshesPosToCenterWorld = false;
 
 	//Chicken_van_2.vox
 	//std::string path = "B:/Projects/voxeller/bin/Debug/testvox/nda/Ambulance_1.vox"; // Test this!
