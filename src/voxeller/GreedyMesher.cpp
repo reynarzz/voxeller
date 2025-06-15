@@ -1374,7 +1374,7 @@ static std::vector<aiScene*> GetModels(const vox_file* voxData, const s32 frameI
 			//  float cyy = box.minY + (box.maxY - box.minY) * options.Pivot.y;
 			//  float czz = box.minZ + (box.maxZ - box.minZ) * options.Pivot.z;
  
-			auto pivot = Rotate(wxf.rot, options.Pivot);
+			auto pivot =options.Pivot;// Rotate(wxf.rot, options.Pivot);
 			auto bbbox = ComputeMeshBoundingBox(mesh);
 			float cxx = bbbox.minX + (bbbox.maxX - bbbox.minX) * pivot.x;
 			float cyy = bbbox.minY + (bbbox.maxY - bbbox.minY) * pivot.y;
