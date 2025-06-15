@@ -26,6 +26,14 @@ enum class ConvertMSG
     SUCESS,
 };
 
+enum class TextureFormat 
+{
+    RGBA8,
+    PGN,
+    JPG,
+    TGA,
+};
+
 
 struct VOXELLER_API TextureData
 {
@@ -49,13 +57,6 @@ struct VOXELLER_API ExportResults
     std::string OutPath = "";
 };
 
-enum class TextureFormat 
-{
-    RGBA8,
-    PGN,
-    JPG,
-    TGA,
-};
 
 
 struct VOXELLER_API ConvertOptions

@@ -80,22 +80,22 @@ int main()
 
 	Voxeller::ExportOptions exportOptions{};
 	exportOptions.OutputFormat = Voxeller::ModelFormat::FBX;
-	exportOptions.ConvertOptions.RemoveTJunctions = true;
+	exportOptions.ConvertOptions.RemoveTJunctions = false;
 	exportOptions.ConvertOptions.WeldVertices = true;
 	exportOptions.ConvertOptions.FlatShading = true;
 	exportOptions.ConvertOptions.SeparateTexturesPerMesh = false;
 	exportOptions.ConvertOptions.MaterialPerMesh = true;
 	exportOptions.ConvertOptions.Scale = { 1.0f, 1.0f, 1.0f };
 	exportOptions.ConvertOptions.ExportFramesSeparatelly = true;
-	exportOptions.ConvertOptions.ExportMeshesSeparatelly = false;
+	exportOptions.ConvertOptions.ExportMeshesSeparatelly = true;
 	
 	exportOptions.ConvertOptions.GenerateMaterials = true;
 
 	//Chicken_van_2.vox
 	//std::string path = "B:/Projects/voxeller/bin/Debug/testvox/nda/Ambulance_1.vox"; // Test this!
 	//std::string path = "B:/Projects/voxeller/bin/Debug/testvox/room.vox"; 
-	std::string path = "B:/Projects/voxeller/bin/Debug/testvox/nda/Ambulance_1.vox";
-	std::string output = "B:/Projects/voxeller/bin/Debug/testvox/nda/export/Output.fbx";
+	std::string path = "testvox/nda/Ambulance_1.vox";
+	std::string output = "testvox/nda/export/Output.fbx";
 	Voxeller::GreedyMesher::ExportVoxToModel(path, output, exportOptions);
 
 	while (!glfwWindowShouldClose(win))

@@ -997,7 +997,7 @@ static void GenerateAtlasImage(
 	}
 }
 
-static bool WriteSceneToFile(const aiScene* scene, const std::string& outPath, const ExportOptions& options)
+static bool WriteSceneToFile(const std::vector<aiScene*> scenes, const std::string& outPath, const ExportOptions& options)
 {
 	size_t dot = outPath.find_last_of('.');
 
@@ -1047,16 +1047,25 @@ static bool WriteSceneToFile(const aiScene* scene, const std::string& outPath, c
 		preprocess |= aiProcess_JoinIdenticalVertices;
 	}
 
-	const std::string convertedOutName = outPath.substr(0, dot);
 	aiMatrix4x4 scaleMat;
 	aiMatrix4x4::Scaling(aiVector3D(options.ConvertOptions.Scale.x, options.ConvertOptions.Scale.y, options.ConvertOptions.Scale.z), scaleMat);
-	scene->mRootNode->mTransformation = scaleMat * scene->mRootNode->mTransformation;
+	
 
-	aiReturn ret = exporter.Export(scene, formatId.c_str(), convertedOutName + "." + ext, preprocess);
-	if (ret != aiReturn_SUCCESS) {
-		std::cerr << "Export failed: " << exporter.GetErrorString() << "\n";
-		return false;
+	for (size_t i = 0; i < scenes.size(); i++)
+	{
+		auto scene = scenes[i];
+
+		const std::string convertedOutName = outPath.substr(0, dot) + (scenes.size() > 1? "_" + std::to_string(i): "");
+		scene->mRootNode->mTransformation = scaleMat * scene->mRootNode->mTransformation;
+		aiReturn ret = exporter.Export(scene, formatId.c_str(), convertedOutName + "." + ext, preprocess);
+		if (ret != aiReturn_SUCCESS) 
+		{
+			std::cerr << "Export failed: " << exporter.GetErrorString() << "\n";
+			return false;
+		}
+
 	}
+
 	return true;
 
 }
@@ -1404,12 +1413,12 @@ static std::vector<aiScene*> GetModels(const vox_file* voxData, const s32 frameI
 }
 
 
-const aiScene* Run(const vox_file* voxData, const std::string& outputPath, const ConvertOptions& options)
+const std::vector<aiScene*> Run(const vox_file* voxData, const std::string& outputPath, const ConvertOptions& options)
 {
 	if (!voxData || !voxData->isValid)
 	{
 		std::cerr << "Failed to read voxel file or file is invalid.\n";
-		return nullptr;
+		return {};
 	}
 
 	// Determine if we have multiple frames (multiple models or transform frames)
@@ -1430,7 +1439,7 @@ const aiScene* Run(const vox_file* voxData, const std::string& outputPath, const
 	if (frameCount == 0 && voxData->voxModels.size() == 0 && voxData->shapes.size() == 0)
 	{
 		std::cerr << "No voxel models in the file.\n";
-		return nullptr;
+		return {};
 	}
 
 	// Set up Assimp scene
@@ -1448,17 +1457,17 @@ const aiScene* Run(const vox_file* voxData, const std::string& outputPath, const
 
 	if (options.ExportFramesSeparatelly && frameCount >= 1 && voxData->shapes.size() > 0)
 	{
-		// Loop through frames, create scene for each
+		std::vector<aiScene*> scenesOut{};
+
 		for (s32 fi = 0; fi < frameCount; ++fi)
 		{
 			// Prepare a new minimal scene for this frame
 			LOG_CORE_INFO("Frame processing: {0}", fi);
 			auto scenes = GetModels(voxData, fi, outputPath, options);
-
+			scenesOut.insert(scenesOut.end(), scenes.begin(), scenes.end());
+//std::make_move_iterator(
 			for (size_t j = 0; j < scenes.size(); j++)
 			{
-				aiScene* scene = scenes[j];
-
 				// Export this scene
 				std::string frameOut = outputPath;
 				// Insert frame number before extension
@@ -1471,50 +1480,11 @@ const aiScene* Run(const vox_file* voxData, const std::string& outputPath, const
 					frameOut = outputPath + "_frame" + std::to_string(j);
 				}
 
-				Assimp::Exporter exporter;
-
-				const aiExportFormatDesc* fmtDesc = nullptr;
-
-				for (size_t ii = 0; ii < exporter.GetExportFormatCount(); ++ii)
-				{
-					auto fdesc = exporter.GetExportFormatDescription(ii);
-					LOG_EDITOR_INFO("Export ext: {0}", fdesc->fileExtension);
-
-					if (fdesc && outputPath.size() >= strlen(fdesc->fileExtension) &&
-						outputPath.substr(outputPath.size() - strlen(fdesc->fileExtension)) == fdesc->fileExtension)
-					{
-						fmtDesc = fdesc;
-						break;
-					}
-				}
-
-				std::string fmtId = fmtDesc ? fmtDesc->id : "fbx";
-				u32 preprocess = 0;
-
-				if (options.WeldVertices)
-				{
-					preprocess |= aiProcess_JoinIdenticalVertices;
-				}
-
-				if (exporter.Export(scene, "fbx", frameOut, preprocess) != aiReturn_SUCCESS)
-				{
-					std::cerr << "Failed to export mesh " << j << ": " << exporter.GetErrorString() << "\n";
-				}
-				else
-				{
-					std::cout << "Exported " << frameOut << "\n";
-				}
+				scenes[j]->mName = frameOut;
 			}
-
-			// Clean up allocated data in singleScene
-			// (Note: It's a stack aiScene, but we allocated materials and meshes)
-			/*delete singleScene.mMeshes[0];
-			delete [] singleScene.mMeshes;
-			delete singleScene.mMaterials[0];
-			delete [] singleScene.mMaterials;
-			delete [] singleScene.mRootNode->mMeshes;*/
-			//delete singleScene.mRootNode;
 		}
+
+		return scenesOut;
 	}
 	else
 	{
@@ -1725,7 +1695,6 @@ const aiScene* Run(const vox_file* voxData, const std::string& outputPath, const
 			LOG_CORE_INFO("Done cleaning up meshes count: {0}", scene->mNumMeshes);
 		}
 
-
 		// Export combined scene
 		// if(!exportScene(outputPath)) {
 		//     std::cerr << "Failed to export scene.\n";
@@ -1734,7 +1703,7 @@ const aiScene* Run(const vox_file* voxData, const std::string& outputPath, const
 		//     std::cout << "Exported " << outputPath << " successfully.\n";
 		// }
 
-		return scene;
+		return { scene };
 	}
 
 	// Clean up dynamically allocated scene data for combined case
@@ -1763,7 +1732,7 @@ const aiScene* Run(const vox_file* voxData, const std::string& outputPath, const
 		// delete scene->mRootNode;
 		// delete scene;
 	}
-	return nullptr;
+	return {};
 }
 
 
@@ -1771,13 +1740,19 @@ const aiScene* Run(const vox_file* voxData, const std::string& outputPath, const
 ExportResults GreedyMesher::ExportVoxToModel(const std::string& inVoxPath, const std::string& outExportPath, const ExportOptions& options)
 {
 	std::shared_ptr<vox_file> voxData = VoxParser::read_vox_file(inVoxPath.c_str());
-	const aiScene* scene = Run(voxData.get(), outExportPath, options.ConvertOptions);
+	const auto scenes = Run(voxData.get(), outExportPath, options.ConvertOptions);
 
 	ExportResults results{};
-
-	if (scene != nullptr)
+	
+	if (scenes.size() > 0)
 	{
-		WriteSceneToFile(scene, outExportPath, options);
+		WriteSceneToFile(scenes, outExportPath, options);
+		
+		for (size_t i = 0; i < scenes.size(); i++)
+		{
+			delete scenes[i];
+		}
+		
 		results.Convert.Msg = ConvertMSG::SUCESS;
 	}
 	else
