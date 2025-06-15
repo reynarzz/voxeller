@@ -591,7 +591,7 @@ inline vox_transform AccumulateWorldTransform(
 	return world;
 }
 
-inline aiVector3D crossProduct(const aiVector3D& a, const aiVector3D& b) 
+inline aiVector3D crossProduct(const aiVector3D& a, const aiVector3D& b)
 {
 	return aiVector3D(
 		a.y * b.z - a.z * b.y,
@@ -755,9 +755,9 @@ static void BuildMeshFromFaces(
 			tx = rotation->m00 * nx + rotation->m01 * ny + rotation->m02 * nz;
 			ty = rotation->m10 * nx + rotation->m11 * ny + rotation->m12 * nz;
 			tz = rotation->m20 * nx + rotation->m21 * ny + rotation->m22 * nz;
-		/*	nx = tx; 
-			ny = ty; 
-			nz = tz;*/
+			/*	nx = tx;
+				ny = ty;
+				nz = tz;*/
 		}
 
 		// swizzle into Assimp (X,Z,Y)
@@ -815,14 +815,14 @@ static void BuildMeshFromFaces(
 		aiVector3D fn = crossProduct(B - A, C - A).Normalize();
 		fn.Normalize();
 
-		if (flatShading) 
+		if (flatShading)
 		{
 			// assign same normal to all three corners
 			mesh->mNormals[i0] = fn;
 			mesh->mNormals[i1] = fn;
 			mesh->mNormals[i2] = fn;
 		}
-		else 
+		else
 		{
 			// accumulate for smoothing
 			accum[i0] += fn;
@@ -832,9 +832,9 @@ static void BuildMeshFromFaces(
 	}
 
 	// if smooth shading, normalize the per‐vertex sums
-	if (!flatShading) 
+	if (!flatShading)
 	{
-		for (unsigned int i = 0; i < mesh->mNumVertices; ++i) 
+		for (unsigned int i = 0; i < mesh->mNumVertices; ++i)
 		{
 			accum[i].Normalize();
 			mesh->mNormals[i] = accum[i];
@@ -1213,14 +1213,21 @@ static std::vector<aiScene*> GetModels(const vox_file* voxData, const s32 frameI
 			aiVector3D center(cx, cy, cz);
 
 			// 3) Recenter every vertex so that the mesh’s center is at the origin
-			for (unsigned int i = 0; i < mesh->mNumVertices; ++i) 
+			for (unsigned int i = 0; i < mesh->mNumVertices; ++i)
 			{
 				mesh->mVertices[i] -= center;
 			}
 
 			// Assign material index...
-			mesh->mMaterialIndex = options.MaterialPerMesh && !options.ExportMeshesSeparatelly ? materialIndex++ : 0;
 
+			if (options.ExportMaterials)
+			{
+				mesh->mMaterialIndex = options.MaterialPerMesh && !options.ExportMeshesSeparatelly ? materialIndex++ : 0;
+			}
+			else
+			{
+				mesh->mMaterialIndex = 0;
+			}
 			// Record mesh index and create node with identity transform:
 			unsigned int meshIndex = static_cast<unsigned int>(meshes.size());
 			meshes.push_back({ mesh, imageName });
@@ -1233,7 +1240,7 @@ static std::vector<aiScene*> GetModels(const vox_file* voxData, const s32 frameI
 			{
 				node->mMeshes = new unsigned int[1] { 0 };
 			}
-			else 
+			else
 			{
 				node->mMeshes = new unsigned int[1] { meshIndex };
 			}
@@ -1282,15 +1289,22 @@ static std::vector<aiScene*> GetModels(const vox_file* voxData, const s32 frameI
 			sceneSplit->mNumMeshes = 1;
 			sceneSplit->mMeshes = new aiMesh * [1] { meshes[i].Mesh };
 
+			if (options.ExportMaterials)
+			{
+				aiString texPath(meshes[i].imageName);
+				aiMaterial* mat = new aiMaterial();
+				mat->AddProperty(&texPath, AI_MATKEY_TEXTURE(aiTextureType_DIFFUSE, 0));
 
-			aiString texPath(meshes[i].imageName);
-			aiMaterial* mat = new aiMaterial();
-			mat->AddProperty(&texPath, AI_MATKEY_TEXTURE(aiTextureType_DIFFUSE, 0));
+				// Since the meshes will be exported separatelly, always create a material per mesh
+				sceneSplit->mNumMaterials = 1;
+				sceneSplit->mMaterials = new aiMaterial * [1] { mat };
 
-			// Since the meshes will be exported separatelly, always create a material per mesh
-			sceneSplit->mNumMaterials = 1;
-			sceneSplit->mMaterials = new aiMaterial * [1] { mat };
-
+			}
+			else
+			{
+				sceneSplit->mNumMaterials = 0;
+				sceneSplit->mMaterials = nullptr;
+			}
 			scenes.push_back(sceneSplit);
 		}
 	}
@@ -1306,18 +1320,27 @@ static std::vector<aiScene*> GetModels(const vox_file* voxData, const s32 frameI
 		scene->mRootNode->mChildren = new aiNode * [shapeNodes.size()];
 
 		// TODO: set one material per mesh, or share a material? for shared materials, the texture individial export option should be turned off, since the material needs the whole atlas.
-		if (options.MaterialPerMesh)
-		{
-			scene->mNumMaterials = meshes.size();
-			scene->mMaterials = new aiMaterial * [meshes.size()];
-		}
-		else
-		{
-			LOG_CORE_ERROR("IMPLEMENT shared materials");
-			throw;
-			scene->mNumMaterials = 1;
-			scene->mMaterials = new aiMaterial * [1];
 
+		if (options.ExportMaterials) 
+		{
+			if (options.MaterialPerMesh)
+			{
+				scene->mNumMaterials = meshes.size();
+				scene->mMaterials = new aiMaterial * [meshes.size()];
+			}
+			else
+			{
+				LOG_CORE_ERROR("IMPLEMENT shared materials");
+				throw;
+				scene->mNumMaterials = 1;
+				scene->mMaterials = new aiMaterial * [1];
+
+			}
+		}
+		else 
+		{
+			scene->mNumMaterials = 0;
+			scene->mMaterials = nullptr;
 		}
 
 		for (size_t i = 0; i < meshes.size(); ++i)
@@ -1326,10 +1349,13 @@ static std::vector<aiScene*> GetModels(const vox_file* voxData, const s32 frameI
 
 			s32 matIndex = meshes[i].Mesh->mMaterialIndex;
 
-			aiString texPath(meshes[i].imageName);
-			aiMaterial* mat = new aiMaterial();
-			mat->AddProperty(&texPath, AI_MATKEY_TEXTURE(aiTextureType_DIFFUSE, 0));
-			scene->mMaterials[matIndex] = mat;
+			if (options.ExportMaterials)
+			{
+				aiString texPath(meshes[i].imageName);
+				aiMaterial* mat = new aiMaterial();
+				mat->AddProperty(&texPath, AI_MATKEY_TEXTURE(aiTextureType_DIFFUSE, 0));
+				scene->mMaterials[matIndex] = mat;
+			}		
 		}
 
 		// Set all the nodes to the root.
@@ -1341,6 +1367,15 @@ static std::vector<aiScene*> GetModels(const vox_file* voxData, const s32 frameI
 		scenes = { scene };
 	}
 
+	// Adds default material, some formats require at least one.
+	for (auto sceneitem : scenes)
+	{
+		if (sceneitem->mNumMaterials == 0) 
+		{
+			sceneitem->mNumMaterials = 1;
+			sceneitem->mMaterials = new aiMaterial*[1] {new aiMaterial};
+		}
+	}
 	return scenes;
 }
 
@@ -1362,16 +1397,6 @@ const aiScene* Run(const vox_file* voxData, const std::string& outputPath, const
 		frameCount = std::max(frameCount, kv.second.framesCount);
 	}
 
-
-	/*for (const auto& kv : voxData->shapes)
-	{
-		const vox_nSHP& shape = kv.second;
-		for (const auto& m : shape.models)
-		{
-			frameCount = std::max(frameCount, m.frameIndex + 1);
-		}
-	}*/
-
 	LOG_CORE_INFO("Version: {0}", voxData->header.version);
 	LOG_CORE_INFO("Transforms: {0}", voxData->transforms.size());
 	LOG_CORE_INFO("Models: {0}", voxData->voxModels.size());
@@ -1383,6 +1408,7 @@ const aiScene* Run(const vox_file* voxData, const std::string& outputPath, const
 		std::cerr << "No voxel models in the file.\n";
 		return nullptr;
 	}
+
 	// Set up Assimp scene
 	aiScene* scene = new aiScene();
 	scene->mRootNode = new aiNode();
@@ -1396,9 +1422,8 @@ const aiScene* Run(const vox_file* voxData, const std::string& outputPath, const
 
 	size_t dot = outputPath.find_last_of('.');
 
-	if (options.ExportFramesSeparatelly /*&& frameCount >= 1 && voxData->shapes.size() > 0*/)
+	if (options.ExportFramesSeparatelly && frameCount >= 1 && voxData->shapes.size() > 0)
 	{
-
 		// Loop through frames, create scene for each
 		for (s32 fi = 0; fi < frameCount; ++fi)
 		{
@@ -1449,9 +1474,7 @@ const aiScene* Run(const vox_file* voxData, const std::string& outputPath, const
 				{
 					std::cout << "Exported " << frameOut << "\n";
 				}
-
 			}
-
 
 			// Clean up allocated data in singleScene
 			// (Note: It's a stack aiScene, but we allocated materials and meshes)
