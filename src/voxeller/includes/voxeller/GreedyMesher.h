@@ -28,12 +28,33 @@ enum class ConvertMSG
 
 enum class TextureFormat 
 {
+    // 4 Bytes per pixel
     RGBA8,
+    // Encoded as .png
     PGN,
+    // Encoded as .jpg
     JPG,
+    // Encoded as .tga
     TGA,
 };
 
+enum class TextureType
+{
+    // Atlas: Will generate a performant mesh, but texture will be more complex and bigger in size. 
+    // Perfect for complex meshes.
+    Atlas,
+    // Will generate a mesh with more complex topology but simpler and smaller texture made of individual colors per pixel. 
+    // Perfect for simple meshes.
+    Palette
+};
+
+struct PaletteTextureConfig
+{
+    bool UseColumns = false;
+    
+    // How many pixels can be fit in the same Row/Column before increasing the texture dimension.
+    s32 Max = 255;
+};
 
 struct VOXELLER_API TextureData
 {
@@ -56,13 +77,6 @@ struct VOXELLER_API ExportResults
     ConvertResult Convert = {};
     std::string OutPath = "";
 };
-
-enum class MeshOrigin
-{
-    LocalOrigin,
-    WorldOrigin
-};
-
 
 struct VOXELLER_API ConvertOptions
 {
@@ -115,7 +129,8 @@ struct VOXELLER_API ConvertOptions
     // When using texture atlas, faces will reuse the same uv locations.
     bool OptimizeTextures = false;
 
-    MeshOrigin Origin;
+    
+    TextureType TextureType;
 
     // Scale, Ex, if 1.0, every single voxel will take up 1 unit.
     VXVector Scale = { 1.0f, 1.0f, 1.0f };

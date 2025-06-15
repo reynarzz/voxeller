@@ -92,8 +92,8 @@ int main()
 	
 	exportOptions.ConvertOptions.GenerateMaterials = true;
 	exportOptions.ConvertOptions.MeshesToWorldCenter = false;
-   exportOptions.ConvertOptions.TexturesPOT = true;
-   
+   exportOptions.ConvertOptions.TexturesPOT = false;
+
 	//Chicken_van_2.vox
 	//std::string path = "B:/Projects/voxeller/bin/Debug/testvox/nda/Ambulance_1.vox"; // Test this!
 	//std::string path = "B:/Projects/voxeller/bin/Debug/testvox/room.vox"; 
@@ -105,7 +105,7 @@ int main()
 	{
 		Render(win);
 	}
-
+   
 	glfwTerminate();
 	return -1;
 }

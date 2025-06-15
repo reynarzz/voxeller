@@ -1185,14 +1185,7 @@ inline ConvertOptions::VXVector Rotate(const vox_imat3& m, const ConvertOptions:
 std::shared_ptr<TextureData> GetTexture(std::vector<FaceRect>& faces, const std::vector<color>& palette, 
 									  const std::vector<vox_model>& models, const bool texturesPOT)
 {
-	 
-// Determine atlas size
 			int atlasDim = 16;
-
-			// TODO: if textures were said to be exported in a large atlas, then, deffer this pack, and joint all the faces together?
-			// Base initial size on number of used colors or face area sum
-			// We'll just try increasing POT until success
-
 			int usedW = 0;
 			int usedH = 0;
 
@@ -1244,7 +1237,6 @@ std::shared_ptr<TextureData> GetTexture(std::vector<FaceRect>& faces, const std:
 
 				atlasDim = std::max(usedW, usedH);
 			}
-
 				// Create image
 				auto textureData = std::make_shared<TextureData>();
 				textureData->Width = usedW;
