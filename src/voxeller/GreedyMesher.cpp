@@ -591,6 +591,14 @@ inline vox_transform AccumulateWorldTransform(
 	return world;
 }
 
+inline aiVector3D crossProduct(const aiVector3D& a, const aiVector3D& b) 
+{
+	return aiVector3D(
+		a.y * b.z - a.z * b.y,
+		a.z * b.x - a.x * b.z,
+		a.x * b.y - a.y * b.x
+	);
+}
 
 // Build the actual geometry (vertices and indices) for a mesh from the FaceRect list and a given texture atlas configuration.
 static void BuildMeshFromFaces(
@@ -730,13 +738,16 @@ static void BuildMeshFromFaces(
 
 	// 3) Transform vertices: recenter→rotate→swizzle→pivot→translate→mirror
 	for (unsigned int i = 0; i < verts.size(); ++i) {
+		// recenter on pivot
 		float x = verts[i].px - pivot.x;
 		float y = verts[i].py - pivot.y;
 		float z = verts[i].pz - pivot.z;
-		float nx = verts[i].nx, ny = verts[i].ny, nz = verts[i].nz;
+		float nx = verts[i].nx;
+		float ny = verts[i].ny;
+		float nz = verts[i].nz;
 
+		// apply MagicaVoxel rotation (if any)
 		if (rotation) {
-			// apply MagicaVoxel rotation
 			float tx = rotation->m00 * x + rotation->m01 * y + rotation->m02 * z;
 			float ty = rotation->m10 * x + rotation->m11 * y + rotation->m12 * z;
 			float tz = rotation->m20 * x + rotation->m21 * y + rotation->m22 * z;
@@ -744,22 +755,28 @@ static void BuildMeshFromFaces(
 			tx = rotation->m00 * nx + rotation->m01 * ny + rotation->m02 * nz;
 			ty = rotation->m10 * nx + rotation->m11 * ny + rotation->m12 * nz;
 			tz = rotation->m20 * nx + rotation->m21 * ny + rotation->m22 * nz;
-			nx = tx; ny = ty; nz = tz;
+		/*	nx = tx; 
+			ny = ty; 
+			nz = tz;*/
 		}
 
-		// swizzle into Assimp coords (X,Z,Y)
+		// swizzle into Assimp (X,Z,Y)
 		aiVector3D pos{ x, z, y };
 		aiVector3D norm{ nx, nz, ny };
 
+		// apply MagicaVoxel translation (with Y↔Z swap)
 		if (translation) {
 			pos.x += translation->x;
 			pos.y += translation->z;
 			pos.z += translation->y;
 		}
 
-		// un-mirror X
+		// un‐mirror X to restore right‐handedness
 		pos.x = -pos.x;
 		norm.x = -norm.x;
+
+		// ** NEW: re-normalize to unit length **
+		norm.Normalize();
 
 		mesh->mVertices[i] = pos;
 		mesh->mNormals[i] = norm;
@@ -777,6 +794,51 @@ static void BuildMeshFromFaces(
 				indices[f * 3 + 1],
 				indices[f * 3 + 2]
 			};
+	}
+
+
+	// Recalculate the normals
+	std::vector<aiVector3D> accum(mesh->mNumVertices, aiVector3D{ 0,0,0 });
+
+	// for each triangle face...
+	for (unsigned int f = 0; f < mesh->mNumFaces; ++f) {
+		const aiFace& face = mesh->mFaces[f];
+		unsigned i0 = face.mIndices[0],
+			i1 = face.mIndices[1],
+			i2 = face.mIndices[2];
+
+		aiVector3D A = mesh->mVertices[i0];
+		aiVector3D B = mesh->mVertices[i1];
+		aiVector3D C = mesh->mVertices[i2];
+
+		// face normal = (B−A) × (C−A)
+		aiVector3D fn = crossProduct(B - A, C - A).Normalize();
+		fn.Normalize();
+
+		if (flatShading) 
+		{
+			// assign same normal to all three corners
+			mesh->mNormals[i0] = fn;
+			mesh->mNormals[i1] = fn;
+			mesh->mNormals[i2] = fn;
+		}
+		else 
+		{
+			// accumulate for smoothing
+			accum[i0] += fn;
+			accum[i1] += fn;
+			accum[i2] += fn;
+		}
+	}
+
+	// if smooth shading, normalize the per‐vertex sums
+	if (!flatShading) 
+	{
+		for (unsigned int i = 0; i < mesh->mNumVertices; ++i) 
+		{
+			accum[i].Normalize();
+			mesh->mNormals[i] = accum[i];
+		}
 	}
 }
 
@@ -1181,11 +1243,7 @@ static std::vector<aiScene*> GetModels(const vox_file* voxData, const s32 frameI
 			// if your existing nodeXf is M * T3 * T2 * R * T1, then:
 			node->mTransformation = C * node->mTransformation;
 
-			// Leave node->mTransformation as identity (baked already)
 			shapeNodes.push_back(node);
-
-
-			// Now assign meshes and nodes to the scene
 		}
 	}
 	else if (voxData->voxModels.size() > 0)
