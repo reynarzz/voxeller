@@ -40,9 +40,14 @@ enum class TextureFormat
 
 enum class TextureType
 {
-    // Atlas: Will generate a performant mesh, but texture will be more complex and bigger in size. 
+    // Will generate a performant mesh, but texture will be more complex and bigger in size. 
     // Perfect for complex meshes.
     Atlas,
+
+    // Will generate a not so performant mesh, and a no so performant texture, but final mesh fidelity will be higher. 
+    // Great for non interactive media (videos/images).
+    AtlasHighFidelity,
+
     // Will generate a mesh with more complex topology but simpler and smaller texture made of individual colors per pixel. 
     // Perfect for simple meshes.
     Palette
