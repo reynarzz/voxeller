@@ -1122,63 +1122,63 @@ vox_vec3 TransformToMeshSpace(const vox_vec3& p,
     return sw;
 }
 
-// Function to transform the voxel AABB into mesh space after rotation/translation/mirroring
-bbox TransformAABB(
-    const bbox& box,
-    const vox_imat3& rot,
-    const vox_vec3& trans
+#include <assimp/scene.h> // for aiMatrix4x4, aiVector3D
+
+aiMatrix4x4 BuildAiTransformMatrix(
+    const vox_imat3& rot,      // 3×3 rotation from MagicaVoxel
+    const vox_vec3& trans      // translation from MagicaVoxel (_t), in voxel units
 ) {
-    // Helper to transform a single corner
-    auto transformCorner = [&](const vox_vec3& p) {
-        // 1. Apply rotation
-        vox_vec3 v = rot * p;
-        // 2. Swap axes (x, z, y)
-        vox_vec3 sw{ v.x, v.z, v.y };
-        // 3. Apply translation (Y↔Z swap)
-        sw.x += trans.x;
-        sw.y += trans.z;
-        sw.z += trans.y;
-        // 4. Mirror X axis
-        sw.x = -sw.x;
-        return sw;
+    // 1. Assemble a 4×4 matrix from rot and trans,
+    //    with axis swap and X mirroring baked in.
+
+    // Prepare rotation rows
+    // MagicaVoxel uses row-vectors; we map to column-major aiMatrix4x4
+    float R[4][4] = {
+        { rot.m00, rot.m10, rot.m20, 0.0f },
+        { rot.m01, rot.m11, rot.m21, 0.0f },
+        { rot.m02, rot.m12, rot.m22, 0.0f },
+        {    0.0f,    0.0f,    0.0f, 1.0f }
     };
 
-    // Determine all 8 corners of the voxel AABB
-    std::array<vox_vec3, 8> corners = {
-        vox_vec3{box.minX, box.minY, box.minZ},
-        vox_vec3{box.minX, box.minY, box.maxZ},
-        vox_vec3{box.minX, box.maxY, box.minZ},
-        vox_vec3{box.minX, box.maxY, box.maxZ},
-        vox_vec3{box.maxX, box.minY, box.minZ},
-        vox_vec3{box.maxX, box.minY, box.maxZ},
-        vox_vec3{box.maxX, box.maxY, box.minZ},
-        vox_vec3{box.maxX, box.maxY, box.maxZ},
-    };
+    // 2. Swap axes: convert (x, y, z) → (x, z, y)
+    //    Effectively multiply on the right with a permutation matrix.
+    aiMatrix4x4 perm;
+    perm.a1 = 1.0f; // X → X
+    perm.b3 = 1.0f; // Y → Z
+    perm.c2 = 1.0f; // Z → Y
 
-    // Transform each corner, tracking min/max
-    bbox result = {
-        std::numeric_limits<float>::max(),
-        std::numeric_limits<float>::max(),
-        std::numeric_limits<float>::max(),
-        std::numeric_limits<float>::lowest(),
-        std::numeric_limits<float>::lowest(),
-        std::numeric_limits<float>::lowest()
-    };
+    // 3. Mirror X: scale X by –1
+    aiMatrix4x4 mirror;
+    mirror.a1 = -1.0f;
 
-    for (const auto& c : corners) {
-        vox_vec3 tc = transformCorner(c);
+    // Combine rotation, permutation, and mirroring
+    aiMatrix4x4 mRot(
+        R[0][0], R[0][1], R[0][2], 0.0f,
+        R[1][0], R[1][1], R[1][2], 0.0f,
+        R[2][0], R[2][1], R[2][2], 0.0f,
+           0.0f,    0.0f,    0.0f, 1.0f
+    );
 
-        result.minX = std::min(result.minX, tc.x);
-        result.minY = std::min(result.minY, tc.y);
-        result.minZ = std::min(result.minZ, tc.z);
-        result.maxX = std::max(result.maxX, tc.x);
-        result.maxY = std::max(result.maxY, tc.y);
-        result.maxZ = std::max(result.maxZ, tc.z);
-    }
+    aiMatrix4x4 xf = mirror * perm * mRot;
 
-    return result;
+    // 4. Apply translation: note the Y ↔ Z swap
+    aiVector3D t;
+    t.x = trans.x;
+    t.y = trans.z;
+    t.z = trans.y;
+
+    aiMatrix4x4::Translation(t, xf);
+    return xf;
 }
 
+inline ConvertOptions::VXVector Rotate(const vox_imat3& m, const ConvertOptions::VXVector& v) 
+{
+      return {
+        m.m00 * v.x + m.m10 * v.y + m.m20 * v.z,
+        m.m01 * v.x + m.m11 * v.y + m.m21 * v.z,
+        m.m02 * v.x + m.m12 * v.y + m.m22 * v.z
+    };
+}
 
 // TODO: start simple, from the begining, the whole code base has a problem of code duplication.
 static std::vector<aiScene*> GetModels(const vox_file* voxData, const s32 frameIndex, const std::string& outputPath, const ConvertOptions& options)
@@ -1373,11 +1373,12 @@ static std::vector<aiScene*> GetModels(const vox_file* voxData, const s32 frameI
 			//  float cxx = box.minX + (box.maxX - box.minX) * options.Pivot.x;
 			//  float cyy = box.minY + (box.maxY - box.minY) * options.Pivot.y;
 			//  float czz = box.minZ + (box.maxZ - box.minZ) * options.Pivot.z;
-
+ 
+			auto pivot = Rotate(wxf.rot, options.Pivot);
 			auto bbbox = ComputeMeshBoundingBox(mesh);
-			float cxx = bbbox.minX + (bbbox.maxX - bbbox.minX) * options.Pivot.x;
-			float cyy = bbbox.minY + (bbbox.maxY - bbbox.minY) * options.Pivot.y;
-			float czz = bbbox.minZ + (bbbox.maxZ - bbbox.minZ) * options.Pivot.z;
+			float cxx = bbbox.minX + (bbbox.maxX - bbbox.minX) * pivot.x;
+			float cyy = bbbox.minY + (bbbox.maxY - bbbox.minY) * pivot.y;
+			float czz = bbbox.minZ + (bbbox.maxZ - bbbox.minZ) * pivot.z;
 			
 			aiVector3D cent(cxx, cyy, czz);
 
@@ -1396,11 +1397,11 @@ static std::vector<aiScene*> GetModels(const vox_file* voxData, const s32 frameI
 				}
 				
 				aiMatrix4x4 C;
-				aiMatrix4x4::Translation({cent.x,cent.y,cent.z}, C);
-				//aiMatrix4x4::Translation(cent, C);
+				aiMatrix4x4::Translation(cent, C);
 				node->mTransformation = C * node->mTransformation;
 			}
 			
+	
 			// ----------------------------------------------------------------------------------------------------------------------------------------------------------
 			
 			meshes.push_back({ mesh, imageName });
