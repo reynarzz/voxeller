@@ -1104,6 +1104,7 @@ static std::vector<aiScene*> GetModels(const vox_file* voxData, const s32 frameI
 				continue; // no model for this shape this frame
 			}
 
+			// TODO Move this to another function so it can be reused for everything else--------------------------------------------------------------------------------------------------
 
 			// Generate mesh for this shape/model
 			std::vector<FaceRect> faces = GreedyMeshModel(voxData->voxModels[modelId], voxData->sizes[modelId], modelId);
@@ -1230,7 +1231,6 @@ static std::vector<aiScene*> GetModels(const vox_file* voxData, const s32 frameI
 			}
 			// Record mesh index and create node with identity transform:
 			unsigned int meshIndex = static_cast<unsigned int>(meshes.size());
-			meshes.push_back({ mesh, imageName });
 
 			aiNode* node = new aiNode();
 			node->mName = aiString(name);
@@ -1249,7 +1249,9 @@ static std::vector<aiScene*> GetModels(const vox_file* voxData, const s32 frameI
 			aiMatrix4x4::Translation(center, C);
 			// if your existing nodeXf is M * T3 * T2 * R * T1, then:
 			node->mTransformation = C * node->mTransformation;
+			// ----------------------------------------------------------------------------------------------------------------------------------------------------------
 
+			meshes.push_back({ mesh, imageName });
 			shapeNodes.push_back(node);
 		}
 	}
