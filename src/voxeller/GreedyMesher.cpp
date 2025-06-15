@@ -600,8 +600,8 @@ static void BuildMeshFromFaces(
 	const std::vector<color>& palette,
 	aiMesh* mesh,
 	const bbox& box,
-	const vox_imat3* rotation =nullptr,
-	const vox_vec3* translation =nullptr
+	const vox_imat3* rotation = nullptr,
+	const vox_vec3* translation = nullptr
 ) {
 	// 1) Build raw voxel-space verts & indices
 	struct Vertex { float px, py, pz, nx, ny, nz, u, v; };
@@ -720,7 +720,7 @@ static void BuildMeshFromFaces(
 	mesh->mNormals = new aiVector3D[verts.size()];
 	mesh->mTextureCoords[0] = new aiVector3D[verts.size()];
 	mesh->mNumUVComponents[0] = 2;
-	
+
 	// compute pivot
 	vox_vec3 pivot = {
 		(box.minX + box.maxX) * 0.5f,
@@ -1018,7 +1018,7 @@ static std::vector<aiScene*> GetModels(const vox_file* voxData, const s32 frameI
 			std::string name = shpKV.second.attributes.count("_name") ? shpKV.second.attributes.at("_name") : "vox";
 
 			const vox_nSHP& shape = shpKV.second;
-			
+
 			int modelId = -1;
 
 			if (shape.models.size() == 1)
@@ -1105,23 +1105,23 @@ static std::vector<aiScene*> GetModels(const vox_file* voxData, const s32 frameI
 			// Save image file for this frame
 			std::string baseName = outputPath;
 
-			if (dot != std::string::npos) 
+			if (dot != std::string::npos)
 			{
 				baseName = outputPath.substr(0, outputPath.find_last_of('.'));
 			}
-			
+
 			// TODO: If exporting separated textures.
-			
+
 			std::string imageName = baseName + "_frame" + std::to_string(shapeIndex++) + ".png";
 			SaveAtlasImage(imageName, atlasDim, atlasDim, image);
 
 			aiMesh* mesh = new aiMesh();
-			
+
 			int shapeNodeId = shape.nodeID;
 			const vox_nTRN* trnNode = nullptr;
-			for (const auto& trnKV : voxData->transforms) 
+			for (const auto& trnKV : voxData->transforms)
 			{
-				if (trnKV.second.childNodeID == shapeNodeId) 
+				if (trnKV.second.childNodeID == shapeNodeId)
 				{
 					trnNode = &trnKV.second;
 					break;
@@ -1145,21 +1145,19 @@ static std::vector<aiScene*> GetModels(const vox_file* voxData, const s32 frameI
 				&wxf.trans    // MagicaVoxel translation
 			);
 
-			
-
-				float cx = (box.minX + box.maxX) * 0.5f;
+			float cx = (box.minX + box.maxX) * 0.5f;
 			float cy = (box.minY + box.maxY) * 0.5f;
 			float cz = (box.minZ + box.maxZ) * 0.5f;
 			aiVector3D center(cx, cy, cz);
 
 			// 3) Recenter every vertex so that the mesh’s center is at the origin
-			for (unsigned int i = 0; i < mesh->mNumVertices; ++i) {
+			for (unsigned int i = 0; i < mesh->mNumVertices; ++i) 
+			{
 				mesh->mVertices[i] -= center;
 			}
 
-
 			// Assign material index...
-			mesh->mMaterialIndex = options.MaterialPerMesh ? materialIndex++ : 0;
+			mesh->mMaterialIndex = options.MaterialPerMesh && !options.ExportMeshesSeparatelly ? materialIndex++ : 0;
 
 			// Record mesh index and create node with identity transform:
 			unsigned int meshIndex = static_cast<unsigned int>(meshes.size());
@@ -1168,7 +1166,15 @@ static std::vector<aiScene*> GetModels(const vox_file* voxData, const s32 frameI
 			aiNode* node = new aiNode();
 			node->mName = aiString(name);
 			node->mNumMeshes = 1;
-			node->mMeshes = new unsigned int[1] { meshIndex };
+
+			if (options.ExportMeshesSeparatelly)
+			{
+				node->mMeshes = new unsigned int[1] { 0 };
+			}
+			else 
+			{
+				node->mMeshes = new unsigned int[1] { meshIndex };
+			}
 
 			aiMatrix4x4 C;
 			aiMatrix4x4::Translation(center, C);
@@ -1198,16 +1204,25 @@ static std::vector<aiScene*> GetModels(const vox_file* voxData, const s32 frameI
 		for (size_t i = 0; i < meshes.size(); i++)
 		{
 			aiScene* sceneSplit = new aiScene();
-			sceneSplit->mRootNode = new aiNode();
 
-		
-			sceneSplit->mNumMeshes = 1;
-			sceneSplit->mMeshes = new aiMesh * [1] { meshes[i].Mesh };
-			
-			
+			// — create & initialize the root node —
+			sceneSplit->mRootNode = new aiNode();
+			sceneSplit->mRootNode->mName = aiString("RootNode");
+			sceneSplit->mRootNode->mTransformation = aiMatrix4x4();   // identity
+			// ** zero out the root node’s mesh list **
+			sceneSplit->mRootNode->mNumMeshes = 0;
+			sceneSplit->mRootNode->mMeshes = nullptr;
+
+			// now attach exactly one child node:
 			sceneSplit->mRootNode->mNumChildren = 1;
 			sceneSplit->mRootNode->mChildren = new aiNode * [1] { shapeNodes[i] };
 			sceneSplit->mRootNode->mChildren[0]->mMeshes[0] = 0; // Overwrite to set the index to 0
+
+
+
+			// — populate the scene’s mesh and material arrays —
+			sceneSplit->mNumMeshes = 1;
+			sceneSplit->mMeshes = new aiMesh * [1] { meshes[i].Mesh };
 
 
 			aiString texPath(meshes[i].imageName);
@@ -1215,7 +1230,6 @@ static std::vector<aiScene*> GetModels(const vox_file* voxData, const s32 frameI
 			mat->AddProperty(&texPath, AI_MATKEY_TEXTURE(aiTextureType_DIFFUSE, 0));
 
 			// Since the meshes will be exported separatelly, always create a material per mesh
-		
 			sceneSplit->mNumMaterials = 1;
 			sceneSplit->mMaterials = new aiMaterial * [1] { mat };
 
@@ -1239,12 +1253,12 @@ static std::vector<aiScene*> GetModels(const vox_file* voxData, const s32 frameI
 			scene->mNumMaterials = meshes.size();
 			scene->mMaterials = new aiMaterial * [meshes.size()];
 		}
-		else 
+		else
 		{
 			LOG_CORE_ERROR("IMPLEMENT shared materials");
 			throw;
 			scene->mNumMaterials = 1;
-			scene->mMaterials = new aiMaterial*[1];
+			scene->mMaterials = new aiMaterial * [1];
 
 		}
 
@@ -1323,7 +1337,7 @@ const aiScene* Run(const vox_file* voxData, const std::string& outputPath, const
 	// For combined output, we build scene once.
 
 	size_t dot = outputPath.find_last_of('.');
-	
+
 	if (options.ExportFramesSeparatelly /*&& frameCount >= 1 && voxData->shapes.size() > 0*/)
 	{
 

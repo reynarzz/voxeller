@@ -85,9 +85,11 @@ int main()
 	exportOptions.ConvertOptions.FlatShading = true;
 	exportOptions.ConvertOptions.Scale = .01f;
 	exportOptions.ConvertOptions.ExportFramesSeparatelly = true;
-	exportOptions.ConvertOptions.ExportMeshesSeparatelly = false;
+	exportOptions.ConvertOptions.ExportMeshesSeparatelly = true;
 	exportOptions.ConvertOptions.SeparateTexturesPerMesh = false;
-	  
+	exportOptions.ConvertOptions.MaterialPerMesh = true;
+	
+	//Chicken_van_2.vox
 	std::string path = "B:/Projects/voxeller/bin/Debug/testvox/nda/Ambulance_1.vox"; // Test this!
 	//std::string path = "B:/Projects/voxeller/bin/Debug/testvox/room.vox"; 
 	//std::string path = "B:/Projects/voxeller/bin/Debug/testvox/nda/Island_7.vox";
