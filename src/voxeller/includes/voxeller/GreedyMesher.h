@@ -28,13 +28,13 @@ enum class ConvertMSG
 
 enum class TextureFormat 
 {
-    // 4 Bytes per pixel
+    // Raw texture, 4 Bytes per pixel
     RGBA8,
-    // Encoded as .png
+    // Encode as .png
     PGN,
-    // Encoded as .jpg
+    // Encode as .jpg
     JPG,
-    // Encoded as .tga
+    // Encode as .tga
     TGA,
 };
 
