@@ -85,6 +85,7 @@ struct MyTraits : public OpenMesh::DefaultTraits {
 		OpenMesh::Attributes::TexCoord2D);
 };
 using TriMesh = OpenMesh::TriMesh_ArrayKernelT<MyTraits>;
+#include <voxeller/TjunctionsFixer.h>
 
 
 // Import an aiMesh into OpenMesh
@@ -231,6 +232,9 @@ static void splitTJunctions(TriMesh& mesh)
 	// Request the attributes we need
 	mesh.request_vertex_normals();
 	mesh.request_vertex_texcoords2D();
+	
+	LOG_CORE_INFO("T Juntions Fix: vertex count: {0}", mesh.n_vertices());
+	LOG_CORE_INFO("T Juntions Fix: edges count: {0}", mesh.n_edges());
 
 	// Iterate every vertex in the mesh
 	for (auto vh : mesh.vertices())
@@ -288,6 +292,7 @@ static void CleanUpMesh(aiMesh* mesh)
 	// 2) Weld duplicates + fix T-junctions
 	collapseDuplicateVertices(om);
 	splitTJunctions(om);
+	//splitTJunctionsFast(om);
 
 	// 3) Clean up deletions
 	om.garbage_collection();
@@ -1161,22 +1166,26 @@ static std::vector<aiScene*> GetModels(const vox_file* voxData, const s32 frameI
 				atlasDim = std::max(usedW, usedH);
 			}
 
-			// Create image
-			std::vector<unsigned char> image;
-			GenerateAtlasImage(atlasDim, atlasDim, faces, voxData->voxModels, voxData->palette, image);
-
-			// Save image file for this frame
-			std::string baseName = outputPath;
-
-			if (dot != std::string::npos)
+			std::string imageName = "";
+			if (options.ExportTextures)
 			{
-				baseName = outputPath.substr(0, outputPath.find_last_of('.'));
+				// Create image
+				std::vector<unsigned char> image;
+				GenerateAtlasImage(atlasDim, atlasDim, faces, voxData->voxModels, voxData->palette, image);
+
+				// Save image file for this frame
+				std::string baseName = outputPath;
+
+				if (dot != std::string::npos)
+				{
+					baseName = outputPath.substr(0, outputPath.find_last_of('.'));
+				}
+
+				// TODO: If exporting separated textures.
+
+				imageName = baseName + "_frame" + std::to_string(shapeIndex++) + ".png";
+				SaveAtlasImage(imageName, atlasDim, atlasDim, image);
 			}
-
-			// TODO: If exporting separated textures.
-
-			std::string imageName = baseName + "_frame" + std::to_string(shapeIndex++) + ".png";
-			SaveAtlasImage(imageName, atlasDim, atlasDim, image);
 
 			aiMesh* mesh = new aiMesh();
 
@@ -1323,7 +1332,7 @@ static std::vector<aiScene*> GetModels(const vox_file* voxData, const s32 frameI
 
 		// TODO: set one material per mesh, or share a material? for shared materials, the texture individial export option should be turned off, since the material needs the whole atlas.
 
-		if (options.ExportMaterials) 
+		if (options.ExportMaterials)
 		{
 			if (options.MaterialPerMesh)
 			{
@@ -1339,7 +1348,7 @@ static std::vector<aiScene*> GetModels(const vox_file* voxData, const s32 frameI
 
 			}
 		}
-		else 
+		else
 		{
 			scene->mNumMaterials = 0;
 			scene->mMaterials = nullptr;
@@ -1357,7 +1366,7 @@ static std::vector<aiScene*> GetModels(const vox_file* voxData, const s32 frameI
 				aiMaterial* mat = new aiMaterial();
 				mat->AddProperty(&texPath, AI_MATKEY_TEXTURE(aiTextureType_DIFFUSE, 0));
 				scene->mMaterials[matIndex] = mat;
-			}		
+			}
 		}
 
 		// Set all the nodes to the root.
@@ -1369,15 +1378,27 @@ static std::vector<aiScene*> GetModels(const vox_file* voxData, const s32 frameI
 		scenes = { scene };
 	}
 
-	// Adds default material, some formats require at least one.
 	for (auto sceneitem : scenes)
 	{
-		if (sceneitem->mNumMaterials == 0) 
+		// Adds default material, some formats require at least one.
+		if (sceneitem->mNumMaterials == 0)
 		{
 			sceneitem->mNumMaterials = 1;
-			sceneitem->mMaterials = new aiMaterial*[1] {new aiMaterial};
+			sceneitem->mMaterials = new aiMaterial * [1] {new aiMaterial};
+		}
+
+		if (options.RemoveTJunctions)
+		{
+			for (unsigned int i = 0; i < sceneitem->mNumMeshes; ++i)
+			{
+				CleanUpMesh(sceneitem->mMeshes[i]);
+			}
+
+			LOG_CORE_INFO("Done cleaning up meshes count: {0}", sceneitem->mNumMeshes);
 		}
 	}
+
+
 	return scenes;
 }
 
@@ -1467,8 +1488,14 @@ const aiScene* Run(const vox_file* voxData, const std::string& outputPath, const
 				}
 
 				std::string fmtId = fmtDesc ? fmtDesc->id : "fbx";
+				u32 preprocess = 0;
 
-				if (exporter.Export(scene, "fbx", frameOut) != aiReturn_SUCCESS)
+				if (options.WeldVertices)
+				{
+					preprocess |= aiProcess_JoinIdenticalVertices;
+				}
+
+				if (exporter.Export(scene, "fbx", frameOut, preprocess) != aiReturn_SUCCESS)
 				{
 					std::cerr << "Failed to export mesh " << j << ": " << exporter.GetErrorString() << "\n";
 				}
@@ -1684,10 +1711,10 @@ const aiScene* Run(const vox_file* voxData, const std::string& outputPath, const
 		}
 		// If there was only one mesh in scene (no children used above), attach it directly to root node
 
-		LOG_CORE_INFO("TJuntctions: {0}", options.NoTJunctions);
+		LOG_CORE_INFO("TJuntctions: {0}", options.RemoveTJunctions);
 
 		// TODO: This makes the algorithm freeze when a vox has multiple frames, and is exported as no separated
-		if (options.NoTJunctions)
+		if (options.RemoveTJunctions)
 		{
 			for (unsigned int m = 0; m < scene->mNumMeshes; ++m)
 			{

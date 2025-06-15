@@ -41,7 +41,9 @@ struct VOXELLER_API ExportResults
 struct VOXELLER_API ConvertOptions
 {
     // Remove T-Juntions
-    bool NoTJunctions = false;
+    bool RemoveTJunctions = false;
+
+    bool ExportTextures = true;
 
     // Make Textures to always be power of two
     bool TexturesPOT = false;
@@ -52,12 +54,10 @@ struct VOXELLER_API ConvertOptions
     // Vertices will be shared across faces.
     bool WeldVertices = false;
 
-    // Hard edges
+    // Prevent smoothing the normals.
     bool FlatShading = true;
 
-
     bool ExportFramesSeparatelly = true;
-
 
     bool ExportMeshesSeparatelly = false;
 
@@ -65,7 +65,15 @@ struct VOXELLER_API ConvertOptions
 
     bool MaterialPerMesh = true;
 
+    // Export All Materials, otherwise a default (empty) one will be used for all meshes.
     bool ExportMaterials = true;
+
+    // Parts of meshes that are not visible will be removed.
+    bool RemoveOcludedFaces = false;
+
+    // All meshes will be merged, this will overwrite texture export options, since an atlas will be exported. 
+    // Tip: use it alongside "RemoveOcludedFaces" for cleaner and performat results.
+    bool MergeMeshes = false;
 
     // Scale, Ex, if 1.0, every single voxel will take up 1 unit.
     f32 Scale = 1.0f;
