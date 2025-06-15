@@ -28,7 +28,7 @@ enum class ConvertMSG
 
 enum class TextureFormat 
 {
-    // Raw texture, 4 Bytes per pixel
+    // Raw texture: 4 channels, 4 bytes per pixel, 8 bits per channel.
     RGBA8,
     // Encode as .png
     PGN,
