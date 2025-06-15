@@ -7,6 +7,7 @@ The last voxel convert tool you will ever need.
 -Export convert info as json .txt (num of meshes, colors count, frames, meshes names, etc...)
 -Single and multi threaded processing, fully thread safe library.
 -Cull faces that a "virtual camera" (manipulated by user) can't see
+-If user decides to fully merge all meshes into one, perform ask user if wants to remove hidden faces
 
 [#Voxeller lib]
 -Libs for Unity, full package (Custom importer for .vox)

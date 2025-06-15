@@ -523,95 +523,91 @@ inline vox_transform AccumulateWorldTransform(
 	int frameIndex,
 	const vox_file& voxData)
 {
-	// Find the nTRN node that points to this shape
-	// (Usually: look for nTRN with childNodeID == shapeNodeID)
-	int currentNodeID = -1;
-	for (const auto& kv : voxData.transforms) {
-		if (kv.second.childNodeID == shapeNodeID) {
-			currentNodeID = kv.first;
-			break;
+	// Helper: find the transform node whose childNodeID == nodeID
+	auto findTransformByChild = [&](int childID) -> int {
+		for (auto const& kv : voxData.transforms) {
+			if (kv.second.childNodeID == childID)
+				return kv.first;
 		}
-	}
-	if (currentNodeID < 0)
-		return vox_transform(); // identity
+		return -1;
+		};
 
-	// Compose transforms up to root
-	std::stack<vox_transform> stack;
-	int trnID = currentNodeID;
+	// 1) start at the transform that directly points to our shape
+	int trnID = findTransformByChild(shapeNodeID);
+	if (trnID < 0) {
+		return vox_transform(); // identity
+	}
+
+	// 2) We'll walk up to the root, but we need to apply parent transforms *first*,
+	//    so push them on a stack, then multiply in that order.
+	std::stack<vox_transform> xfStack;
+
 	while (trnID != -1) {
 		auto it = voxData.transforms.find(trnID);
-		if (it == voxData.transforms.end())
-			break;
-
+		if (it == voxData.transforms.end()) break;
 		const vox_nTRN& trn = it->second;
 
-		// Safety: Clamp frameIndex
-		int fidx = 0;
-		if (trn.framesCount > 0 && frameIndex < trn.framesCount)
-			fidx = frameIndex;
+		// clamp frameIndex
+		int fidx = (frameIndex < trn.framesCount ? frameIndex : 0);
+		const vox_frame_attrib& attr = trn.frameAttrib[fidx];
 
-		const vox_frame_attrib& attr = trn.frameAttrib.empty() ? vox_frame_attrib{} : trn.frameAttrib[fidx];
+		xfStack.push(vox_transform(attr.rotation, attr.translation));
 
-		// Push this transform
-		stack.push(vox_transform(attr.rotation, attr.translation));
-		// Next: parent of this transform node
-		// (Find the parent from the nTRN node: sometimes it's in attributes, sometimes needs .parentNodeID)
-		auto attrIt = trn.attributes.find("_parent");
+		// 3) find the *parent* transform of this nTRN:
+		//    a) first, check explicit "_parent" attributes
 		int parentID = -1;
-		if (attrIt != trn.attributes.end()) {
-			parentID = std::stoi(attrIt->second);
+		for (auto const& key : { "_parent", "_parent_id", "_parentID" }) {
+			auto ait = trn.attributes.find(key);
+			if (ait != trn.attributes.end()) {
+				parentID = std::stoi(ait->second);
+				break;
+			}
 		}
-		else if (trn.attributes.count("_parent_id")) {
-			parentID = std::stoi(trn.attributes.at("_parent_id"));
-		}
-		else if (trn.attributes.count("_parentID")) {
-			parentID = std::stoi(trn.attributes.at("_parentID"));
-		}
-		else {
-			// sometimes it's the node that points to this trn as a child
-			// try to find nGRP that lists this trn as a child
-			for (const auto& gkv : voxData.groups) {
-				for (int c : gkv.second.childrenIDs) {
-					if (c == trnID) {
-						parentID = gkv.first;
+
+		//    b) if none, maybe this trn is listed in an nGRP — find the group,
+		//       then find the nTRN whose child is *that* group.
+		if (parentID < 0) {
+			for (auto const& gkv : voxData.groups) {
+				for (int cid : gkv.second.childrenIDs) {
+					if (cid == trnID) {
+						// gkv.first is the group node ID
+						parentID = findTransformByChild(gkv.first);
 						break;
 					}
 				}
-				if (parentID != -1) break;
+				if (parentID >= 0) break;
 			}
-			// For root, parentID == -1
 		}
+
 		trnID = parentID;
-		// If parent is a group, the group may be the child of a transform, so we need to walk up
-		// through groups to next parent nTRN. (This is only needed for scenes with nested nGRP)
-		// We simply keep going up until -1.
 	}
 
-	// Multiply transforms in parent-first order
-	vox_transform t;
-	while (!stack.empty()) {
-		t = t * stack.top();
-		stack.pop();
+	// 4) Now multiply them in parent→child order
+	vox_transform world; // identity
+	while (!xfStack.empty()) {
+		world = xfStack.top() * world;
+		xfStack.pop();
 	}
-	return t;
+	return world;
 }
 
 
 // Build the actual geometry (vertices and indices) for a mesh from the FaceRect list and a given texture atlas configuration.
 static void BuildMeshFromFaces(
 	const std::vector<FaceRect>& faces,
-	int texWidth,
-	int texHeight,
+	int texWidth, int texHeight,
 	bool flatShading,
 	const std::vector<color>& palette,
 	aiMesh* mesh,
-	const vox_imat3* rotation = nullptr,
-	const vox_vec3* translation = nullptr)
-{
-	// 1) Gather vertices & indices in MagicaVoxel space
-	std::vector<Vertex>             vertices;
-	std::vector<unsigned int>       indices;
-	vertices.reserve(faces.size() * 4);
+	const bbox& box,
+	const vox_imat3* rotation =nullptr,
+	const vox_vec3* translation =nullptr
+) {
+	// 1) Build raw voxel-space verts & indices
+	struct Vertex { float px, py, pz, nx, ny, nz, u, v; };
+	std::vector<Vertex>       verts;
+	std::vector<unsigned int> indices;
+	verts.reserve(faces.size() * 4);
 	indices.reserve(faces.size() * 6);
 
 	std::unordered_map<VertKey, unsigned int, VertKeyHash> vertMap;
@@ -628,176 +624,164 @@ static void BuildMeshFromFaces(
 				key.pz_i = int(std::round(vz * 100.0f));
 				key.u_i = int(std::round(u * texWidth * 100.0f));
 				key.v_i = int(std::round(v * texHeight * 100.0f));
-				auto it = vertMap.find(key);
-				if (it != vertMap.end()) {
-					// accumulate normals
-					unsigned int idx = it->second;
-					vertices[idx].nx += nx;
-					vertices[idx].ny += ny;
-					vertices[idx].nz += nz;
-					return idx;
+				if (auto it = vertMap.find(key); it != vertMap.end()) {
+					auto& dst = verts[it->second];
+					dst.nx += nx; dst.ny += ny; dst.nz += nz;
+					return it->second;
 				}
 			}
-			Vertex vert;
-			vert.px = vx; vert.py = vy; vert.pz = vz;
-			vert.nx = nx; vert.ny = ny; vert.nz = nz;
-			vert.u = u;  vert.v = v;
-			unsigned int idx = (unsigned int)vertices.size();
-			vertices.push_back(vert);
+			Vertex vert{ vx,vy,vz, nx,ny,nz, u,v };
+			unsigned int idx = (unsigned int)verts.size();
+			verts.push_back(vert);
 			if (!flatShading) vertMap[key] = idx;
 			return idx;
 		};
 
-	const float pixelW = 1.0f / float(texWidth);
-	const float pixelH = 1.0f / float(texHeight);
-	const float border = 1.0f;
+	const float pixelW = 1.0f / float(texWidth),
+		pixelH = 1.0f / float(texHeight),
+		border = 1.0f;
 
-	for (auto const& face : faces) {
-		// compute UVs
+	for (auto& face : faces) {
 		float u0 = (face.atlasX + border + 0.5f) * pixelW;
 		float v0 = 1.0f - (face.atlasY + border + 0.5f) * pixelH;
 		float u1 = (face.atlasX + border + face.w - 0.5f) * pixelW;
 		float v1 = 1.0f - (face.atlasY + border + face.h - 0.5f) * pixelH;
 
-		// determine corners in voxel space
 		float nx = 0, ny = 0, nz = 0;
 		float x0, y0, z0, x1, y1, z1, x2, y2, z2, x3, y3, z3;
-
 		switch (face.orientation) {
-		case 'X': {
-			nx = +1;
-			float f = face.constantCoord;
-			x0 = f; y0 = face.vMin; z0 = face.uMin;
-			x1 = f; y1 = face.vMax; z1 = face.uMin;
-			x2 = f; y2 = face.vMax; z2 = face.uMax;
-			x3 = f; y3 = face.vMin; z3 = face.uMax;
-		} break;
-		case 'x': {
-			nx = -1;
-			float f = face.constantCoord;
-			float zmin = face.uMin, zmax = face.uMax;
+		case 'X': nx = +1;
+			x0 = face.constantCoord; y0 = face.vMin; z0 = face.uMin;
+			x1 = face.constantCoord; y1 = face.vMax; z1 = face.uMin;
+			x2 = face.constantCoord; y2 = face.vMax; z2 = face.uMax;
+			x3 = face.constantCoord; y3 = face.vMin; z3 = face.uMax;
+			break;
+		case 'x': nx = -1;
+		{
+			float f = face.constantCoord, zmin = face.uMin, zmax = face.uMax;
 			std::swap(zmin, zmax);
 			x0 = f; y0 = face.vMin; z0 = zmin;
 			x1 = f; y1 = face.vMax; z1 = zmin;
 			x2 = f; y2 = face.vMax; z2 = zmax;
 			x3 = f; y3 = face.vMin; z3 = zmax;
 		} break;
-		case 'Y': {
-			ny = +1;
-			float f = face.constantCoord;
-			x0 = face.uMin; y0 = f; z0 = face.vMin;
-			x1 = face.uMin; y1 = f; z1 = face.vMax;
-			x2 = face.uMax; y2 = f; z2 = face.vMax;
-			x3 = face.uMax; y3 = f; z3 = face.vMin;
-		} break;
-		case 'y': {
-			ny = -1;
-			float f = face.constantCoord;
-			float zmin = face.vMin, zmax = face.vMax;
+		case 'Y': ny = +1;
+			x0 = face.uMin; y0 = face.constantCoord; z0 = face.vMin;
+			x1 = face.uMin; y1 = face.constantCoord; z1 = face.vMax;
+			x2 = face.uMax; y2 = face.constantCoord; z2 = face.vMax;
+			x3 = face.uMax; y3 = face.constantCoord; z3 = face.vMin;
+			break;
+		case 'y': ny = -1;
+		{
+			float f = face.constantCoord, zmin = face.vMin, zmax = face.vMax;
 			std::swap(zmin, zmax);
 			x0 = face.uMin; y0 = f; z0 = zmin;
 			x1 = face.uMin; y1 = f; z1 = zmax;
 			x2 = face.uMax; y2 = f; z2 = zmax;
 			x3 = face.uMax; y3 = f; z3 = zmin;
 		} break;
-		case 'Z': {
-			nz = +1;
-			float f = face.constantCoord;
-			x0 = face.uMin; y0 = face.vMin; z0 = f;
-			x1 = face.uMin; y1 = face.vMax; z1 = f;
-			x2 = face.uMax; y2 = face.vMax; z2 = f;
-			x3 = face.uMax; y3 = face.vMin; z3 = f;
-		} break;
-		case 'z': {
-			nz = -1;
-			float f = face.constantCoord;
-			float xmin = face.uMin, xmax = face.uMax;
+		case 'Z': nz = +1;
+			x0 = face.uMin; y0 = face.vMin; z0 = face.constantCoord;
+			x1 = face.uMin; y1 = face.vMax; z1 = face.constantCoord;
+			x2 = face.uMax; y2 = face.vMax; z2 = face.constantCoord;
+			x3 = face.uMax; y3 = face.vMin; z3 = face.constantCoord;
+			break;
+		case 'z': nz = -1;
+		{
+			float f = face.constantCoord, xmin = face.uMin, xmax = face.uMax;
 			std::swap(xmin, xmax);
 			x0 = xmin; y0 = face.vMin; z0 = f;
 			x1 = xmin; y1 = face.vMax; z1 = f;
 			x2 = xmax; y2 = face.vMax; z2 = f;
 			x3 = xmax; y3 = face.vMin; z3 = f;
 		} break;
-		default:
-			continue;
+		default: continue;
 		}
 
 		auto i0 = addVertex(x0, y0, z0, nx, ny, nz, u0, v0);
 		auto i1 = addVertex(x1, y1, z1, nx, ny, nz, u0, v1);
 		auto i2 = addVertex(x2, y2, z2, nx, ny, nz, u1, v1);
 		auto i3 = addVertex(x3, y3, z3, nx, ny, nz, u1, v0);
-		indices.insert(indices.end(), { i0, i1, i2, i0, i2, i3 });
+		indices.insert(indices.end(), { i0,i1,i2, i0,i2,i3 });
 	}
 
-	// normalize normals if smooth
+	// smooth normals
 	if (!flatShading) {
-		for (auto& v : vertices) {
+		for (auto& v : verts) {
 			float L = std::sqrt(v.nx * v.nx + v.ny * v.ny + v.nz * v.nz);
-			if (L > 0) {
-				v.nx /= L; v.ny /= L; v.nz /= L;
-			}
+			if (L > 0) { v.nx /= L; v.ny /= L; v.nz /= L; }
 		}
 	}
 
-	// 2) Write into aiMesh, applying transform, swap, and handedness fix
+	// 2) allocate into aiMesh
 	mesh->mPrimitiveTypes = aiPrimitiveType_TRIANGLE;
-	mesh->mNumVertices = (unsigned int)vertices.size();
-	mesh->mVertices = new aiVector3D[vertices.size()];
-	mesh->mNormals = new aiVector3D[vertices.size()];
-	mesh->mTextureCoords[0] = new aiVector3D[vertices.size()];
+	mesh->mNumVertices = (unsigned int)verts.size();
+	mesh->mVertices = new aiVector3D[verts.size()];
+	mesh->mNormals = new aiVector3D[verts.size()];
+	mesh->mTextureCoords[0] = new aiVector3D[verts.size()];
 	mesh->mNumUVComponents[0] = 2;
+	
+	// compute pivot
+	vox_vec3 pivot = {
+		(box.minX + box.maxX) * 0.5f,
+		(box.minY + box.maxY) * 0.5f,
+		(box.minZ + box.maxZ) * 0.5f
+	};
 
-	for (unsigned int i = 0; i < vertices.size(); ++i) {
-		float x = vertices[i].px;
-		float y = vertices[i].py;
-		float z = vertices[i].pz;
-		float nx = vertices[i].nx;
-		float ny = vertices[i].ny;
-		float nz = vertices[i].nz;
+	// 3) Transform vertices: recenter→rotate→swizzle→pivot→translate→mirror
+	for (unsigned int i = 0; i < verts.size(); ++i) {
+		float x = verts[i].px - pivot.x;
+		float y = verts[i].py - pivot.y;
+		float z = verts[i].pz - pivot.z;
+		float nx = verts[i].nx, ny = verts[i].ny, nz = verts[i].nz;
 
-		// A) apply rotation
 		if (rotation) {
+			// apply MagicaVoxel rotation
 			float tx = rotation->m00 * x + rotation->m01 * y + rotation->m02 * z;
 			float ty = rotation->m10 * x + rotation->m11 * y + rotation->m12 * z;
 			float tz = rotation->m20 * x + rotation->m21 * y + rotation->m22 * z;
 			x = tx; y = ty; z = tz;
-
 			tx = rotation->m00 * nx + rotation->m01 * ny + rotation->m02 * nz;
 			ty = rotation->m10 * nx + rotation->m11 * ny + rotation->m12 * nz;
 			tz = rotation->m20 * nx + rotation->m21 * ny + rotation->m22 * nz;
 			nx = tx; ny = ty; nz = tz;
 		}
 
-		// B) apply translation
-		if (translation) {
-			x += translation->x;
-			y += translation->y;
-			z += translation->z;
-		}
-
-		// C) permute into Assimp’s (X, Z, Y)
-		aiVector3D pos{ x,  z,  y };
+		// swizzle into Assimp coords (X,Z,Y)
+		aiVector3D pos{ x, z, y };
 		aiVector3D norm{ nx, nz, ny };
 
-		// D) fix handedness (un-mirror X)
-		pos.x *= -1.0f;
-		norm.x *= -1.0f;
+		// add back pivot in Assimp axes
+		pos.x += pivot.x;
+		pos.y += pivot.z;
+		pos.z += pivot.y;
+
+		if (translation) {
+			pos.x += translation->x;
+			pos.y += translation->z;
+			pos.z += translation->y;
+		}
+
+		// un-mirror X
+		pos.x = -pos.x;
+		norm.x = -norm.x;
 
 		mesh->mVertices[i] = pos;
 		mesh->mNormals[i] = norm;
-		mesh->mTextureCoords[0][i] = aiVector3D(vertices[i].u, vertices[i].v, 0.0f);
+		mesh->mTextureCoords[0][i] = aiVector3D(verts[i].u, verts[i].v, 0.0f);
 	}
 
-	// 3) Build faces
+	// 4) Build faces
 	mesh->mNumFaces = (unsigned int)(indices.size() / 3);
 	mesh->mFaces = new aiFace[mesh->mNumFaces];
 	for (unsigned int f = 0; f < mesh->mNumFaces; ++f) {
 		aiFace& face = mesh->mFaces[f];
 		face.mNumIndices = 3;
-		face.mIndices = new unsigned int[3];
-		face.mIndices[0] = indices[f * 3 + 0];
-		face.mIndices[1] = indices[f * 3 + 1];
-		face.mIndices[2] = indices[f * 3 + 2];
+		face.mIndices = new unsigned int[3] {
+			indices[f * 3 + 0],
+				indices[f * 3 + 1],
+				indices[f * 3 + 2]
+			};
 	}
 }
 
@@ -1148,52 +1132,38 @@ static std::vector<aiScene*> GetModels(const vox_file* voxData, const s32 frameI
 					break;
 				}
 			}
+
+			auto& box = voxData->voxModels[modelId].boundingBox;
+
 			// If you want to support groups (nGRP), you may have to walk up to the root and find the chain.
+			vox_transform wxf = AccumulateWorldTransform(shape.nodeID, frameIndex, *voxData);
 
-			if (trnNode) 
-			{
-				// 2. Get the matrix and translation for this frame
-				//const vox_imat3& matrix = trnNode->frameAttrib[frameIndex].rotation;
-				//const vox_vec3& translation = trnNode->frameAttrib[frameIndex].translation;
+			// Build mesh and apply MagicaVoxel rotation+translation directly into vertices:
+			BuildMeshFromFaces(
+				faces,
+				atlasDim, atlasDim,
+				options.FlatShading,
+				voxData->palette,
+				mesh,
+				box,          // pivot centering
+				&wxf.rot,     // MagicaVoxel 3×3 rotation
+				&wxf.trans    // MagicaVoxel translation
+			);
 
-				//// 3. Pass them into your mesh builder
-				//BuildMeshFromFaces(faces, atlasDim, atlasDim, options.FlatShading, voxData->palette, mesh,
-				//	&matrix,
-				//	&translation
-				//);
+			// Assign material index...
+			mesh->mMaterialIndex = options.MaterialPerMesh ? materialIndex++ : 0;
 
-				vox_transform worldXf = AccumulateWorldTransform(shape.nodeID, frameIndex, *voxData);
-				BuildMeshFromFaces(faces, atlasDim, atlasDim, options.FlatShading, voxData->palette, mesh, &worldXf.rot, &worldXf.trans);
-			}
-			else {
-				// No transform, build with identity matrix/zero translation
-				BuildMeshFromFaces(faces, atlasDim, atlasDim, options.FlatShading, voxData->palette, mesh);
-			}
-
-
-			//--BuildMeshFromFaces(faces, atlasDim, atlasDim, options.FlatShading, voxData->palette, mesh);
-
-			if (options.MaterialPerMesh && !options.ExportMeshesSeparatelly)
-			{
-				mesh->mMaterialIndex = materialIndex;
-				materialIndex++;
-			}
-			else
-			{
-				mesh->mMaterialIndex = 0;
-			}
-
+			// Record mesh index and create node with identity transform:
+			unsigned int meshIndex = static_cast<unsigned int>(meshes.size());
 			meshes.push_back({ mesh, imageName });
 
-			// Create a node for this shape (for transforms, naming, etc.)
 			aiNode* node = new aiNode();
-			node->mName = name;// aiString(shape.attributes.count("_name") ? shape.attributes.at("_name") : "Shape");
+			node->mName = aiString(name);
 			node->mNumMeshes = 1;
-			node->mMeshes = new unsigned int[1];
-			node->mMeshes[0] = meshes.size() - 1;
-
-			// (optional: set node transform from nTRN info)
+			node->mMeshes = new unsigned int[1] { meshIndex };
+			// Leave node->mTransformation as identity (baked already)
 			shapeNodes.push_back(node);
+
 
 			// Now assign meshes and nodes to the scene
 		}
@@ -1500,7 +1470,12 @@ const aiScene* Run(const vox_file* voxData, const std::string& outputPath, const
 				// Create mesh
 				aiMesh* mesh = new aiMesh();
 				scene->mMeshes[i] = mesh;
-				BuildMeshFromFaces(facesForMesh, globalAtlasSize, globalAtlasSize, options.FlatShading, voxData->palette, mesh);
+
+				auto& sz = voxData->sizes[modelIndex];
+				auto& mdl = voxData->voxModels[modelIndex];
+				auto  box = mdl.boundingBox;
+
+				BuildMeshFromFaces(facesForMesh, globalAtlasSize, globalAtlasSize, options.FlatShading, voxData->palette, mesh, box);
 				LOG_CORE_INFO("Build meshes from faces, mesh: {0}", i);
 
 				// TODO: position origin issue, take into account the position of the objects, this should be used, reynardo
@@ -1518,7 +1493,7 @@ const aiScene* Run(const vox_file* voxData, const std::string& outputPath, const
 				node->mMeshes[0] = i;
 				aiMatrix4x4 rot;
 				aiMatrix4x4::RotationX(-static_cast<float>(AI_MATH_PI / 2.0f), rot);
-				node->mTransformation = rot;
+				//node->mTransformation = rot;
 
 				scene->mRootNode->mChildren[i] = node;
 
@@ -1575,7 +1550,12 @@ const aiScene* Run(const vox_file* voxData, const std::string& outputPath, const
 				// Create mesh geometry
 				aiMesh* mesh = new aiMesh();
 				scene->mMeshes[i] = mesh;
-				BuildMeshFromFaces(faces, dim, dim, options.FlatShading, voxData->palette, mesh);
+
+				auto& sz = voxData->sizes[modelIndex];
+				auto& mdl = voxData->voxModels[modelIndex];
+				auto  box = mdl.boundingBox;
+
+				BuildMeshFromFaces(faces, dim, dim, options.FlatShading, voxData->palette, mesh, box);
 
 				mesh->mMaterialIndex = (int)i;
 				// Node

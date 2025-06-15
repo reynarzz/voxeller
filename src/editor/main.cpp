@@ -83,9 +83,9 @@ int main()
 	exportOptions.ConvertOptions.NoTJunctions = false;
 	exportOptions.ConvertOptions.WeldVertices = true;
 	exportOptions.ConvertOptions.FlatShading = true;
-	//exportOptions.ConvertOptions.Scale = .01f;
+	exportOptions.ConvertOptions.Scale = .01f;
 	exportOptions.ConvertOptions.ExportFramesSeparatelly = true;
-	exportOptions.ConvertOptions.ExportMeshesSeparatelly = true;
+	exportOptions.ConvertOptions.ExportMeshesSeparatelly = false;
 	exportOptions.ConvertOptions.SeparateTexturesPerMesh = false;
 	  
 	std::string path = "B:/Projects/voxeller/bin/Debug/testvox/nda/Ambulance_1.vox"; // Test this!
