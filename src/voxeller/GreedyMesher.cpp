@@ -307,7 +307,7 @@ static void CleanUpMesh(aiMesh* mesh)
 	convertOpenMeshToAiMesh(om, mesh);
 }
 
-static std::vector<FaceRect> GreedyMeshModel(
+static std::vector<FaceRect> GreedyMesh_Atlas(
 	const vox_model& model,
 	const vox_size& size, s32 modelIndex)
 {
@@ -1302,7 +1302,7 @@ static std::vector<aiScene*> GetModels(const vox_file* voxData, const s32 frameI
 			// TODO Move this to another function so it can be reused for everything else--------------------------------------------------------------------------------------------------
 
 			// Generate mesh for this shape/model
-			std::vector<FaceRect> faces = GreedyMeshModel(voxData->voxModels[modelId], voxData->sizes[modelId], modelId);
+			std::vector<FaceRect> faces = GreedyMesh_Atlas(voxData->voxModels[modelId], voxData->sizes[modelId], modelId);
 
 			std::string imageName = "";
 
@@ -1676,7 +1676,7 @@ const std::vector<aiScene*> Run(const vox_file* voxData, const std::string& outp
 			std::unordered_set<uint8_t> usedColors;
 			for (size_t i = 0; i < meshCount; ++i) {
 				size_t modelIndex = (i < voxData->voxModels.size() ? i : voxData->voxModels.size() - 1);
-				std::vector<FaceRect> faces = GreedyMeshModel(voxData->voxModels[modelIndex], voxData->sizes[modelIndex], modelIndex);
+				std::vector<FaceRect> faces = GreedyMesh_Atlas(voxData->voxModels[modelIndex], voxData->sizes[modelIndex], modelIndex);
 				// Tag faces with an offset or id if needed (not needed for atlas, we just combine)
 				allFaces.insert(allFaces.end(), faces.begin(), faces.end());
 			}
@@ -1726,7 +1726,7 @@ const std::vector<aiScene*> Run(const vox_file* voxData, const std::string& outp
 			for (size_t i = 0; i < meshCount; ++i) {
 				size_t modelIndex = (i < voxData->voxModels.size() ? i : voxData->voxModels.size() - 1);
 				// Remesh the frame to get number of faces:            
-				std::vector<FaceRect> frameFaces = GreedyMeshModel(voxData->voxModels[modelIndex], voxData->sizes[modelIndex], modelIndex);
+				std::vector<FaceRect> frameFaces = GreedyMesh_Atlas(voxData->voxModels[modelIndex], voxData->sizes[modelIndex], modelIndex);
 				// Now copy that many faces from allFaces (they should correspond in order to this frame).
 				std::vector<FaceRect> facesForMesh;
 				facesForMesh.insert(facesForMesh.end(), allFaces.begin() + faceOffset, allFaces.begin() + faceOffset + frameFaces.size());
@@ -1772,7 +1772,7 @@ const std::vector<aiScene*> Run(const vox_file* voxData, const std::string& outp
 			{
 				size_t modelIndex = (i < voxData->voxModels.size() ? i : voxData->voxModels.size() - 1);
 
-				std::vector<FaceRect> faces = GreedyMeshModel(voxData->voxModels[modelIndex], voxData->sizes[modelIndex], modelIndex);
+				std::vector<FaceRect> faces = GreedyMesh_Atlas(voxData->voxModels[modelIndex], voxData->sizes[modelIndex], modelIndex);
 				int dim = 16;
 				if (options.TexturesPOT)
 				{
