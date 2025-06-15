@@ -1048,7 +1048,7 @@ static bool WriteSceneToFile(const aiScene* scene, const std::string& outPath, c
 
 	const std::string convertedOutName = outPath.substr(0, dot);
 	aiMatrix4x4 scaleMat;
-	aiMatrix4x4::Scaling(aiVector3D(options.ConvertOptions.Scale, options.ConvertOptions.Scale, options.ConvertOptions.Scale), scaleMat);
+	aiMatrix4x4::Scaling(aiVector3D(options.ConvertOptions.Scale.x, options.ConvertOptions.Scale.y, options.ConvertOptions.Scale.z), scaleMat);
 	scene->mRootNode->mTransformation = scaleMat * scene->mRootNode->mTransformation;
 
 	aiReturn ret = exporter.Export(scene, formatId.c_str(), convertedOutName + "." + ext, preprocess);
@@ -1167,7 +1167,7 @@ static std::vector<aiScene*> GetModels(const vox_file* voxData, const s32 frameI
 			}
 
 			std::string imageName = "";
-			if (options.ExportTextures)
+			if (options.GenerateTextures)
 			{
 				// Create image
 				std::vector<unsigned char> image;
@@ -1230,7 +1230,7 @@ static std::vector<aiScene*> GetModels(const vox_file* voxData, const s32 frameI
 
 			// Assign material index...
 
-			if (options.ExportMaterials)
+			if (options.GenerateMaterials)
 			{
 				mesh->mMaterialIndex = options.MaterialPerMesh && !options.ExportMeshesSeparatelly ? materialIndex++ : 0;
 			}
@@ -1300,7 +1300,7 @@ static std::vector<aiScene*> GetModels(const vox_file* voxData, const s32 frameI
 			sceneSplit->mNumMeshes = 1;
 			sceneSplit->mMeshes = new aiMesh * [1] { meshes[i].Mesh };
 
-			if (options.ExportMaterials)
+			if (options.GenerateMaterials)
 			{
 				aiString texPath(meshes[i].imageName);
 				aiMaterial* mat = new aiMaterial();
@@ -1332,7 +1332,7 @@ static std::vector<aiScene*> GetModels(const vox_file* voxData, const s32 frameI
 
 		// TODO: set one material per mesh, or share a material? for shared materials, the texture individial export option should be turned off, since the material needs the whole atlas.
 
-		if (options.ExportMaterials)
+		if (options.GenerateMaterials)
 		{
 			if (options.MaterialPerMesh)
 			{
@@ -1360,7 +1360,7 @@ static std::vector<aiScene*> GetModels(const vox_file* voxData, const s32 frameI
 
 			s32 matIndex = meshes[i].Mesh->mMaterialIndex;
 
-			if (options.ExportMaterials)
+			if (options.GenerateMaterials)
 			{
 				aiString texPath(meshes[i].imageName);
 				aiMaterial* mat = new aiMaterial();
