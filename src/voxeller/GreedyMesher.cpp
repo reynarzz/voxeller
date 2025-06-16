@@ -232,7 +232,7 @@ static void splitTJunctions(TriMesh& mesh)
 	// Request the attributes we need
 	mesh.request_vertex_normals();
 	mesh.request_vertex_texcoords2D();
-	
+
 	LOG_CORE_INFO("T Juntions Fix: vertex count: {0}", mesh.n_vertices());
 	LOG_CORE_INFO("T Juntions Fix: edges count: {0}", mesh.n_edges());
 
@@ -848,7 +848,7 @@ static void BuildMeshFromFaces(
 }
 
 // Create and save a PNG texture from the atlas data
-static bool SaveAtlasImage(const std::string& filename, int width, int height, const std::vector<unsigned char>& rgbaData) 
+static bool SaveAtlasImage(const std::string& filename, int width, int height, const std::vector<unsigned char>& rgbaData)
 {
 	// Use stb_image_write to write PNG
 	if (stbi_write_png(filename.c_str(), width, height, 4, rgbaData.data(), width * 4) == 0) {
@@ -999,7 +999,7 @@ static void GenerateAtlasImage(
 
 static bool WriteSceneToFile(const std::vector<aiScene*> scenes, const std::string& outPath, const ExportOptions& options)
 {
-	
+
 	// Determine export format from extension
 
 	std::string ext = "";
@@ -1055,11 +1055,11 @@ static bool WriteSceneToFile(const std::vector<aiScene*> scenes, const std::stri
 			// 	MergeIdenticalVertices(scene->mMeshes[i]);
 			// }
 		}
-		
-		const std::string convertedOutName = outPath.substr(0, dot) + (scenes.size() > 1? "_" + std::to_string(i): "");
+
+		const std::string convertedOutName = outPath.substr(0, dot) + (scenes.size() > 1 ? "_" + std::to_string(i) : "");
 		scene->mRootNode->mTransformation = scaleMat * scene->mRootNode->mTransformation;
 		aiReturn ret = exporter.Export(scene, formatId.c_str(), convertedOutName + "." + ext, preprocess);
-		if (ret != aiReturn_SUCCESS) 
+		if (ret != aiReturn_SUCCESS)
 		{
 			std::cerr << "Export failed: " << exporter.GetErrorString() << "\n";
 			return false;
@@ -1072,179 +1072,179 @@ static bool WriteSceneToFile(const std::vector<aiScene*> scenes, const std::stri
 }
 
 bbox ComputeMeshBoundingBox(const aiMesh* mesh) {
-    bbox boundingBox = {
-        std::numeric_limits<float>::max(),
-        std::numeric_limits<float>::max(),
-        std::numeric_limits<float>::max(),
-        std::numeric_limits<float>::lowest(),
-        std::numeric_limits<float>::lowest(),
-        std::numeric_limits<float>::lowest()
-    };
-    if (!mesh || mesh->mNumVertices == 0)
-        return boundingBox;
+	bbox boundingBox = {
+		std::numeric_limits<float>::max(),
+		std::numeric_limits<float>::max(),
+		std::numeric_limits<float>::max(),
+		std::numeric_limits<float>::lowest(),
+		std::numeric_limits<float>::lowest(),
+		std::numeric_limits<float>::lowest()
+	};
+	if (!mesh || mesh->mNumVertices == 0)
+		return boundingBox;
 
-    for (unsigned i = 0; i < mesh->mNumVertices; ++i) {
-        const aiVector3D& v = mesh->mVertices[i];
-        boundingBox.minX = std::min(boundingBox.minX, v.x);
-        boundingBox.minY = std::min(boundingBox.minY, v.y);
-        boundingBox.minZ = std::min(boundingBox.minZ, v.z);
+	for (unsigned i = 0; i < mesh->mNumVertices; ++i) {
+		const aiVector3D& v = mesh->mVertices[i];
+		boundingBox.minX = std::min(boundingBox.minX, v.x);
+		boundingBox.minY = std::min(boundingBox.minY, v.y);
+		boundingBox.minZ = std::min(boundingBox.minZ, v.z);
 
-        boundingBox.maxX = std::max(boundingBox.maxX, v.x);
-        boundingBox.maxY = std::max(boundingBox.maxY, v.y);
-        boundingBox.maxZ = std::max(boundingBox.maxZ, v.z);
-    }
-    return boundingBox;
+		boundingBox.maxX = std::max(boundingBox.maxX, v.x);
+		boundingBox.maxY = std::max(boundingBox.maxY, v.y);
+		boundingBox.maxZ = std::max(boundingBox.maxZ, v.z);
+	}
+	return boundingBox;
 }
 
 vox_vec3 TransformToMeshSpace(const vox_vec3& p,
-                              const vox_vec3& voxCenter,
-                              const vox_mat3& rot,
-                              const vox_vec3& trans)
+	const vox_vec3& voxCenter,
+	const vox_mat3& rot,
+	const vox_vec3& trans)
 {
-    // 1. Translate so pivot is at origin (pivot recentering)
-    vox_vec3 v = p - voxCenter;
+	// 1. Translate so pivot is at origin (pivot recentering)
+	vox_vec3 v = p - voxCenter;
 
-    // 2. Apply MagicaVoxel's rotation
-    v = rot * v;
+	// 2. Apply MagicaVoxel's rotation
+	v = rot * v;
 
-    // 3. Swizzle axes to (x, z, y) to match Assimp's coordinate system
-    vox_vec3 sw{ v.x, v.z, v.y };
+	// 3. Swizzle axes to (x, z, y) to match Assimp's coordinate system
+	vox_vec3 sw{ v.x, v.z, v.y };
 
-    // 4. Apply translation (note Y↔Z swap)
-    sw.x += trans.x;
-    sw.y += trans.z;
-    sw.z += trans.y;
+	// 4. Apply translation (note Y↔Z swap)
+	sw.x += trans.x;
+	sw.y += trans.z;
+	sw.z += trans.y;
 
-    // 5. Mirror the X-axis to restore right-handedness
-    sw.x = -sw.x;
+	// 5. Mirror the X-axis to restore right-handedness
+	sw.x = -sw.x;
 
-    return sw;
+	return sw;
 }
 
 aiMatrix4x4 BuildAiTransformMatrix(
-    const vox_mat3& rot,      // 3×3 rotation from MagicaVoxel
-    const vox_vec3& trans      // translation from MagicaVoxel (_t), in voxel units
+	const vox_mat3& rot,      // 3×3 rotation from MagicaVoxel
+	const vox_vec3& trans      // translation from MagicaVoxel (_t), in voxel units
 ) {
-    // 1. Assemble a 4×4 matrix from rot and trans,
-    //    with axis swap and X mirroring baked in.
+	// 1. Assemble a 4×4 matrix from rot and trans,
+	//    with axis swap and X mirroring baked in.
 
-    // Prepare rotation rows
-    // MagicaVoxel uses row-vectors; we map to column-major aiMatrix4x4
-    float R[4][4] = {
-        { rot.m00, rot.m10, rot.m20, 0.0f },
-        { rot.m01, rot.m11, rot.m21, 0.0f },
-        { rot.m02, rot.m12, rot.m22, 0.0f },
-        {    0.0f,    0.0f,    0.0f, 1.0f }
-    };
+	// Prepare rotation rows
+	// MagicaVoxel uses row-vectors; we map to column-major aiMatrix4x4
+	float R[4][4] = {
+		{ rot.m00, rot.m10, rot.m20, 0.0f },
+		{ rot.m01, rot.m11, rot.m21, 0.0f },
+		{ rot.m02, rot.m12, rot.m22, 0.0f },
+		{    0.0f,    0.0f,    0.0f, 1.0f }
+	};
 
-    // 2. Swap axes: convert (x, y, z) → (x, z, y)
-    //    Effectively multiply on the right with a permutation matrix.
-    aiMatrix4x4 perm;
-    perm.a1 = 1.0f; // X → X
-    perm.b3 = 1.0f; // Y → Z
-    perm.c2 = 1.0f; // Z → Y
+	// 2. Swap axes: convert (x, y, z) → (x, z, y)
+	//    Effectively multiply on the right with a permutation matrix.
+	aiMatrix4x4 perm;
+	perm.a1 = 1.0f; // X → X
+	perm.b3 = 1.0f; // Y → Z
+	perm.c2 = 1.0f; // Z → Y
 
-    // 3. Mirror X: scale X by –1
-    aiMatrix4x4 mirror;
-    mirror.a1 = -1.0f;
+	// 3. Mirror X: scale X by –1
+	aiMatrix4x4 mirror;
+	mirror.a1 = -1.0f;
 
-    // Combine rotation, permutation, and mirroring
-    aiMatrix4x4 mRot(
-        R[0][0], R[0][1], R[0][2], 0.0f,
-        R[1][0], R[1][1], R[1][2], 0.0f,
-        R[2][0], R[2][1], R[2][2], 0.0f,
-           0.0f,    0.0f,    0.0f, 1.0f
-    );
+	// Combine rotation, permutation, and mirroring
+	aiMatrix4x4 mRot(
+		R[0][0], R[0][1], R[0][2], 0.0f,
+		R[1][0], R[1][1], R[1][2], 0.0f,
+		R[2][0], R[2][1], R[2][2], 0.0f,
+		0.0f, 0.0f, 0.0f, 1.0f
+	);
 
-    aiMatrix4x4 xf = mirror * perm * mRot;
+	aiMatrix4x4 xf = mirror * perm * mRot;
 
-    // 4. Apply translation: note the Y ↔ Z swap
-    aiVector3D t;
-    t.x = trans.x;
-    t.y = trans.z;
-    t.z = trans.y;
+	// 4. Apply translation: note the Y ↔ Z swap
+	aiVector3D t;
+	t.x = trans.x;
+	t.y = trans.z;
+	t.z = trans.y;
 
-    aiMatrix4x4::Translation(t, xf);
-    return xf;
+	aiMatrix4x4::Translation(t, xf);
+	return xf;
 }
 
 inline vox_vec3 Rotate(const vox_mat3& m, const vox_vec3& v)
 {
-      return 
-	  {
-        m.m00 * v.x + m.m10 * v.y + m.m20 * v.z,
-        m.m01 * v.x + m.m11 * v.y + m.m21 * v.z,
-        m.m02 * v.x + m.m12 * v.y + m.m22 * v.z
-    };
+	return
+	{
+	  m.m00 * v.x + m.m10 * v.y + m.m20 * v.z,
+	  m.m01 * v.x + m.m11 * v.y + m.m21 * v.z,
+	  m.m02 * v.x + m.m12 * v.y + m.m22 * v.z
+	};
 }
 
 
 
-std::shared_ptr<TextureData> GetTexture(std::vector<FaceRect>& faces, const std::vector<color>& palette, 
-									  const std::vector<vox_model>& models, const bool texturesPOT)
+std::shared_ptr<TextureData> GetTexture(std::vector<FaceRect>& faces, const std::vector<color>& palette,
+	const std::vector<vox_model>& models, const bool texturesPOT)
 {
-			int atlasDim = 16;
-			int usedW = 0;
-			int usedH = 0;
+	int atlasDim = 16;
+	int usedW = 0;
+	int usedH = 0;
 
-			if (texturesPOT)
+	if (texturesPOT)
+	{
+		// Start from 16 and double
+		while (true)
+		{
+			if (PackFacesIntoAtlas(atlasDim, faces))
 			{
-				// Start from 16 and double
-				while (true)
-				{
-					if (PackFacesIntoAtlas(atlasDim, faces))
-					{
-						break;
-					}
-					atlasDim *= 2;
-					if (atlasDim > 4096)
-					{ // safety break
-						LOG_CORE_ERROR("Could not pack texture atlas up to 4096 for frame ");// << frameIndex << "\n";
-						break;
-					}
-				}
-
-				usedW = atlasDim;
-				usedH = atlasDim;
+				break;
 			}
-			else
+			atlasDim *= 2;
+			if (atlasDim > 4096)
+			{ // safety break
+				LOG_CORE_ERROR("Could not pack texture atlas up to 4096 for frame ");// << frameIndex << "\n";
+				break;
+			}
+		}
+
+		usedW = atlasDim;
+		usedH = atlasDim;
+	}
+	else
+	{
+		// Start with 16 and grow by 16 steps or double as needed (non-POT allowed)
+		while (true)
+		{
+			if (PackFacesIntoAtlas(atlasDim, faces))
 			{
-				// Start with 16 and grow by 16 steps or double as needed (non-POT allowed)
-				while (true)
-				{
-					if (PackFacesIntoAtlas(atlasDim, faces))
-					{
-						break;
-					}
-
-					atlasDim += 16;
-
-					if (atlasDim > 4096)
-					{
-						LOG_CORE_ERROR("Could not pack texture atlas up to 4096 for frame ");
-						break;
-					}
-				}
-				// Shrink to actual used size
-				// We can compute used width and height from faces placement
-				for (auto& fr : faces)
-				{
-					usedW = std::max(usedW, fr.atlasX + fr.w + 2);
-					usedH = std::max(usedH, fr.atlasY + fr.h + 2);
-				}
-
-				atlasDim = std::max(usedW, usedH);
+				break;
 			}
-				// Create image
-				auto textureData = std::make_shared<TextureData>();
-				textureData->Width = usedW;
-				textureData->Height = usedH;
 
-				LOG_CORE_INFO("Texture size: ({0}, {1})", textureData->Width, textureData->Height);
+			atlasDim += 16;
 
-				GenerateAtlasImage(atlasDim, atlasDim, faces, models, palette, textureData->Buffer);
+			if (atlasDim > 4096)
+			{
+				LOG_CORE_ERROR("Could not pack texture atlas up to 4096 for frame ");
+				break;
+			}
+		}
+		// Shrink to actual used size
+		// We can compute used width and height from faces placement
+		for (auto& fr : faces)
+		{
+			usedW = std::max(usedW, fr.atlasX + fr.w + 2);
+			usedH = std::max(usedH, fr.atlasY + fr.h + 2);
+		}
 
-				return textureData;
+		atlasDim = std::max(usedW, usedH);
+	}
+	// Create image
+	auto textureData = std::make_shared<TextureData>();
+	textureData->Width = usedW;
+	textureData->Height = usedH;
+
+	LOG_CORE_INFO("Texture size: ({0}, {1})", textureData->Width, textureData->Height);
+
+	GenerateAtlasImage(atlasDim, atlasDim, faces, models, palette, textureData->Buffer);
+
+	return textureData;
 }
 
 
@@ -1305,7 +1305,7 @@ static std::vector<aiScene*> GetModels(const vox_file* voxData, const s32 frameI
 			std::string imageName = "";
 
 			s32 texWidth = 16, texHeight = 16;
-			if(options.GenerateTextures)
+			if (options.GenerateTextures)
 			{
 				// TODO: to create an atlas of all the meshes, the property colorIndex, in face should be updated.
 				const auto textureData = GetTexture(faces, voxData->palette, voxData->voxModels, options.TexturesPOT);
@@ -1355,10 +1355,10 @@ static std::vector<aiScene*> GetModels(const vox_file* voxData, const s32 frameI
 				&wxf.trans    // MagicaVoxel translation
 			);
 
-			
+
 			// 3) Recenter every vertex so that the mesh’s center is at the origin
-			
-			
+
+
 			// Assign material index...
 
 			if (options.GenerateMaterials)
@@ -1385,21 +1385,21 @@ static std::vector<aiScene*> GetModels(const vox_file* voxData, const s32 frameI
 				node->mMeshes = new unsigned int[1] { meshIndex };
 			}
 
-			
+
 			// box = TransformAABB(box, wxf.rot, wxf.trans);
 			//  float cxx = box.minX + (box.maxX - box.minX) * options.Pivot.x;
 			//  float cyy = box.minY + (box.maxY - box.minY) * options.Pivot.y;
 			//  float czz = box.minZ + (box.maxZ - box.minZ) * options.Pivot.z;
- 
-			auto pivot =options.Pivot;// Rotate(wxf.rot, options.Pivot);
+
+			auto pivot = options.Pivot;// Rotate(wxf.rot, options.Pivot);
 			auto bbbox = ComputeMeshBoundingBox(mesh);
 			float cxx = bbbox.minX + (bbbox.maxX - bbbox.minX) * pivot.x;
 			float cyy = bbbox.minY + (bbbox.maxY - bbbox.minY) * pivot.y;
 			float czz = bbbox.minZ + (bbbox.maxZ - bbbox.minZ) * pivot.z;
-			
+
 			aiVector3D cent(cxx, cyy, czz);
 
-			if(options.MeshesToWorldCenter)
+			if (options.MeshesToWorldCenter)
 			{
 				for (unsigned int i = 0; i < mesh->mNumVertices; ++i)
 				{
@@ -1412,15 +1412,15 @@ static std::vector<aiScene*> GetModels(const vox_file* voxData, const s32 frameI
 				{
 					mesh->mVertices[i] -= cent;
 				}
-				
+
 				aiMatrix4x4 C;
 				aiMatrix4x4::Translation(cent, C);
 				node->mTransformation = C * node->mTransformation;
 			}
-			
-	
+
+
 			// ----------------------------------------------------------------------------------------------------------------------------------------------------------
-			
+
 			meshes.push_back({ mesh, imageName });
 			shapeNodes.push_back(node);
 		}
@@ -1896,16 +1896,16 @@ ExportResults GreedyMesher::ExportVoxToModel(const std::string& inVoxPath, const
 	const auto scenes = Run(voxData.get(), outExportPath, options.ConvertOptions);
 
 	ExportResults results{};
-	
+
 	if (scenes.size() > 0)
 	{
 		WriteSceneToFile(scenes, outExportPath, options);
-		
+
 		for (size_t i = 0; i < scenes.size(); i++)
 		{
 			delete scenes[i];
 		}
-		
+
 		results.Convert.Msg = ConvertMSG::SUCESS;
 	}
 	else
