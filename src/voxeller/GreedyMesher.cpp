@@ -6,7 +6,6 @@
 #ifndef _USE_MATH_DEFINES
 #define _USE_MATH_DEFINES
 #endif
-#include <cmath>
 #include <algorithm>
 #include <cassert>
 #include <voxeller/GreedyMesher.h>
@@ -1121,8 +1120,6 @@ vox_vec3 TransformToMeshSpace(const vox_vec3& p,
 
     return sw;
 }
-
-#include <assimp/scene.h> // for aiMatrix4x4, aiVector3D
 
 aiMatrix4x4 BuildAiTransformMatrix(
     const vox_mat3& rot,      // 3×3 rotation from MagicaVoxel

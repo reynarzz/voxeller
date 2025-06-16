@@ -1,4 +1,5 @@
 /build/
 /bin/
 cmakefiles
-.vscode/settings.json
+/testvox/nda
+/.vscode

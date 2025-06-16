@@ -17,7 +17,7 @@
 
 void mesh_texturizer::export_pallete_png(const char* path, const std::vector<Voxeller::color>& pallete)
 {
-	if (!pallete.empty()) 
+	if (!pallete.empty())
 	{
 		constexpr int strideBytes = 0;
 
@@ -34,7 +34,7 @@ void mesh_texturizer::export_pallete_png(const char* path, const std::vector<Vox
 		imageStream.write(reinterpret_cast<const char*>(image), length);
 		imageStream.close();
 	}
-	else 
+	else
 	{
 		std::cout << "Color pallete is empty";
 	}

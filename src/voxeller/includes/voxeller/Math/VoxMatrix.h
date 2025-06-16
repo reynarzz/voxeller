@@ -1,7 +1,7 @@
 #pragma once
 
 #include <voxeller/Types.h>
-#include <voxeller/VoxVector.h>
+#include <voxeller/Math/VoxVector.h>
 #include <cmath>
 
 //–– 2×2 float matrix
