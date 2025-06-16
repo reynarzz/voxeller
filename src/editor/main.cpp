@@ -10,7 +10,7 @@
 #include <Voxeller/GreedyMesher.h>
 #include <iostream>
 
-
+#include <voxeller/Math/VoxMath.h>
 using namespace VoxellerEditor;
 
 ImGuiApp imgui{};
@@ -29,7 +29,8 @@ void Render(GLFWwindow* window)
 	glfwSwapBuffers(window);
 }
 
-void drop_callback(GLFWwindow* window, int count, const char** paths) {
+void drop_callback(GLFWwindow* window, int count, const char** paths) 
+{
 	for (int i = 0; i < count; ++i) {
 		std::cout << "Dropped file: " << paths[i] << std::endl;
 		// Save paths[i] somewhere to use in ImGui
@@ -93,7 +94,8 @@ int main()
 	exportOptions.ConvertOptions.GenerateMaterials = true;
 	exportOptions.ConvertOptions.MeshesToWorldCenter = false;
 	exportOptions.ConvertOptions.TexturesPOT = false;
-
+	Voxeller::vox_quat s{};
+	Voxeller::scale
 	//Chicken_van_2.vox
 	std::string path = "B:/Projects/Voxeller/bin/Debug/testvox/nda/Ambulance_1.vox"; // Test this!
 	//std::string path = "B:/Projects/Voxeller/bin/Debug/testvox/room.vox"; 

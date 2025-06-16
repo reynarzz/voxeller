@@ -61,9 +61,9 @@ namespace Voxeller
 	f32 dot(const vox_vec2& a, const vox_vec2& b) { return a.x * b.x + a.y * b.y; }
 	f32 dot(const vox_vec3& a, const vox_vec3& b) { return a.x * b.x + a.y * b.y + a.z * b.z; }
 	f32 dot(const vox_vec4& a, const vox_vec4& b) { return a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w; }
-	s32   dot(const vox_ivec2& a, const vox_ivec2& b) { return a.x * b.x + a.y * b.y; }
-	s32   dot(const vox_ivec3& a, const vox_ivec3& b) { return a.x * b.x + a.y * b.y + a.z * b.z; }
-	s32   dot(const vox_ivec4& a, const vox_ivec4& b) { return a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w; }
+	s32 dot(const vox_ivec2& a, const vox_ivec2& b) { return a.x * b.x + a.y * b.y; }
+	s32 dot(const vox_ivec3& a, const vox_ivec3& b) { return a.x * b.x + a.y * b.y + a.z * b.z; }
+	s32 dot(const vox_ivec4& a, const vox_ivec4& b) { return a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w; }
 
 	vox_vec3 cross(const vox_vec3& a, const vox_vec3& b) { return { a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x }; }
 	vox_ivec3 cross(const vox_ivec3& a, const vox_ivec3& b) { return { a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x }; }
@@ -73,11 +73,27 @@ namespace Voxeller
 	vox_vec3 frac(const vox_vec3& v) { return { frac(v.x), frac(v.y), frac(v.z) }; }
 	vox_vec4 frac(const vox_vec4& v) { return { frac(v.x), frac(v.y), frac(v.z), frac(v.w) }; }
 
+
+	vox_vec2 lerp(const vox_vec2& a, const vox_vec2& b, float t) 
+	{
+		return a + (b - a) * t;
+	}
+
+	vox_vec3 lerp(const vox_vec3& a, const vox_vec3& b, float t)
+	{
+		return a + (b - a) * t;
+	}
+
+	vox_vec4 lerp(const vox_vec4& a, const vox_vec4& b, float t) 
+	{
+		return a + (b - a) * t;
+	}
+
 	f32 min(f32 a, f32 b) { return (a < b) ? a : b; }
 	f32 max(f32 a, f32 b) { return (a > b) ? a : b; }
-	s32   min(s32 a, s32 b) { return (a < b) ? a : b; }
-	s32   max(s32 a, s32 b) { return (a > b) ? a : b; }
+	s32 min(s32 a, s32 b) { return (a < b) ? a : b; }
+	s32 max(s32 a, s32 b) { return (a > b) ? a : b; }
 
 	f32 sign(f32 x) { return (x > 0) ? 1.f : ((x < 0) ? -1.f : 0.f); }
-	s32   sign(s32 x) { return (x > 0) - (x < 0); }
+	s32 sign(s32 x) { return (x > 0) - (x < 0); }
 }
