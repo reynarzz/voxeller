@@ -715,7 +715,24 @@ static void BuildMeshFromFaces(
 		auto i1 = addVertex(x1, y1, z1, nx, ny, nz, u0, v1);
 		auto i2 = addVertex(x2, y2, z2, nx, ny, nz, u1, v1);
 		auto i3 = addVertex(x3, y3, z3, nx, ny, nz, u1, v0);
-		indices.insert(indices.end(), { i0,i1,i2, i0,i2,i3 });
+		//indices.insert(indices.end(), { i0,i1,i2, i0,i2,i3 });
+
+
+		vox_vec3 P0{ x0,y0,z0 }, P1{ x1,y1,z1 }, P2{ x2,y2,z2 };
+		vox_vec3 faceN{ nx,ny,nz };
+
+		// compute the geometric normal of (P0,P1,P2)
+		vox_vec3 triN = cross(P1 - P0, P2 - P0);
+
+		// if the triangle normal lines up with your face normal, use CCW, otherwise flip
+		if (dot(triN, faceN) > 0.0f) {
+			// P0→P1→P2 is already CCW when viewed from outside
+			indices.insert(indices.end(), { i0, i1, i2,   i0, i2, i3 });
+		}
+		else {
+			// it’s backwards, so swap 1↔2
+			indices.insert(indices.end(), { i0, i2, i1,   i0, i3, i2 });
+		}
 	}
 
 	// smooth normals
@@ -1085,6 +1102,7 @@ bbox ComputeMeshBoundingBox(const aiMesh* mesh) {
 
 	for (unsigned i = 0; i < mesh->mNumVertices; ++i) {
 		const aiVector3D& v = mesh->mVertices[i];
+		const aiVector3D& n = mesh->mNormals[i];
 		boundingBox.minX = std::min(boundingBox.minX, v.x);
 		boundingBox.minY = std::min(boundingBox.minY, v.y);
 		boundingBox.minZ = std::min(boundingBox.minZ, v.z);
