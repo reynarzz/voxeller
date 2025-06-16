@@ -22,9 +22,10 @@ namespace Voxeller
     vox_mat4 orthographic(f32 left, f32 right, f32 bottom, f32 top, f32 near, f32 far)
     {
         vox_mat4 m(0, 0, 0, 0,
-            0, 0, 0, 0,
-            0, 0, 0, 0,
-            0, 0, 0, 1);
+                   0, 0, 0, 0,
+                   0, 0, 0, 0,
+                   0, 0, 0, 1);
+
         m.m00 = 2.0f / (right - left);
         m.m11 = 2.0f / (top - bottom);
         m.m22 = -2.0f / (far - near);
@@ -108,8 +109,4 @@ namespace Voxeller
     {
         return m * scale(s);
     }
-
-  
-    
-
 } 
