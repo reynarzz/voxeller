@@ -95,7 +95,9 @@ int main()
 	exportOptions.ConvertOptions.MeshesToWorldCenter = false;
 	exportOptions.ConvertOptions.TexturesPOT = false;
 	Voxeller::vox_quat s{};
-	
+	Voxeller::vox_vec3 as;
+	Voxeller::vox_vec3 a2s = -as;
+
 	//Chicken_van_2.vox
 	std::string path = "B:/Projects/Voxeller/bin/Debug/testvox/nda/Ambulance_1.vox"; // Test this!
 	//std::string path = "B:/Projects/Voxeller/bin/Debug/testvox/room.vox"; 

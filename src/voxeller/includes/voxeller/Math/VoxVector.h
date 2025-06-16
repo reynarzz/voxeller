@@ -1,10 +1,10 @@
-#pragma once
+ï»¿#pragma once
 #include <voxeller/api.h>
 #include <Voxeller/Types.h>
 
 namespace Voxeller
 {
-	//–– 2D vector (f32)
+	//â€“â€“ 2D vector (f32)
 	struct VOXELLER_API vox_vec2
 	{
 		f32 x, y;
@@ -23,9 +23,14 @@ namespace Voxeller
 
 		// Scalar multiplication
 		friend vox_vec2 operator*(f32 s, const vox_vec2& v);
+
+		vox_vec2 operator-() const;
 	};
 
-	//–– 3D vector (f32)
+
+	VOXELLER_API vox_vec2 operator/(const vox_vec2& a, const vox_vec2& b);
+
+	//â€“â€“ 3D vector (f32)
 	struct VOXELLER_API vox_vec3
 	{
 		f32 x, y, z;
@@ -44,9 +49,13 @@ namespace Voxeller
 
 		// Scalar multiplication
 		friend vox_vec3 operator*(f32 s, const vox_vec3& v);
+		vox_vec3 operator-() const;
 	};
 
-	//–– 4D vector (f32)
+	VOXELLER_API vox_vec3 operator/(const vox_vec3& a, const vox_vec3& b);
+
+
+	//â€“â€“ 4D vector (f32)
 	struct VOXELLER_API vox_vec4
 	{
 		f32 x, y, z, w;
@@ -63,9 +72,12 @@ namespace Voxeller
 
 		// Scalar multiplication
 		friend vox_vec4 operator*(f32 s, const vox_vec4& v);
+		vox_vec4 operator-() const;
 	};
 
-	//–– 2D vector (integer)
+	VOXELLER_API vox_vec4 operator/(const vox_vec4& a, const vox_vec4& b);
+
+	//â€“â€“ 2D vector (integer)
 	struct VOXELLER_API vox_ivec2
 	{
 		s32 x, y;
@@ -78,7 +90,7 @@ namespace Voxeller
 	vox_ivec2 operator-(const vox_ivec2& a, const vox_ivec2& b);
 	vox_ivec2 operator/(const vox_ivec2& v, s32 s);
 
-	//–– 3D vector (integer)
+	//â€“â€“ 3D vector (integer)
 	struct VOXELLER_API vox_ivec3
 	{
 		s32 x, y, z;
@@ -91,7 +103,7 @@ namespace Voxeller
 	vox_ivec3 operator-(const vox_ivec3& a, const vox_ivec3& b);
 	vox_ivec3 operator/(const vox_ivec3& v, s32 s);
 
-	//–– 4D vector (integer)
+	//â€“â€“ 4D vector (integer)
 	struct VOXELLER_API vox_ivec4
 	{
 		s32 x, y, z, w;
@@ -104,14 +116,15 @@ namespace Voxeller
 	vox_ivec4 operator-(const vox_ivec4& a, const vox_ivec4& b);
 	vox_ivec4 operator/(const vox_ivec4& v, s32 s);
 
-	//–– Utility functions
+
+	//â€“â€“ Utility functions
 
 	f32 dot(const vox_vec2& a, const vox_vec2& b);
 	f32 dot(const vox_vec3& a, const vox_vec3& b);
 	f32 dot(const vox_vec4& a, const vox_vec4& b);
-	s32   dot(const vox_ivec2& a, const vox_ivec2& b);
-	s32   dot(const vox_ivec3& a, const vox_ivec3& b);
-	s32   dot(const vox_ivec4& a, const vox_ivec4& b);
+	s32 dot(const vox_ivec2& a, const vox_ivec2& b);
+	s32 dot(const vox_ivec3& a, const vox_ivec3& b);
+	s32 dot(const vox_ivec4& a, const vox_ivec4& b);
 
 	vox_vec3 cross(const vox_vec3& a, const vox_vec3& b);
 	vox_ivec3 cross(const vox_ivec3& a, const vox_ivec3& b);
@@ -125,11 +138,106 @@ namespace Voxeller
 	vox_vec3 lerp(const vox_vec3& a, const vox_vec3& b, f32 t);
 	vox_vec4 lerp(const vox_vec4& a, const vox_vec4& b, f32 t);
 
+
 	f32 min(f32 a, f32 b);
 	f32 max(f32 a, f32 b);
-	s32   min(s32 a, s32 b);
-	s32   max(s32 a, s32 b);
+	s32 min(s32 a, s32 b);
+	s32 max(s32 a, s32 b);
 
 	f32 sign(f32 x);
-	s32   sign(s32 x);
+	s32 sign(s32 x);
+
+	VOXELLER_API vox_vec2   abs(const vox_vec2& v);
+	VOXELLER_API vox_vec3   abs(const vox_vec3& v);
+	VOXELLER_API vox_vec4   abs(const vox_vec4& v);
+
+	VOXELLER_API vox_vec2   floor(const vox_vec2& v);
+	VOXELLER_API vox_vec3   floor(const vox_vec3& v);
+	VOXELLER_API vox_vec4   floor(const vox_vec4& v);
+
+	VOXELLER_API vox_vec2   ceil(const vox_vec2& v);
+	VOXELLER_API vox_vec3   ceil(const vox_vec3& v);
+	VOXELLER_API vox_vec4   ceil(const vox_vec4& v);
+
+	VOXELLER_API vox_vec2   round(const vox_vec2& v);
+	VOXELLER_API vox_vec3   round(const vox_vec3& v);
+	VOXELLER_API vox_vec4   round(const vox_vec4& v);
+
+	VOXELLER_API vox_vec2   clamp(const vox_vec2& v, f32 lo, f32 hi);
+	VOXELLER_API vox_vec3   clamp(const vox_vec3& v, f32 lo, f32 hi);
+	VOXELLER_API vox_vec4   clamp(const vox_vec4& v, f32 lo, f32 hi);
+
+	VOXELLER_API vox_vec2   saturate(const vox_vec2& v);
+	VOXELLER_API vox_vec3   saturate(const vox_vec3& v);
+	VOXELLER_API vox_vec4   saturate(const vox_vec4& v);
+
+	// Length / distance
+	VOXELLER_API f32        length(const vox_vec2& v);
+	VOXELLER_API f32        length(const vox_vec3& v);
+	VOXELLER_API f32        length(const vox_vec4& v);
+
+	VOXELLER_API f32        length2(const vox_vec2& v);
+	VOXELLER_API f32        length2(const vox_vec3& v);
+	VOXELLER_API f32        length2(const vox_vec4& v);
+
+	VOXELLER_API f32        distance(const vox_vec2& a, const vox_vec2& b);
+	VOXELLER_API f32        distance(const vox_vec3& a, const vox_vec3& b);
+	VOXELLER_API f32        distance(const vox_vec4& a, const vox_vec4& b);
+
+	// Normalize & projections
+	VOXELLER_API vox_vec2   normalize(const vox_vec2& v);
+	VOXELLER_API vox_vec3   normalize(const vox_vec3& v);
+	VOXELLER_API vox_vec4   normalize(const vox_vec4& v);
+
+	VOXELLER_API vox_vec3   faceforward(const vox_vec3& N, const vox_vec3& I, const vox_vec3& Nref);
+	VOXELLER_API vox_vec3   project(const vox_vec3& v, const vox_vec3& onto);
+	VOXELLER_API vox_vec2   perp(const vox_vec2& v);        // 2D perpendicular
+
+	VOXELLER_API f32        angleBetween(const vox_vec3& a, const vox_vec3& b);
+
+	// Interpolation (besides your existing lerp)
+	VOXELLER_API vox_vec2   smoothstep(const vox_vec2& e0, const vox_vec2& e1, const vox_vec2& x);
+	VOXELLER_API vox_vec3   smoothstep(const vox_vec3& e0, const vox_vec3& e1, const vox_vec3& x);
+	VOXELLER_API vox_vec4   smoothstep(const vox_vec4& e0, const vox_vec4& e1, const vox_vec4& x);
+
+	VOXELLER_API vox_vec2   smootherstep(const vox_vec2& e0, const vox_vec2& e1, const vox_vec2& x);
+	VOXELLER_API vox_vec3   smootherstep(const vox_vec3& e0, const vox_vec3& e1, const vox_vec3& x);
+	VOXELLER_API vox_vec4   smootherstep(const vox_vec4& e0, const vox_vec4& e1, const vox_vec4& x);
+
+	VOXELLER_API vox_vec2   step(const vox_vec2& edge, const vox_vec2& x);
+	VOXELLER_API vox_vec3   step(const vox_vec3& edge, const vox_vec3& x);
+	VOXELLER_API vox_vec4   step(const vox_vec4& edge, const vox_vec4& x);
+
+	// Reflection & refraction
+	VOXELLER_API vox_vec3   reflect(const vox_vec3& I, const vox_vec3& N);
+	VOXELLER_API vox_vec3   refract(const vox_vec3& I, const vox_vec3& N, f32 eta);
+	VOXELLER_API f32        fresnelSchlick(f32 cosTheta, f32 F0);
+
+	// Angle & coordinate
+	VOXELLER_API f32        radians(f32 deg);
+	VOXELLER_API f32        degrees(f32 rad);
+
+	VOXELLER_API vox_vec2   cartesianToPolar(const vox_vec2& v);  // (angle, radius)
+	VOXELLER_API vox_vec2   polarToCartesian(const vox_vec2& pr);
+
+	VOXELLER_API vox_vec3   toSpherical(const vox_vec3& v);       // (azimuth, inclination, r)
+	VOXELLER_API vox_vec3   fromSpherical(const vox_vec3& sph);
+
+	// Random & noise
+	VOXELLER_API vox_vec3   randomUnitSphere();
+	VOXELLER_API f32        perlinNoise(const vox_vec3& p);
+	VOXELLER_API f32        simplexNoise(const vox_vec3& p);
+	VOXELLER_API f32        fbm(const vox_vec3& p);
+	VOXELLER_API f32        turbulence(const vox_vec3& p);
+
+	// Modulo, isnan/isfinite
+	VOXELLER_API f32        mod(f32 x, f32 y);
+	VOXELLER_API vox_vec2   mod(const vox_vec2& v, f32 m);
+	VOXELLER_API vox_vec3   mod(const vox_vec3& v, f32 m);
+	VOXELLER_API vox_vec4   mod(const vox_vec4& v, f32 m);
+
+	VOXELLER_API bool       isnan(f32 x);
+	VOXELLER_API bool       isfinite(f32 x);
+
+	VOXELLER_API vox_vec3 noise3D(f32 t, f32 frequency = 1.0f);
 }
