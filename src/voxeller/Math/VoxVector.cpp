@@ -74,7 +74,7 @@ namespace Voxeller
 	vox_vec4 frac(const vox_vec4& v) { return { frac(v.x), frac(v.y), frac(v.z), frac(v.w) }; }
 
 
-	vox_vec2 lerp(const vox_vec2& a, const vox_vec2& b, float t) 
+	vox_vec2 lerp(const vox_vec2& a, const vox_vec2& b, float t)
 	{
 		return a + (b - a) * t;
 	}
@@ -84,7 +84,7 @@ namespace Voxeller
 		return a + (b - a) * t;
 	}
 
-	vox_vec4 lerp(const vox_vec4& a, const vox_vec4& b, float t) 
+	vox_vec4 lerp(const vox_vec4& a, const vox_vec4& b, float t)
 	{
 		return a + (b - a) * t;
 	}
