@@ -92,13 +92,14 @@ int main()
 	
 	exportOptions.ConvertOptions.GenerateMaterials = true;
 	exportOptions.ConvertOptions.MeshesToWorldCenter = false;
-   exportOptions.ConvertOptions.TexturesPOT = false;
+	exportOptions.ConvertOptions.TexturesPOT = false;
 
 	//Chicken_van_2.vox
-	//std::string path = "B:/Projects/voxeller/bin/Debug/testvox/nda/Ambulance_1.vox"; // Test this!
+	std::string path = "B:/Projects/voxeller/bin/Debug/testvox/nda/Ambulance_1.vox"; // Test this!
 	//std::string path = "B:/Projects/voxeller/bin/Debug/testvox/room.vox"; 
-	std::string path = "testvox/nda/Ambulance_1.vox";
-	std::string output = "testvox/nda/export/Output.fbx";
+	//std::string path = "testvox/nda/Ambulance_1.vox";
+	//std::string output = "testvox/nda/export/Output.fbx";
+	std::string output = "B:/Projects/voxeller/bin/Debug/testvox/nda/export/Output.fbx";
 	Voxeller::GreedyMesher::ExportVoxToModel(path, output, exportOptions);
 
 	while (!glfwWindowShouldClose(win))

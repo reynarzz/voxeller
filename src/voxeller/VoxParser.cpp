@@ -12,13 +12,8 @@
 
 namespace Voxeller
 {
-    const vox_imat3 vox_imat3::identity = {
-   1.0f, 0.0f, 0.0f,
-   0.0f, 1.0f, 0.0f,
-   0.0f, 0.0f, 1.0f
-    };
     int VoxParser::modelIndex = 0;
-
+    
     vox_header VoxParser::read_vox_metadata(const char* path) {
         std::ifstream voxFile(path, std::ios::binary);
         vox_header header{};
@@ -511,7 +506,7 @@ namespace Voxeller
             vox_frame_attrib& frameAttrib = transform.frameAttrib[f];
             frameAttrib.frameIndex = f;
             frameAttrib.translation = { 0, 0, 0 };
-            frameAttrib.rotation = vox_imat3::identity;  // identity matrix initially
+            frameAttrib.rotation = vox_mat3::identity;  // identity matrix initially
             // Read frame attributes dictionary
             uint32_t frameKvCount;
             voxFile.read(reinterpret_cast<char*>(&frameKvCount), 4);
@@ -559,7 +554,7 @@ namespace Voxeller
                     if (row1Neg) row1 = row1 * -1;
                     if (row2Neg) row2 = row2 * -1;
                     // MagicaVoxel rotation is given as row vectors; convert to column-major matrix
-                    vox_imat3 rotMat;
+                    vox_mat3 rotMat;
                     rotMat.m00 = row0.x; rotMat.m01 = row0.y; rotMat.m02 = row0.z;
                     rotMat.m10 = row1.x; rotMat.m11 = row1.y; rotMat.m12 = row1.z;
                     rotMat.m20 = row2.x; rotMat.m21 = row2.y; rotMat.m22 = row2.z;

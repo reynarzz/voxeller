@@ -4,6 +4,7 @@
 #include <vector>
 #include <functional>
 #include <voxeller/api.h>
+#include <voxeller/VoxParser.h>
 
 namespace Voxeller
 {

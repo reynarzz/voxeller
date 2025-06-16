@@ -500,7 +500,7 @@ static bool PackFacesIntoAtlas(int atlasSize, std::vector<FaceRect>& rects)
 	return true;
 }
 
-inline vox_imat3 decode_rotation(uint8_t r)
+inline vox_mat3 decode_rotation(uint8_t r)
 {
 	int idx[3], sign[3];
 	idx[0] = (r >> 0) & 0x3;
@@ -614,7 +614,7 @@ static void BuildMeshFromFaces(
 	const std::vector<color>& palette,
 	aiMesh* mesh,
 	const bbox& box,
-	const vox_imat3* rotation = nullptr,
+	const vox_mat3* rotation = nullptr,
 	const vox_vec3* translation = nullptr
 ) {
 	// 1) Build raw voxel-space verts & indices
@@ -1099,7 +1099,7 @@ bbox ComputeMeshBoundingBox(const aiMesh* mesh) {
 
 vox_vec3 TransformToMeshSpace(const vox_vec3& p,
                               const vox_vec3& voxCenter,
-                              const vox_imat3& rot,
+                              const vox_mat3& rot,
                               const vox_vec3& trans)
 {
     // 1. Translate so pivot is at origin (pivot recentering)
@@ -1125,7 +1125,7 @@ vox_vec3 TransformToMeshSpace(const vox_vec3& p,
 #include <assimp/scene.h> // for aiMatrix4x4, aiVector3D
 
 aiMatrix4x4 BuildAiTransformMatrix(
-    const vox_imat3& rot,      // 3×3 rotation from MagicaVoxel
+    const vox_mat3& rot,      // 3×3 rotation from MagicaVoxel
     const vox_vec3& trans      // translation from MagicaVoxel (_t), in voxel units
 ) {
     // 1. Assemble a 4×4 matrix from rot and trans,
@@ -1171,7 +1171,7 @@ aiMatrix4x4 BuildAiTransformMatrix(
     return xf;
 }
 
-inline ConvertOptions::VXVector Rotate(const vox_imat3& m, const ConvertOptions::VXVector& v) 
+inline ConvertOptions::VXVector Rotate(const vox_mat3& m, const ConvertOptions::VXVector& v) 
 {
       return {
         m.m00 * v.x + m.m10 * v.y + m.m20 * v.z,
