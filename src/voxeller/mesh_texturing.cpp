@@ -3,7 +3,7 @@
 #define VOXELLER_API_EXPORT
 #endif
 
-#include <voxeller/mesh_texturing.h>
+#include <Voxeller/mesh_texturing.h>
 #include <fstream>
 #define STB_IMAGE_STATIC
 

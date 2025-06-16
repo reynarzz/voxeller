@@ -8,16 +8,16 @@
 #endif
 #include <algorithm>
 #include <cassert>
-#include <voxeller/GreedyMesher.h>
+#include <Voxeller/GreedyMesher.h>
 #include <assimp/postprocess.h>
 // Include Assimp headers for creating and exporting 3D assets
 #include <assimp/scene.h>
 #include <assimp/Exporter.hpp>
 #include <assimp/DefaultLogger.hpp>
 #include <assimp/material.h>
-#include <voxeller/VoxParser.h>
-#include <voxeller/Log/Log.h>
-#include <voxeller/VertexMerger.h>
+#include <Voxeller/VoxParser.h>
+#include <Voxeller/Log/Log.h>
+#include <Voxeller/VertexMerger.h>
 
 // Include stb_image_write for saving texture atlas as PNG
 //#define STB_IMAGE_WRITE_IMPLEMENTATION
@@ -85,7 +85,7 @@ struct MyTraits : public OpenMesh::DefaultTraits {
 		OpenMesh::Attributes::TexCoord2D);
 };
 using TriMesh = OpenMesh::TriMesh_ArrayKernelT<MyTraits>;
-#include <voxeller/TjunctionsFixer.h>
+#include <Voxeller/TjunctionsFixer.h>
 
 
 // Import an aiMesh into OpenMesh
@@ -1168,9 +1168,10 @@ aiMatrix4x4 BuildAiTransformMatrix(
     return xf;
 }
 
-inline ConvertOptions::VXVector Rotate(const vox_mat3& m, const ConvertOptions::VXVector& v) 
+inline vox_vec3 Rotate(const vox_mat3& m, const vox_vec3& v)
 {
-      return {
+      return 
+	  {
         m.m00 * v.x + m.m10 * v.y + m.m20 * v.z,
         m.m01 * v.x + m.m11 * v.y + m.m21 * v.z,
         m.m02 * v.x + m.m12 * v.y + m.m22 * v.z

@@ -3,11 +3,10 @@
 #include <string>
 #include <vector>
 #include <unordered_map>
-#include <memory>
-#include <cstdint>
 #include <limits>
-#include <fstream>
-#include <voxeller/Math/VoxMath.h>
+#include <Voxeller/Math/VoxMath.h>
+#include <memory>
+
 
 namespace Voxeller
 {
@@ -199,5 +198,5 @@ namespace Voxeller
 			uint32_t contentBytes, uint32_t childrenBytes);
 	};
 
-} // namespace voxeller
+} // namespace Voxeller
 

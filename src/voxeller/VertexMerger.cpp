@@ -1,4 +1,4 @@
-#include <voxeller/VertexMerger.h>
+#include <Voxeller/VertexMerger.h>
 #include <unordered_map>
 #include <vector>
 #include <tuple>

@@ -1,13 +1,13 @@
 //
 #define VOXELLER_LIB
 
-#include <voxeller/voxeller.h>
+#include <Voxeller/Voxeller.h>
 #include <gl/glad.h>
 #include <GLFW/glfw3.h>
-#include <voxeller/Log/Log.h>
+#include <Voxeller/Log/Log.h>
 #include <GUI/ImGuiInit.h>
 
-#include <voxeller/GreedyMesher.h>
+#include <Voxeller/GreedyMesher.h>
 #include <iostream>
 
 
@@ -95,11 +95,11 @@ int main()
 	exportOptions.ConvertOptions.TexturesPOT = false;
 
 	//Chicken_van_2.vox
-	std::string path = "B:/Projects/voxeller/bin/Debug/testvox/nda/Ambulance_1.vox"; // Test this!
-	//std::string path = "B:/Projects/voxeller/bin/Debug/testvox/room.vox"; 
+	std::string path = "B:/Projects/Voxeller/bin/Debug/testvox/nda/Ambulance_1.vox"; // Test this!
+	//std::string path = "B:/Projects/Voxeller/bin/Debug/testvox/room.vox"; 
 	//std::string path = "testvox/nda/Ambulance_1.vox";
 	//std::string output = "testvox/nda/export/Output.fbx";
-	std::string output = "B:/Projects/voxeller/bin/Debug/testvox/nda/export/Output.fbx";
+	std::string output = "B:/Projects/Voxeller/bin/Debug/testvox/nda/export/Output.fbx";
 	Voxeller::GreedyMesher::ExportVoxToModel(path, output, exportOptions);
 
 	while (!glfwWindowShouldClose(win))

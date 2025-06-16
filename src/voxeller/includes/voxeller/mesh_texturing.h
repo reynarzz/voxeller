@@ -1,7 +1,7 @@
 #pragma once
 
 #include "api.h"
-#include <voxeller/VoxParser.h>
+#include <Voxeller/VoxParser.h>
 
 class VOXELLER_API mesh_texturizer 
 {

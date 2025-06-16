@@ -1,5 +1,5 @@
-#include <voxeller/Log/Log.h>
-#include <voxeller/voxeller.h>
+#include <Voxeller/Log/Log.h>
+#include <Voxeller/Voxeller.h>
 
 void VoxellerInit()
 {

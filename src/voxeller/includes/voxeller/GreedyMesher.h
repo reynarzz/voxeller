@@ -2,12 +2,11 @@
 #include <string>
 #include <vector>
 #include <functional>
-#include <voxeller/api.h>
-#include <voxeller/Math/VoxVector.h>
+#include <Voxeller/api.h>
+#include <Voxeller/Math/VoxVector.h>
 
 namespace Voxeller
 {
-
 	enum class ModelFormat
 	{
 		FBX, OBJ,

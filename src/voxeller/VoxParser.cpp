@@ -1,6 +1,6 @@
 
 
-#include <voxeller/VoxParser.h>
+#include <Voxeller/VoxParser.h>
 
 #include <fstream>
 #include <iostream>
@@ -9,6 +9,8 @@
 #include <string>
 #include <algorithm>
 #include <limits>
+#include <memory>
+#include <cstdint>
 
 namespace Voxeller
 {

@@ -1,7 +1,7 @@
 #include "VoxToProcessView.h"
 #include <imgui/imgui.h>
 #include <vector>
-#include <voxeller/Types.h>
+#include <Voxeller/Types.h>
 #include <imgui/imgui_internal.h>
 #include <string>
 #include <algorithm>

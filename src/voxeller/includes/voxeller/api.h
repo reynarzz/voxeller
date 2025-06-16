@@ -4,7 +4,7 @@
 // VOXELLER_API / VXAPI handling
 #if defined(_WIN32)
 
-  // When building the DLL (inside voxeller project)
+  // When building the DLL (inside Voxeller project)
 #ifdef VOXELLER_API_EXPORT
 #define VOXELLER_API __declspec(dllexport)
 #define VXAPI extern "C" __declspec(dllexport)
