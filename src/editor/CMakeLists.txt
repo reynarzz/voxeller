@@ -61,6 +61,9 @@ add_executable(Unvoxeller_editor
     $<$<BOOL:APPLE>:${CMAKE_CURRENT_SOURCE_DIR}/GUI/Utils/DropHover.mm>
 )
 
+install(TARGETS Unvoxeller_editor
+        RUNTIME DESTINATION bin)
+
 if(BUILD_VOXELLER_SHARED)
   target_compile_definitions(Unvoxeller_editor PRIVATE 
         UNVOXELLER_LIB

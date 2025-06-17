@@ -12,6 +12,9 @@ set(OUTPUT_DIR "${CMAKE_SOURCE_DIR}/bin")
 
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${OUTPUT_DIR})
+set(CMAKE_INSTALL_PREFIX "${CMAKE_SOURCE_DIR}/dist" CACHE PATH "")
+set(CMAKE_INSTALL_RPATH "@loader_path;@loader_path/../lib")
+set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
 
 # Add engine/library and editor

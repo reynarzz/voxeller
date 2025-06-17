@@ -10,6 +10,7 @@
       "binaryDir": "${sourceDir}/build-desktop",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
+      "CMAKE_INSTALL_PREFIX": "${sourceDir}/publish/desktop",  
 		"BUILD_EDITOR":     "ON"
       }
     },
@@ -35,6 +36,7 @@
         "ANDROID_ABI":      "armeabi-v7a",
         "ANDROID_PLATFORM": "android-21",
         "ANDROID_STL":      "c++_static",
+        "CMAKE_INSTALL_PREFIX": "${sourceDir}/publish/android/armeabi-v7a",
         "BUILD_EDITOR":     "OFF"
       }
     },
@@ -49,6 +51,7 @@
        "ANDROID_ABI": "arm64-v8a",
        "ANDROID_PLATFORM": "android-21",
        "ANDROID_STL": "c++_static",
+       "CMAKE_INSTALL_PREFIX": "${sourceDir}/publish/android/arm64-v8a",
        "BUILD_EDITOR":     "OFF"
       }
     },
@@ -63,6 +66,7 @@
         "ANDROID_ABI": "x86",
         "ANDROID_PLATFORM": "android-21",
         "ANDROID_STL": "c++_static",
+        "CMAKE_INSTALL_PREFIX": "${sourceDir}/publish/android/x86",
 		"BUILD_EDITOR":     "OFF"
       }
 	},
@@ -77,6 +81,7 @@
         "ANDROID_ABI":      "x86_64",
         "ANDROID_PLATFORM": "android-21",
         "ANDROID_STL":      "c++_static",
+        "CMAKE_INSTALL_PREFIX": "${sourceDir}/publish/android/x86_64",
         "BUILD_EDITOR":     "OFF"
       }
     },
@@ -90,6 +95,7 @@
         "CMAKE_SYSTEM_NAME":          "iOS",
         "CMAKE_OSX_DEPLOYMENT_TARGET":"12.0",
         "CMAKE_OSX_ARCHITECTURES":    "arm64",
+        "CMAKE_INSTALL_PREFIX": "${sourceDir}/publish/ios/device",
         "BUILD_EDITOR":               "OFF",
         "CMAKE_XCODE_ATTRIBUTE_SKIP_INSTALL": "YES",
         "CMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED":  "NO",
@@ -99,7 +105,7 @@
            "CMAKE_XCODE_ATTRIBUTE_CODE_SIGN_ENTITLEMENTS":""
       }
     },
-    {
+    { 
       "name": "ios-simulator",
       "displayName": "iOS Simulator",
       "generator": "Xcode",
@@ -110,6 +116,7 @@
         "CMAKE_OSX_DEPLOYMENT_TARGET":"12.0",
         "CMAKE_OSX_ARCHITECTURES":    "x86_64;arm64",
         "BUILD_EDITOR":               "OFF",
+        "CMAKE_INSTALL_PREFIX": "${sourceDir}/publish/ios/simulator",
         "CMAKE_XCODE_ATTRIBUTE_SKIP_INSTALL": "YES",
         "CMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED":  "NO",
            "CMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_REQUIRED":"NO",

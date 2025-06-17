@@ -10,3 +10,7 @@
 	cmake --preset {architectureName}
         cmake --build --preset {architectureName}
     where the "{architectureName}" can be found in CMakePresets.json
+
+# TO publish use:
+    cmake --build --preset {presetName}
+    cmake --install {folderWereWasBuilt} --config Release

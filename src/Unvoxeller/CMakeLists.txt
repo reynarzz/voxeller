@@ -77,6 +77,16 @@ set(_out_subdir $<IF:$<BOOL:${BUILD_VOXELLER_SHARED}>,shared,static>)
   	LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib/${_out_subdir}    # .so / .dylib
 )
 
+install(TARGETS Unvoxeller
+        ARCHIVE   DESTINATION lib
+        LIBRARY   DESTINATION lib
+        RUNTIME   DESTINATION bin   # on Windows
+        # for iOS/Xcode builds, you may want install(dir) instead
+)
+
+install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/includes/Unvoxeller
+        DESTINATION include)
+
 #target_compile_definitions(Unvoxeller PRIVATE UNVOXELLER_BUILD_DLL UNVOXELLER_API_EXPORT)
 
 # -----------------------------------------------------------------------------
