@@ -13,4 +13,8 @@
 
 # TO publish use:
     cmake --build --preset {presetName}
-    cmake --install {folderWereWasBuilt} --config Release
+    cmake --install {folderWereWasBuilt} --config Release --component Voxeller 
+	
+NOTE: --install works in the folder where "cmake_install.cmake" is located.
+   
+
