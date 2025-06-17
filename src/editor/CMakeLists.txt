@@ -93,6 +93,17 @@ if(WIN32)
         GLFW_EXPOSE_NATIVE_WIN32
         )
     
+         if(MSVC)
+    # MSVC: use /SUBSYSTEM:WINDOWS instead of the console
+    target_link_options(Unvoxeller_editor PRIVATE
+      $<$<CONFIG:Release>:/SUBSYSTEM:WINDOWS>
+    )
+  else()
+    # MinGW/GCC/Clang on Windows: -mwindows hides the console
+    target_link_options(Unvoxeller_editor PRIVATE
+      $<$<CONFIG:Release>:-mwindows>
+    )
+  endif()
 elseif(APPLE)
     find_package(OpenGL REQUIRED)
     find_library(COCOA_LIBRARY Cocoa REQUIRED)

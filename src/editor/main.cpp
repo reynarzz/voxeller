@@ -43,7 +43,7 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 }
 
 
-int main()
+int Init()
 {
 	VoxellerInit();
 
@@ -67,13 +67,13 @@ int main()
 	// set: 'glfwGetPrimaryMonitor()' to make the window full screen
 	GLFWwindow* win = glfwCreateWindow(1000, 600, "Unvoxeller", nullptr, nullptr);
 
-	if (!win) 
+	if (!win)
 	{
 		LOG_ERROR("Error: GLFW window creation error");
 		glfwTerminate();
 		return -1;
 	}
-	else 
+	else
 	{
 		LOG_INFO("Success: GLFW window creation");
 	}
@@ -114,7 +114,7 @@ int main()
 		});
 
 	LOG_INFO("Dir: {0}", Unvoxeller::File::GetExecutableDir());
-	  
+
 	//Unvoxer
 	imgui->Init(win);
 
@@ -153,5 +153,31 @@ int main()
 	}
 
 	glfwTerminate();
-	return -1;
 }
+
+
+#ifdef _WIN32
+		#include <windows.h>
+
+		int WINAPI WinMain(
+			HINSTANCE hInstance,      // handle to current instance
+			HINSTANCE hPrevInstance,  // always NULL in modern Windows
+			LPSTR     lpCmdLine,      // command-line as a single string
+			int       nCmdShow        // how the window should be shown
+		)
+		{
+			return Init();
+		}
+
+		int main()
+		{
+			return Init();
+		}
+#else
+	int main()
+	{
+		return Init();
+	}
+#endif
+
+
