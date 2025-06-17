@@ -15,6 +15,7 @@ set(ASSIMP_NO_EXPORT         OFF CACHE BOOL "" FORCE)
 set(BUILD_SHARED_LIBS    OFF CACHE BOOL "" FORCE)
 set(ASSIMP_BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
 set(SPDLOG_BUILD_SHARED OFF CACHE BOOL "" FORCE)
+set(OPENMESH_BUILD_SHARED OFF CACHE BOOL "" FORCE)
 
 # compute project root from this CMakeLists location
 get_filename_component(ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR} DIRECTORY)
@@ -109,6 +110,6 @@ target_link_libraries(Unvoxeller PRIVATE
   spdlog
 
   # OpenMesh core & tools
-  OpenMeshCore
-  OpenMeshTools
+  OpenMeshCoreStatic
+  OpenMeshToolsStatic
 )
