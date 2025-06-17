@@ -1,4 +1,4 @@
-project(voxeller_editor LANGUAGES CXX)
+project(voxeller_editor LANGUAGES CXX OBJCXX)
 
 get_filename_component(ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR} DIRECTORY)
 get_filename_component(ROOT_DIR ${ROOT_DIR} DIRECTORY) # go from src/voxeller to project root
@@ -45,10 +45,20 @@ foreach(FILE ${EDITOR_SRC})
     source_group("${FOLDER}" FILES "${FILE}")
 endforeach()
 
+
+if(APPLE)
+    set_source_files_properties(
+        ${CMAKE_CURRENT_SOURCE_DIR}/GUI/Utils/DropHover.mm
+        PROPERTIES
+        LANGUAGE OBJCXX
+    )
+endif()
+
 add_executable(voxeller_editor
     ${EDITOR_SRC}
     ${ROOT_DIR}/third/editor/gl/glad.cpp
     $<$<BOOL:WIN32>:${CMAKE_CURRENT_SOURCE_DIR}/resources/app.rc>
+    $<$<BOOL:APPLE>:${CMAKE_CURRENT_SOURCE_DIR}/GUI/Utils/DropHover.mm>
 )
 
 set_target_properties(voxeller_editor PROPERTIES

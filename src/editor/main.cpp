@@ -9,6 +9,7 @@
 #include <Voxeller/GreedyMesher.h>
 #include <voxeller/Math/VoxMath.h>
 #include <Voxeller/Log/Log.h>
+#include <GUI/Utils/DropHoverEvents.h>
 
 #include <Voxeller/File.h>
 
@@ -31,15 +32,6 @@ void Render(GLFWwindow* window)
 	imgui.Update();
 	glfwSwapBuffers(window);
 }
-
-void drop_callback(GLFWwindow* window, int count, const char** paths) 
-{
-	for (int i = 0; i < count; ++i) {
-		std::cout << "Dropped file: " << paths[i] << std::endl;
-		// Save paths[i] somewhere to use in ImGui
-	}
-}
-
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
@@ -76,10 +68,24 @@ int main()
 	// openGL 
 	glfwMakeContextCurrent(win);
 	glfwSetFramebufferSizeCallback(win, framebuffer_size_callback);
-	glfwSetDropCallback(win, drop_callback);
 
 	int status = gladLoadGLLoader((GLADloadproc)glfwGetProcAddress);
 
+   DropHoverEvents::Initialize(win);
+
+    DropHoverEvents::SetDropCallback([](DropEvent info)
+   {
+      for (size_t i = 0; i < info.paths.size(); i++)
+      {
+         LOG_EDITOR_INFO("Droped: " + info.paths[i]);
+      }
+      
+   });
+
+   DropHoverEvents::SetHoverCallback([](HoverEvent info)
+   {
+      LOG_EDITOR_INFO("hove mouse pos: ");
+   });
 	imgui.Init(win);
 
 	Voxeller::ExportOptions exportOptions{};
@@ -93,10 +99,11 @@ int main()
 	//exportOptions.ConvertOptions.Pivot = { 0.5f, 0.0f, 0.5f };
 	exportOptions.ConvertOptions.ExportFramesSeparatelly = true;
 	exportOptions.ConvertOptions.ExportMeshesSeparatelly = false;
-	
+
 	exportOptions.ConvertOptions.GenerateMaterials = true;
 	exportOptions.ConvertOptions.MeshesToWorldCenter = false;
 	exportOptions.ConvertOptions.TexturesPOT = false;
+
 	Voxeller::vox_quat s{};
 	Voxeller::vox_vec3 as;
 	Voxeller::vox_vec3 a2s = -as;
