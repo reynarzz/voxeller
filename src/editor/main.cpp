@@ -140,6 +140,7 @@ int Init()
 
 	//Chicken_van_2.vox
 	std::string path = Unvoxeller::File::GetExecutableDir() + "/testvox/nda/Ambulance_1.vox"; // Test this!
+	//std::string path = Unvoxeller::File::GetExecutableDir() + "/testvox/chr_knight.vox"; // Test this!
 	//std::string path = "B:/Projects/Unvoxeller/bin/Debug/testvox/room.vox"; 
 	//std::string path = "testvox/nda/Ambulance_1.vox";
 	//std::string output = "testvox/nda/export/Output.fbx";

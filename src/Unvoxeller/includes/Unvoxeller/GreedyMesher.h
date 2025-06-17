@@ -124,8 +124,9 @@ namespace Unvoxeller
 		bool MergeMeshes = false;
 
 		// If true:
-		// When exporting separated textures per mesh, materials will reuse the textures files (two materials will point to same texture)
-		// When using texture atlas, faces will reuse the same uv locations.
+		// -When exporting separated textures per mesh, materials will reuse the textures files (Ex: two materials could point to the same texture)
+		// -When using texture atlas, faces will reuse the same uv locations.
+		// Note: Choose this option if No baking will be done on the final meshes. 
 		bool OptimizeTextures = false;
 
 		TextureType TextureType = TextureType::Atlas;
