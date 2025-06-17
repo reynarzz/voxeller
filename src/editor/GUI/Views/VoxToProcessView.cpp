@@ -347,6 +347,60 @@ static bool SearchBar(std::string& text)
 
 	return active;
 }
+
+static void DonutProgressBar(const char* label,
+	float fraction,        // 0.0 → 0% , 1.0 → 100%
+	float radius,          // outer radius in pixels
+	float thickness,       // ring width in pixels
+	ImU32 bg_col,          // background ring color
+	ImU32 fg_col,          // filled‐portion color
+	bool show_text = true) // draw percentage in center
+{
+	ImGuiWindow* window = ImGui::GetCurrentWindow();
+	if (window->SkipItems) return;
+
+	// Reserve a square for the control
+	ImVec2 pos = window->DC.CursorPos;
+	ImVec2 size(radius * 2, radius * 2);
+	ImGui::InvisibleButton(label, size);
+	if (!ImGui::IsItemVisible()) return;
+
+	ImDrawList* draw = ImGui::GetWindowDrawList();
+	const ImVec2 center = ImVec2(pos.x + radius, pos.y + radius);
+
+	// Mid‐line of the ring
+	float mid_r = radius - thickness * 0.5f;
+	const int  num_segments = 60;
+
+	// 1) Background ring
+	draw->AddCircle(center, mid_r, bg_col, num_segments, thickness);
+
+	// 2) Foreground (progress) arc
+	if (fraction > 0.0f)
+	{
+		float start_angle = -IM_PI * 0.5f;
+		float end_angle = start_angle + fraction * 2 * IM_PI;
+
+		draw->PathClear();
+		draw->PathArcTo(center, mid_r, start_angle, end_angle, num_segments);
+		draw->PathStroke(fg_col, false, thickness);
+	}
+
+	// 3) Optional centered text
+	if (show_text)
+	{
+		char buf[16];
+		sprintf(buf, "%d%%", int(fraction * 100 + 0.5f));
+		ImVec2 ts = ImGui::CalcTextSize(buf);
+		draw->AddText(
+			ImVec2(center.x - ts.x * 0.5f,
+				center.y - ts.y * 0.5f),
+			ImGui::GetColorU32(ImGuiCol_Text),
+			buf
+		);
+	}
+}
+
 void ToolBar()
 {
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 10.0f);
@@ -646,6 +700,7 @@ void ExportWin()
 }
 
 
+f32 donuFill = 0;
 
 std::string searchBar = "";
 void VoxToProcessView::UpdateGUI()
@@ -685,6 +740,8 @@ void VoxToProcessView::UpdateGUI()
 
 	ImGui::Begin("Sidebar", &open, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize);
 
+
+
 	TitleLabel("Voxels Bag");
 	if (SearchBar(searchBar))
 	{
@@ -703,6 +760,7 @@ void VoxToProcessView::UpdateGUI()
 	ImVec2 childSize = ImVec2(ImGui::GetContentRegionAvail().x, winSize.y - footerHeight);
 	float rounding = 10.0f;
 	ImU32 bgColor = IM_COL32(30, 30, 30, 255);
+
 
 	RoundedChild("##ScrollingList", []()
 		{
@@ -759,6 +817,15 @@ void VoxToProcessView::UpdateGUI()
 	CornerButton("++", TextAlign::Center, { buttonUpWidth, buttonUpHeight }, IM_COL32(65, 105, 255, 255), IM_COL32(255, 255, 255, 255), 30, ImDrawFlags_RoundCornersAll);
 	ImGui::SameLine();
 	CornerButton("-", TextAlign::Center, { buttonUpWidth, buttonUpHeight }, IM_COL32(65, 105, 255, 255), IM_COL32(255, 255, 255, 255), 30, ImDrawFlags_RoundCornersAll);
+	ImGui::SameLine();
+
+	DonutProgressBar("radial", donuFill, 10, 2, ImColor(20, 20, 20, 255), ImColor(240, 240, 240, 255), false);
+
+	donuFill += 0.001f;
+
+	if (donuFill > 1.0f) {
+		donuFill = 0;
+	}
 	ImGui::PopStyleVar(2);
 
 	ImGui::End();
