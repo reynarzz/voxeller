@@ -55,9 +55,6 @@ foreach(FILE ${UNVOXELLER_SRC})
   source_group("${FOLDER}" FILES "${FILE}")
 endforeach()
 
-
-#add_library(Unvoxeller SHARED ${UNVOXELLER_SRC})
-
 if(BUILD_VOXELLER_SHARED)
   add_library(Unvoxeller SHARED ${UNVOXELLER_SRC})
   target_compile_definitions(Unvoxeller
@@ -72,8 +69,12 @@ else()
   )
 endif()
 
+set(_out_subdir $<IF:$<BOOL:${BUILD_VOXELLER_SHARED}>,shared,static>)
+
  set_target_properties(Unvoxeller PROPERTIES
         OUTPUT_NAME "Unvoxeller"
+	ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib/${_out_subdir}    # .a / .lib
+  	LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib/${_out_subdir}    # .so / .dylib
 )
 
 #target_compile_definitions(Unvoxeller PRIVATE UNVOXELLER_BUILD_DLL UNVOXELLER_API_EXPORT)

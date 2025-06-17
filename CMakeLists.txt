@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.14)
 project(Unvoxeller_project LANGUAGES CXX)
 
-option(BUILD_VOXELLER_SHARED "Build Unvoxeller library as shared (ON) or static (OFF)" OFF)
+option(BUILD_VOXELLER_SHARED "Build Unvoxeller library as shared (ON) or static (OFF)" ON)
 
 
 set(CMAKE_CXX_STANDARD 17)

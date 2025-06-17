@@ -66,6 +66,13 @@ int main()
 	// set: 'glfwGetPrimaryMonitor()' to make the window full screen
 	GLFWwindow* win = glfwCreateWindow(1000, 600, "Unvoxeller", nullptr, nullptr);
 
+	if (!win) 
+	{
+		LOG_ERROR("glfw init error");
+		glfwTerminate();
+		return -1;
+	}
+
 	// openGL 
 	glfwMakeContextCurrent(win);
 	glfwSetFramebufferSizeCallback(win, framebuffer_size_callback);
@@ -100,8 +107,8 @@ int main()
 		});
 
 	LOG_INFO("Dir: {0}", Unvoxeller::File::GetExecutableDir());
-
-
+	  
+	
 	//Unvoxer
 	imgui.Init(win);
 
