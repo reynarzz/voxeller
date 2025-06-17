@@ -19,12 +19,21 @@
 #define FOPEN_FUNC(filename, mode) fopen(filename, mode)
 #define FTELLO_FUNC(stream) ftello(stream)
 #define FSEEKO_FUNC(stream, offset, origin) fseeko(stream, offset, origin)
-#else
-#define FOPEN_FUNC(filename, mode) fopen64(filename, mode)
-#define FTELLO_FUNC(stream) ftello64(stream)
-#define FSEEKO_FUNC(stream, offset, origin) fseeko64(stream, offset, origin)
-#endif
+#elif defined(__ANDROID__)
+#undef FOPEN_FUNC
+#define FOPEN_FUNC(filename, mode) fopen((filename), (mode))
 
+#undef FTELLO_FUNC
+#define FTELLO_FUNC(stream) ftell((FILE *)(stream))
+
+#undef FSEEKO_FUNC
+#define FSEEKO_FUNC(stream, offset, origin) fseek((FILE *)(stream), (offset), (origin))
+
+#else
+#define FOPEN_FUNC(filename, mode) fopen64((filename), (mode))
+#define FTELLO_FUNC(stream) ftello64((FILE *)(stream))
+#define FSEEKO_FUNC(stream, offset, origin) fseeko64((FILE *)(stream), (offset), (origin))
+#endif
 
 #include "ioapi.h"
 

@@ -3,3 +3,5 @@
 cmakefiles
 /testvox/nda
 /.vscode
+/android-build
+/third/android-ndk
