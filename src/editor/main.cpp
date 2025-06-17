@@ -52,11 +52,11 @@ int main()
 
 	if (glfwInit() == GLFW_TRUE)
 	{
-		LOG_EDITOR_INFO("Success GLFW initialization");
+		LOG_INFO("Success GLFW initialization");
 	}
 	else
 	{
-		LOG_EDITOR_ERROR("glfw init error");
+		LOG_ERROR("glfw init error");
 	}
 
 	glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
@@ -77,32 +77,32 @@ int main()
 
 	if (status == 0)
 	{
-		LOG_EDITOR_ERROR("Error: Glad initialization");
+		LOG_ERROR("Error: Glad initialization");
 	}
 	else
 	{
-		LOG_CORE_INFO("Success: Glad initialization");
+		LOG_INFO("Success: Glad initialization");
 	}
 
 	DropHoverEvents::Initialize(win);
 
 	DropHoverEvents::SetDropCallback([](DropEvent info)
 		{
-			LOG_EDITOR_INFO("Dropped position ({0}, {1}): ", info.x, info.y);
+			LOG_INFO("Dropped position ({0}, {1}): ", info.x, info.y);
 
 			for (size_t i = 0; i < info.paths.size(); i++)
 			{
-				LOG_EDITOR_INFO("Droped: " + info.paths[i]);
+				LOG_INFO("Droped: " + info.paths[i]);
 			}
 		});
 
 	DropHoverEvents::SetHoverCallback([](HoverEvent info)
 		{
 
-			LOG_EDITOR_INFO("Hover position ({0}, {1}): ", info.x, info.y);
+			LOG_INFO("Hover position ({0}, {1}): ", info.x, info.y);
 		});
 
-	LOG_CORE_INFO("Dir: {0}", Voxeller::File::GetExecutableDir());
+	LOG_INFO("Dir: {0}", Voxeller::File::GetExecutableDir());
 
 
 	//Unvoxer
@@ -135,13 +135,11 @@ int main()
 	//std::string output = "testvox/nda/export/Output.fbx";
 	std::string output = Voxeller::File::GetExecutableDir() + "/testvox/nda/export/Output.fbx";
 
-	//Voxeller::GreedyMesher::ExportVoxToModel(path, output, exportOptions);
+	Voxeller::GreedyMesher::ExportVoxToModel(path, output, exportOptions);
 
 	while (!glfwWindowShouldClose(win))
 	{
 		Render(win);
-
-
 	}
 
 	glfwTerminate();

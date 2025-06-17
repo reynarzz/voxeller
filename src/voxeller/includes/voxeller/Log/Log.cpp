@@ -4,7 +4,7 @@
 namespace VoxellerApp
 {
     std::shared_ptr<spdlog::logger> core;
-    std::shared_ptr<spdlog::logger> editor;
+    std::shared_ptr<spdlog::logger> app;
     
     void init()
     {
@@ -12,10 +12,10 @@ namespace VoxellerApp
         spdlog::set_pattern("[%T] [%n] %v");
 
         core = spdlog::stdout_color_mt("Voxeller");
-        editor = spdlog::stdout_color_mt("Editor");
+        app = spdlog::stdout_color_mt("App");
 
         core->set_level(spdlog::level::trace);
-        editor->set_level(spdlog::level::trace);
+        app->set_level(spdlog::level::trace);
 #endif
     }
 }

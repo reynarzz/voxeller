@@ -233,8 +233,8 @@ static void splitTJunctions(TriMesh& mesh)
 	mesh.request_vertex_normals();
 	mesh.request_vertex_texcoords2D();
 
-	LOG_CORE_INFO("T Juntions Fix: vertex count: {0}", mesh.n_vertices());
-	LOG_CORE_INFO("T Juntions Fix: edges count: {0}", mesh.n_edges());
+	LOG_INFO("T Juntions Fix: vertex count: {0}", mesh.n_vertices());
+	LOG_INFO("T Juntions Fix: edges count: {0}", mesh.n_edges());
 
 	// Iterate every vertex in the mesh
 	for (auto vh : mesh.vertices())
@@ -1031,7 +1031,7 @@ static bool WriteSceneToFile(const std::vector<aiScene*> scenes, const std::stri
 		ext = "obj";
 		break;
 	default:
-		LOG_EDITOR_ERROR("Format not implemented in writeToFile switch.");
+		LOG_ERROR("Format not implemented in writeToFile switch.");
 		break;
 	}
 
@@ -1048,7 +1048,7 @@ static bool WriteSceneToFile(const std::vector<aiScene*> scenes, const std::stri
 	}
 	if (!selectedFormat)
 	{
-		LOG_EDITOR_ERROR("Unsupported export format: {0}", ext);
+		LOG_ERROR("Unsupported export format: {0}", ext);
 		return false;
 	}
 	formatId = selectedFormat->id;
@@ -1217,7 +1217,7 @@ std::shared_ptr<TextureData> GetTexture(std::vector<FaceRect>& faces, const std:
 			atlasDim *= 2;
 			if (atlasDim > 4096)
 			{ // safety break
-				LOG_CORE_ERROR("Could not pack texture atlas up to 4096 for frame ");// << frameIndex << "\n";
+				LOG_ERROR("Could not pack texture atlas up to 4096 for frame ");// << frameIndex << "\n";
 				break;
 			}
 		}
@@ -1239,7 +1239,7 @@ std::shared_ptr<TextureData> GetTexture(std::vector<FaceRect>& faces, const std:
 
 			if (atlasDim > 4096)
 			{
-				LOG_CORE_ERROR("Could not pack texture atlas up to 4096 for frame ");
+				LOG_ERROR("Could not pack texture atlas up to 4096 for frame ");
 				break;
 			}
 		}
@@ -1258,7 +1258,7 @@ std::shared_ptr<TextureData> GetTexture(std::vector<FaceRect>& faces, const std:
 	textureData->Width = usedW;
 	textureData->Height = usedH;
 
-	LOG_CORE_INFO("Texture size: ({0}, {1})", textureData->Width, textureData->Height);
+	LOG_INFO("Texture size: ({0}, {1})", textureData->Width, textureData->Height);
 
 	GenerateAtlasImage(atlasDim, atlasDim, faces, models, palette, textureData->Buffer);
 
@@ -1449,7 +1449,7 @@ static std::vector<aiScene*> GetModels(const vox_file* voxData, const s32 frameI
 	}
 	else
 	{
-		LOG_CORE_WARN(".Vox File has no meshes");
+		LOG_WARN(".Vox File has no meshes");
 	}
 
 	std::vector<aiScene*> scenes{};
@@ -1520,7 +1520,7 @@ static std::vector<aiScene*> GetModels(const vox_file* voxData, const s32 frameI
 			}
 			else
 			{
-				LOG_CORE_ERROR("IMPLEMENT shared materials");
+				LOG_ERROR("IMPLEMENT shared materials");
 				throw;
 				scene->mNumMaterials = 1;
 				scene->mMaterials = new aiMaterial * [1];
@@ -1573,7 +1573,7 @@ static std::vector<aiScene*> GetModels(const vox_file* voxData, const s32 frameI
 				CleanUpMesh(sceneitem->mMeshes[i]);
 			}
 
-			LOG_CORE_INFO("Done cleaning up meshes count: {0}", sceneitem->mNumMeshes);
+			LOG_INFO("Done cleaning up meshes count: {0}", sceneitem->mNumMeshes);
 		}
 	}
 
@@ -1600,11 +1600,11 @@ const std::vector<aiScene*> Run(const vox_file* voxData, const std::string& outp
 		frameCount = std::max(frameCount, kv.second.framesCount);
 	}
 
-	LOG_CORE_INFO("Version: {0}", voxData->header.version);
-	LOG_CORE_INFO("Transforms: {0}", voxData->transforms.size());
-	LOG_CORE_INFO("Models: {0}", voxData->voxModels.size());
-	LOG_CORE_INFO("Shapes: {0}", voxData->shapes.size());
-	LOG_CORE_INFO("FrameCount: {0}", frameCount);
+	LOG_INFO("Version: {0}", voxData->header.version);
+	LOG_INFO("Transforms: {0}", voxData->transforms.size());
+	LOG_INFO("Models: {0}", voxData->voxModels.size());
+	LOG_INFO("Shapes: {0}", voxData->shapes.size());
+	LOG_INFO("FrameCount: {0}", frameCount);
 
 	if (frameCount == 0 && voxData->voxModels.size() == 0 && voxData->shapes.size() == 0)
 	{
@@ -1632,7 +1632,7 @@ const std::vector<aiScene*> Run(const vox_file* voxData, const std::string& outp
 		for (s32 fi = 0; fi < frameCount; ++fi)
 		{
 			// Prepare a new minimal scene for this frame
-			LOG_CORE_INFO("Frame processing: {0}", fi);
+			LOG_INFO("Frame processing: {0}", fi);
 			auto scenes = GetModels(voxData, fi, outputPath, options);
 
 			for (size_t j = 0; j < scenes.size(); j++)
@@ -1729,7 +1729,7 @@ const std::vector<aiScene*> Run(const vox_file* voxData, const std::string& outp
 			std::string atlasName = baseName + "_atlas.png";
 			SaveAtlasImage(atlasName, dim, dim, globalImage);
 
-			LOG_CORE_INFO("Atlas saved");
+			LOG_INFO("Atlas saved");
 
 			// Assign this texture to the single material
 			aiString texPath(atlasName);
@@ -1756,7 +1756,7 @@ const std::vector<aiScene*> Run(const vox_file* voxData, const std::string& outp
 				auto  box = mdl.boundingBox;
 
 				BuildMeshFromFaces(facesForMesh, globalAtlasSize, globalAtlasSize, options.FlatShading, voxData->palette, mesh, box);
-				LOG_CORE_INFO("Build meshes from faces, mesh: {0}", i);
+				LOG_INFO("Build meshes from faces, mesh: {0}", i);
 
 				// TODO: position origin issue, take into account the position of the objects, this should be used, reynardo
 				//voxData->transforms.at(0).frameAttrib[0].translation;
@@ -1777,7 +1777,7 @@ const std::vector<aiScene*> Run(const vox_file* voxData, const std::string& outp
 
 				scene->mRootNode->mChildren[i] = node;
 
-				LOG_CORE_INFO("Completed mesh: {0}", i);
+				LOG_INFO("Completed mesh: {0}", i);
 
 			}
 		}
@@ -1853,7 +1853,7 @@ const std::vector<aiScene*> Run(const vox_file* voxData, const std::string& outp
 		}
 		// If there was only one mesh in scene (no children used above), attach it directly to root node
 
-		LOG_CORE_INFO("TJuntctions: {0}", options.RemoveTJunctions);
+		LOG_INFO("TJuntctions: {0}", options.RemoveTJunctions);
 
 		// TODO: This makes the algorithm freeze when a vox has multiple frames, and is exported as no separated
 		if (options.RemoveTJunctions)
@@ -1863,7 +1863,7 @@ const std::vector<aiScene*> Run(const vox_file* voxData, const std::string& outp
 				CleanUpMesh(scene->mMeshes[m]);
 			}
 
-			LOG_CORE_INFO("Done cleaning up meshes count: {0}", scene->mNumMeshes);
+			LOG_INFO("Done cleaning up meshes count: {0}", scene->mNumMeshes);
 		}
 
 		// Export combined scene
@@ -1936,7 +1936,7 @@ ExportResults GreedyMesher::ExportVoxToModel(const std::string& inVoxPath, const
 
 ExportResults GreedyMesher::ExportVoxToModel(const char* buffer, int size, const ExportOptions& options)
 {
-	LOG_EDITOR_ERROR("Not implemented");
+	LOG_ERROR("Not implemented");
 	throw;
 
 	return {};
@@ -1944,7 +1944,7 @@ ExportResults GreedyMesher::ExportVoxToModel(const char* buffer, int size, const
 
 MemData GreedyMesher::VoxToMem(const std::string& inVoxPath, const ConvertOptions& options)
 {
-	LOG_EDITOR_ERROR("Not implemented");
+	LOG_ERROR("Not implemented");
 	throw;
 
 	return {};
@@ -1953,19 +1953,19 @@ MemData GreedyMesher::VoxToMem(const std::string& inVoxPath, const ConvertOption
 
 MemData GreedyMesher::VoxToMem(const char* buffer, int size, const ConvertOptions& options)
 {
-	LOG_EDITOR_ERROR("Not implemented");
+	LOG_ERROR("Not implemented");
 	throw;
 	return {};
 }
 
 void GreedyMesher::ExportVoxToModelAsync(const char* buffer, int size, const ExportOptions& options, std::function<void(ExportResults)> callback)
 {
-	LOG_EDITOR_ERROR("Not implemented");
+	LOG_ERROR("Not implemented");
 	throw;
 }
 
 void GreedyMesher::GetModelFromVOXMeshAsync(const char* buffer, int size, const ConvertOptions& options, std::function<void(MemData)> callback)
 {
-	LOG_EDITOR_ERROR("Not implemented");
+	LOG_ERROR("Not implemented");
 	throw;
 }
