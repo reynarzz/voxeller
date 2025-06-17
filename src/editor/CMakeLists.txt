@@ -66,7 +66,7 @@ add_executable(Unvoxeller_editor
         )
 
     set_target_properties(Unvoxeller_editor PROPERTIES
-        OUTPUT_NAME "Unvoxeller Editor"
+        OUTPUT_NAME "Unvoxeller"
     )
 
 target_include_directories(Unvoxeller_editor PRIVATE
