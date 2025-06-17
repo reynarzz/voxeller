@@ -5,6 +5,10 @@
 #include <windows.h>
 #include <shellapi.h>
 
+#define GLFW_EXPOSE_NATIVE_WIN32
+#include <GLFW/glfw3.h>
+#include <GLFW/glfw3native.h>
+
 DropHoverEvents::DropCallback DropHoverEvents::dropCallback = nullptr;
 DropHoverEvents::HoverCallback DropHoverEvents::hoverCallback = nullptr;
 
@@ -50,14 +54,17 @@ LRESULT CALLBACK CustomWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam
     return CallWindowProc(originalWndProc, hWnd, msg, wParam, lParam);
 }
 
-void DropHoverEvents::Initialize(void* nativeWindowHandle) {
-    hwnd = static_cast<HWND>(nativeWindowHandle);
+void DropHoverEvents::Initialize(void* glfwWindow) 
+{
+    HWND hwnd = glfwGetWin32Window(static_cast<GLFWwindow*>(glfwWindow));
     DragAcceptFiles(hwnd, TRUE);
     originalWndProc = (WNDPROC)SetWindowLongPtr(hwnd, GWLP_WNDPROC, (LONG_PTR)CustomWndProc);
 }
 
-void DropHoverEvents::Shutdown() {
-    if (hwnd && originalWndProc) {
+void DropHoverEvents::Shutdown() 
+{
+    if (hwnd && originalWndProc) 
+    {
         SetWindowLongPtr(hwnd, GWLP_WNDPROC, (LONG_PTR)originalWndProc);
         originalWndProc = nullptr;
         hwnd = nullptr;
@@ -66,11 +73,13 @@ void DropHoverEvents::Shutdown() {
     lastY = -1;
 }
 
-void DropHoverEvents::SetDropCallback(DropCallback cb) {
+void DropHoverEvents::SetDropCallback(DropCallback cb) 
+{
     dropCallback = cb;
 }
 
-void DropHoverEvents::SetHoverCallback(HoverCallback cb) {
+void DropHoverEvents::SetHoverCallback(HoverCallback cb) 
+{
     hoverCallback = cb;
 }
 

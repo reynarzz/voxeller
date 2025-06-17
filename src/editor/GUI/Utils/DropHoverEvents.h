@@ -1,4 +1,3 @@
-// DropHoverEvents.h
 #pragma once
 
 #include <functional>
@@ -12,7 +11,8 @@ struct DropEvent
     int y; // Mouse Y
 };
 
-struct HoverEvent {
+struct HoverEvent 
+{
     int x; // Mouse X
     int y; // Mouse Y
 };
