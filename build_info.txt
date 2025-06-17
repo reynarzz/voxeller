@@ -2,3 +2,11 @@
 -cmake to PATH
 -ninja to PATH
 -clang to PATH
+
+#For Shipping the library (the one wil be sold)
+-Run ndk_download.sh
+-Ninja to path
+#build platforms with: 
+	cmake --preset {architectureName}
+        cmake --build --preset {architectureName}
+    where the "{architectureName}" can be found in CMakePresets.json
