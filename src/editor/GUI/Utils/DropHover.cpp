@@ -18,31 +18,39 @@ static HWND hwnd = nullptr;
 static int lastX = -1;
 static int lastY = -1;
 
-LRESULT CALLBACK CustomWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
-    switch (msg) {
-        case WM_DROPFILES: {
+LRESULT CALLBACK CustomWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) 
+{
+    switch (msg) 
+    {
+        case WM_DROPFILES: 
+        {
             HDROP hDrop = (HDROP)wParam;
             UINT count = DragQueryFileA(hDrop, 0xFFFFFFFF, NULL, 0);
             std::vector<std::string> paths;
-            for (UINT i = 0; i < count; ++i) {
+            for (UINT i = 0; i < count; ++i) 
+            {
                 char path[MAX_PATH];
                 DragQueryFileA(hDrop, i, path, MAX_PATH);
                 paths.emplace_back(path);
             }
             POINT pt;
             DragQueryPoint(hDrop, &pt);
-            if (DropHoverEvents::dropCallback) {
+            if (DropHoverEvents::dropCallback) 
+            {
                 DropHoverEvents::dropCallback({ paths, pt.x, pt.y });
             }
             DragFinish(hDrop);
             return 0;
         }
-        case WM_MOUSEMOVE: {
-            if (DropHoverEvents::hoverCallback) {
+        case WM_MOUSEMOVE: 
+        {
+            if (DropHoverEvents::hoverCallback) 
+            {
                 POINT pt;
                 GetCursorPos(&pt);
                 ScreenToClient(hWnd, &pt);
-                if (pt.x != lastX || pt.y != lastY) {
+                if (pt.x != lastX || pt.y != lastY)
+                {
                     lastX = pt.x;
                     lastY = pt.y;
                     DropHoverEvents::hoverCallback({ pt.x, pt.y });
@@ -51,6 +59,7 @@ LRESULT CALLBACK CustomWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam
             break;
         }
     }
+
     return CallWindowProc(originalWndProc, hWnd, msg, wParam, lParam);
 }
 
@@ -69,6 +78,7 @@ void DropHoverEvents::Shutdown()
         originalWndProc = nullptr;
         hwnd = nullptr;
     }
+    
     lastX = -1;
     lastY = -1;
 }

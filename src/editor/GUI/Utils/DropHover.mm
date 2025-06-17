@@ -16,26 +16,31 @@ static NSInteger lastY = -1;
 
 @implementation DropHoverHelper
 
-- (NSDragOperation)draggingEntered:(id<NSDraggingInfo>)sender {
+- (NSDragOperation)draggingEntered:(id<NSDraggingInfo>)sender 
+{
     // Initial entry position
     NSPoint point = [sender draggingLocation];
-    if (DropHoverEvents::hoverCallback) {
+    if (DropHoverEvents::hoverCallback) 
+    {
         DropHoverEvents::hoverCallback({(int)point.x, (int)point.y});
     }
     return NSDragOperationCopy;
 }
 
-- (NSDragOperation)draggingUpdated:(id<NSDraggingInfo>)sender {
+- (NSDragOperation)draggingUpdated:(id<NSDraggingInfo>)sender 
+{
     NSPoint point = [sender draggingLocation];
     NSInteger x = (NSInteger)point.x;
     NSInteger y = (NSInteger)point.y;
 
     // Only fire callback when the position changes
-    if (x != lastX || y != lastY) {
+    if (x != lastX || y != lastY) 
+    {
         lastX = x;
         lastY = y;
 
-        if (DropHoverEvents::hoverCallback) {
+        if (DropHoverEvents::hoverCallback) 
+        {
             DropHoverEvents::hoverCallback({(int)x, (int)y});
         }
     }
@@ -43,16 +48,19 @@ static NSInteger lastY = -1;
     return NSDragOperationCopy;
 }
 
-- (BOOL)prepareForDragOperation:(id<NSDraggingInfo>)sender {
+- (BOOL)prepareForDragOperation:(id<NSDraggingInfo>)sender 
+{
     return YES;
 }
 
-- (BOOL)performDragOperation:(id<NSDraggingInfo>)sender {
+- (BOOL)performDragOperation:(id<NSDraggingInfo>)sender 
+{
     NSPasteboard* pb = [sender draggingPasteboard];
     NSArray<NSURL*>* files = [pb readObjectsForClasses:@[[NSURL class]] options:nil];
     NSPoint point = [sender draggingLocation];
 
-    if (files && DropHoverEvents::dropCallback) {
+    if (files && DropHoverEvents::dropCallback) 
+    {
         std::vector<std::string> paths;
         for (NSURL* url in files) {
             if ([url isFileURL]) {
@@ -84,14 +92,18 @@ void DropHoverEvents::Initialize(void* glfwWin)
         [gHoverHelper registerForDraggedTypes:@[NSPasteboardTypeFileURL]];
     }
 }
-void DropHoverEvents::Shutdown() {
+
+void DropHoverEvents::Shutdown() 
+{
     gHoverHelper = nil;
 }
 
-void DropHoverEvents::SetDropCallback(DropCallback cb) {
+void DropHoverEvents::SetDropCallback(DropCallback cb) 
+{
     dropCallback = cb;
 }
 
-void DropHoverEvents::SetHoverCallback(HoverCallback cb) {
+void DropHoverEvents::SetHoverCallback(HoverCallback cb) 
+{
     hoverCallback = cb;
 }

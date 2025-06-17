@@ -75,20 +75,19 @@ int main()
 
     DropHoverEvents::SetDropCallback([](DropEvent info)
    {
-         LOG_EDITOR_INFO("Dropped position ({0}, {1}): ", info.x, info.y);
+      LOG_EDITOR_INFO("Dropped position ({0}, {1}): ", info.x, info.y);
 
       for (size_t i = 0; i < info.paths.size(); i++)
       {
          LOG_EDITOR_INFO("Droped: " + info.paths[i]);
       }
-      
    });
 
    DropHoverEvents::SetHoverCallback([](HoverEvent info)
    {
-         LOG_EDITOR_INFO("Hover position ({0}, {1}): ", info.x, info.y);
-      
+      LOG_EDITOR_INFO("Hover position ({0}, {1}): ", info.x, info.y);
    });
+   
 	imgui.Init(win);
 
 	Voxeller::ExportOptions exportOptions{};
