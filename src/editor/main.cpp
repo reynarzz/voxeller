@@ -15,7 +15,7 @@
 
 using namespace VoxellerEditor;
 
-ImGuiApp imgui{};
+std::unique_ptr<ImGuiApp> imgui = nullptr;
 
 void Render(GLFWwindow* window)
 {
@@ -29,7 +29,7 @@ void Render(GLFWwindow* window)
 
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	imgui.Update();
+	imgui->Update();
 
 	glfwSwapBuffers(window);
 }
@@ -54,6 +54,7 @@ int main()
 	else
 	{
 		LOG_ERROR("glfw init error");
+		return -1;
 	}
 
 	glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
@@ -68,25 +69,31 @@ int main()
 
 	if (!win) 
 	{
-		LOG_ERROR("glfw window creation error");
+		LOG_ERROR("Error: GLFW window creation error");
 		glfwTerminate();
 		return -1;
 	}
-
+	else 
+	{
+		LOG_INFO("Success: GLFW window creation");
+	}
 	// openGL 
 	glfwMakeContextCurrent(win);
-	glfwSetFramebufferSizeCallback(win, framebuffer_size_callback);
 
 	const s32 status = gladLoadGLLoader((GLADloadproc)glfwGetProcAddress);
 
 	if (status == 0)
 	{
 		LOG_ERROR("Error: Glad initialization");
+		return -1;
 	}
 	else
 	{
 		LOG_INFO("Success: Glad initialization");
 	}
+
+	glfwSetFramebufferSizeCallback(win, framebuffer_size_callback);
+	imgui = std::make_unique<ImGuiApp>();
 
 	DropAndDrop::Initialize(win);
 
@@ -108,9 +115,8 @@ int main()
 
 	LOG_INFO("Dir: {0}", Unvoxeller::File::GetExecutableDir());
 	  
-	
 	//Unvoxer
-	imgui.Init(win);
+	imgui->Init(win);
 
 	Unvoxeller::ExportOptions exportOptions{};
 	exportOptions.OutputFormat = Unvoxeller::ModelFormat::FBX;

@@ -101,6 +101,7 @@ namespace Unvoxeller
 
 		bool ExportFramesSeparatelly = true; // Move this to export options
 
+		// Export meshes in different files.
 		bool ExportMeshesSeparatelly = false; // Move this to export options
 
 		bool MaterialPerMesh = true;
