@@ -53,6 +53,12 @@ namespace VoxellerEditor
 		ImGuiIO& io = ImGui::GetIO();
 		(void)io;
 
+		// Disable writing to disk by nulling out the filename:
+		io.IniFilename = nullptr;
+
+		// Optionally disable log file too (if you don't want Dear ImGui to write a .log):
+		io.LogFilename = nullptr;
+		
 		// Setup Dear ImGui style
 		ImGui::StyleColorsDark();
 

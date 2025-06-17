@@ -130,7 +130,7 @@ int main()
 	//std::string output = "testvox/nda/export/Output.fbx";
 	std::string output = Voxeller::File::GetExecutableDir() + "/testvox/nda/export/Output.fbx";
 
-	Voxeller::GreedyMesher::ExportVoxToModel(path, output, exportOptions);
+	//Voxeller::GreedyMesher::ExportVoxToModel(path, output, exportOptions);
 
 	while (!glfwWindowShouldClose(win))
 	{
