@@ -48,7 +48,7 @@ int main()
 
 	if (glfwInit() == GLFW_TRUE)
 	{
-		 LOG_EDITOR_INFO("glfw initialization successfull!");
+		 LOG_EDITOR_INFO("Success GLFW initialization");
 	}
 	else
 	{
@@ -69,11 +69,20 @@ int main()
 	glfwMakeContextCurrent(win);
 	glfwSetFramebufferSizeCallback(win, framebuffer_size_callback);
 
-	int status = gladLoadGLLoader((GLADloadproc)glfwGetProcAddress);
+	const s32 status = gladLoadGLLoader((GLADloadproc)glfwGetProcAddress);
+
+   if(status == 0)
+   {
+      LOG_EDITOR_ERROR("Error: Glad initialization");
+   }
+   else
+   {
+      LOG_CORE_INFO("Success: Glad initialization");
+   }
 
    DropHoverEvents::Initialize(win);
 
-    DropHoverEvents::SetDropCallback([](DropEvent info)
+   DropHoverEvents::SetDropCallback([](DropEvent info)
    {
       LOG_EDITOR_INFO("Dropped position ({0}, {1}): ", info.x, info.y);
 
@@ -87,7 +96,7 @@ int main()
    {
       LOG_EDITOR_INFO("Hover position ({0}, {1}): ", info.x, info.y);
    });
-   
+   //Unvoxer
 	imgui.Init(win);
 
 	Voxeller::ExportOptions exportOptions{};
