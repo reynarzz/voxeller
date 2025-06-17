@@ -655,10 +655,10 @@ static void BuildMeshFromFaces(
 		border = 1.0f;
 
 	for (auto& face : faces) {
-		float u0 = (face.atlasX + border + 0.5f) * pixelW;
-		float v0 = 1.0f - (face.atlasY + border + 0.5f) * pixelH;
-		float u1 = (face.atlasX + border + face.w - 0.5f) * pixelW;
-		float v1 = 1.0f - (face.atlasY + border + face.h - 0.5f) * pixelH;
+		float u0 = (face.atlasX + border ) * pixelW;
+		float v0 = 1.0f - (face.atlasY + border ) * pixelH;
+		float u1 = (face.atlasX + border + face.w) * pixelW;
+		float v1 = 1.0f - (face.atlasY + border + face.h) * pixelH;
 
 		float nx = 0, ny = 0, nz = 0;
 		float x0, y0, z0, x1, y1, z1, x2, y2, z2, x3, y3, z3;
