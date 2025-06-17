@@ -9,7 +9,6 @@
 #include <GUI/Utils/DropHoverEvents.h>
 
 #include <Unvoxeller/File.h>
-#include <GUI/Utils/Cursor.h>
 #include <iostream>
 #include <imgui/imgui.h>
 

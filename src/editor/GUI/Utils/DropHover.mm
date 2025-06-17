@@ -1,12 +1,15 @@
-// DropHoverEvents.mm
+// DropAndDrop.mm
 #import <Cocoa/Cocoa.h>
 #include "DropHoverEvents.h"
+
 #define GLFW_EXPOSE_NATIVE_COCOA
 #include <GLFW/glfw3.h>
 #include <GLFW/glfw3native.h>
 
-DropHoverEvents::DropCallback DropHoverEvents::dropCallback = nullptr;
-DropHoverEvents::HoverCallback DropHoverEvents::hoverCallback = nullptr;
+
+
+DropAndDrop::DropCallback DropAndDrop::dropCallback = nullptr;
+DropAndDrop::HoverCallback DropAndDrop::hoverCallback = nullptr;
 
 @interface DropHoverHelper : NSView <NSDraggingDestination>
 @end
@@ -20,9 +23,9 @@ static NSInteger lastY = -1;
 {
     // Initial entry position
     NSPoint point = [sender draggingLocation];
-    if (DropHoverEvents::hoverCallback) 
+    if (DropAndDrop::hoverCallback) 
     {
-        DropHoverEvents::hoverCallback({(int)point.x, (int)point.y});
+        DropAndDrop::hoverCallback({(int)point.x, (int)point.y});
     }
     return NSDragOperationCopy;
 }
@@ -39,9 +42,9 @@ static NSInteger lastY = -1;
         lastX = x;
         lastY = y;
 
-        if (DropHoverEvents::hoverCallback) 
+        if (DropAndDrop::hoverCallback) 
         {
-            DropHoverEvents::hoverCallback({(int)x, (int)y});
+            DropAndDrop::hoverCallback({(int)x, (int)y});
         }
     }
 
@@ -59,7 +62,7 @@ static NSInteger lastY = -1;
     NSArray<NSURL*>* files = [pb readObjectsForClasses:@[[NSURL class]] options:nil];
     NSPoint point = [sender draggingLocation];
 
-    if (files && DropHoverEvents::dropCallback) 
+    if (files && DropAndDrop::dropCallback) 
     {
         std::vector<std::string> paths;
         for (NSURL* url in files) {
@@ -67,7 +70,7 @@ static NSInteger lastY = -1;
                 paths.emplace_back([[url path] UTF8String]);
             }
         }
-        DropHoverEvents::dropCallback({ paths, (int)point.x, (int)point.y });
+        DropAndDrop::dropCallback({ paths, (int)point.x, (int)point.y });
     }
     return YES;
 }
@@ -76,7 +79,7 @@ static NSInteger lastY = -1;
 
 static DropHoverHelper* gHoverHelper = nil;
 
-void DropHoverEvents::Initialize(void* glfwWin) 
+void DropAndDrop::Initialize(void* glfwWin) 
 {
     NSWindow* window = glfwGetCocoaWindow(static_cast<GLFWwindow*>(glfwWin));
     NSView* mainView = [window contentView];
@@ -93,17 +96,17 @@ void DropHoverEvents::Initialize(void* glfwWin)
     }
 }
 
-void DropHoverEvents::Shutdown() 
+void DropAndDrop::Shutdown() 
 {
     gHoverHelper = nil;
 }
 
-void DropHoverEvents::SetDropCallback(DropCallback cb) 
+void DropAndDrop::SetDropCallback(DropCallback cb) 
 {
     dropCallback = cb;
 }
 
-void DropHoverEvents::SetHoverCallback(HoverCallback cb) 
+void DropAndDrop::SetHoverCallback(HoverCallback cb) 
 {
     hoverCallback = cb;
 }

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.14)
-project(Unvoxeller_project LANGUAGES C CXX)
+project(Unvoxeller_project LANGUAGES CXX)
 
 option(BUILD_VOXELLER_SHARED "Build Unvoxeller as shared library" ON)
 option(BUILD_EDITOR "Build Editor" ON)
