@@ -1,17 +1,17 @@
 //
 #define VOXELLER_LIB
 
-#include <Voxeller/Voxeller.h>
+#include <Unvoxeller/Unvoxeller.h>
 #include <gl/glad.h>
 #include <GLFW/glfw3.h>
 #include <GUI/ImGuiInit.h>
 
-#include <Voxeller/GreedyMesher.h>
-#include <voxeller/Math/VoxMath.h>
-#include <Voxeller/Log/Log.h>
+#include <Unvoxeller/GreedyMesher.h>
+#include <Unvoxeller/Math/VoxMath.h>
+#include <Unvoxeller/Log/Log.h>
 #include <GUI/Utils/DropHoverEvents.h>
 
-#include <Voxeller/File.h>
+#include <Unvoxeller/File.h>
 #include <GUI/Utils/Cursor.h>
 #include <iostream>
 #include <imgui/imgui.h>
@@ -67,7 +67,7 @@ int main()
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
 	// set: 'glfwGetPrimaryMonitor()' to make the window full screen
-	GLFWwindow* win = glfwCreateWindow(1000, 600, "Voxeller", nullptr, nullptr);
+	GLFWwindow* win = glfwCreateWindow(1000, 600, "Unvoxeller", nullptr, nullptr);
 
 	// openGL 
 	glfwMakeContextCurrent(win);
@@ -102,14 +102,14 @@ int main()
 			LOG_INFO("Hover position ({0}, {1}): ", info.x, info.y);
 		});
 
-	LOG_INFO("Dir: {0}", Voxeller::File::GetExecutableDir());
+	LOG_INFO("Dir: {0}", Unvoxeller::File::GetExecutableDir());
 
 
 	//Unvoxer
 	imgui.Init(win);
 
-	Voxeller::ExportOptions exportOptions{};
-	exportOptions.OutputFormat = Voxeller::ModelFormat::FBX;
+	Unvoxeller::ExportOptions exportOptions{};
+	exportOptions.OutputFormat = Unvoxeller::ModelFormat::FBX;
 	exportOptions.ConvertOptions.RemoveTJunctions = false;
 	exportOptions.ConvertOptions.WeldVertices = false;
 	exportOptions.ConvertOptions.FlatShading = true;
@@ -124,18 +124,18 @@ int main()
 	exportOptions.ConvertOptions.MeshesToWorldCenter = false;
 	exportOptions.ConvertOptions.TexturesPOT = false;
 
-	Voxeller::vox_quat s{};
-	Voxeller::vox_vec3 as;
-	Voxeller::vox_vec3 a2s = -as;
+	Unvoxeller::vox_quat s{};
+	Unvoxeller::vox_vec3 as;
+	Unvoxeller::vox_vec3 a2s = -as;
 
 	//Chicken_van_2.vox
-	std::string path = Voxeller::File::GetExecutableDir() + "/testvox/nda/Ambulance_1.vox"; // Test this!
-	//std::string path = "B:/Projects/Voxeller/bin/Debug/testvox/room.vox"; 
+	std::string path = Unvoxeller::File::GetExecutableDir() + "/testvox/nda/Ambulance_1.vox"; // Test this!
+	//std::string path = "B:/Projects/Unvoxeller/bin/Debug/testvox/room.vox"; 
 	//std::string path = "testvox/nda/Ambulance_1.vox";
 	//std::string output = "testvox/nda/export/Output.fbx";
-	std::string output = Voxeller::File::GetExecutableDir() + "/testvox/nda/export/Output.fbx";
+	std::string output = Unvoxeller::File::GetExecutableDir() + "/testvox/nda/export/Output.fbx";
 
-	Voxeller::GreedyMesher::ExportVoxToModel(path, output, exportOptions);
+	Unvoxeller::GreedyMesher::ExportVoxToModel(path, output, exportOptions);
 
 	while (!glfwWindowShouldClose(win))
 	{

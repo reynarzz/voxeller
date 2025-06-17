@@ -1,9 +1,5 @@
 
-#ifndef VOXELLER_API_EXPORT
-#define VOXELLER_API_EXPORT
-#endif
-
-#include <Voxeller/mesh_texturing.h>
+#include <Unvoxeller/mesh_texturing.h>
 #include <fstream>
 #define STB_IMAGE_STATIC
 
@@ -15,7 +11,7 @@
 #include <iostream>
 
 
-void mesh_texturizer::export_pallete_png(const char* path, const std::vector<Voxeller::color>& pallete)
+void mesh_texturizer::export_pallete_png(const char* path, const std::vector<Unvoxeller::color>& pallete)
 {
 	if (!pallete.empty())
 	{

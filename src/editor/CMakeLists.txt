@@ -1,7 +1,7 @@
-project(voxeller_editor LANGUAGES CXX OBJCXX)
+project(Unvoxeller_editor LANGUAGES CXX OBJCXX)
 
 get_filename_component(ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR} DIRECTORY)
-get_filename_component(ROOT_DIR ${ROOT_DIR} DIRECTORY) # go from src/voxeller to project root
+get_filename_component(ROOT_DIR ${ROOT_DIR} DIRECTORY) # go from src/Unvoxeller to project root
 
 
 # Add GLFW source
@@ -38,7 +38,7 @@ foreach(FILE ${EDITOR_SRC})
     # Get relative path from project root
     file(RELATIVE_PATH REL_PATH "${CMAKE_SOURCE_DIR}" "${FILE}")
 
-    # Extract folder path (e.g. src/voxeller/mesh)
+    # Extract folder path (e.g. src/Unvoxeller/mesh)
     get_filename_component(FOLDER "${REL_PATH}" PATH)
 
     # Set the source group
@@ -54,35 +54,41 @@ if(APPLE)
     )
 endif()
 
-add_executable(voxeller_editor
+add_executable(Unvoxeller_editor
     ${EDITOR_SRC}
     ${ROOT_DIR}/third/editor/gl/glad.cpp
     $<$<BOOL:WIN32>:${CMAKE_CURRENT_SOURCE_DIR}/resources/app.rc>
     $<$<BOOL:APPLE>:${CMAKE_CURRENT_SOURCE_DIR}/GUI/Utils/DropHover.mm>
 )
 
-set_target_properties(voxeller_editor PROPERTIES
-    OUTPUT_NAME "Voxeller Editor"
-)
+  target_compile_definitions(Unvoxeller_editor PRIVATE 
+        UNVOXELLER_LIB
+        )
 
-target_include_directories(voxeller_editor PRIVATE
+    set_target_properties(Unvoxeller_editor PROPERTIES
+        OUTPUT_NAME "Unvoxeller Editor"
+    )
+
+target_include_directories(Unvoxeller_editor PRIVATE
     ${ROOT_DIR}/third/editor
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${ROOT_DIR}/third/editor/imgui
 )
 
-target_link_libraries(voxeller_editor PRIVATE
+target_link_libraries(Unvoxeller_editor PRIVATE
     imgui
-    voxeller
+    Unvoxeller
     glfw
     spdlog
 )
 
-if(WIN32)
-    target_link_libraries(voxeller_editor PRIVATE opengl32)
 
-     target_compile_definitions(voxeller_editor
-        PRIVATE GLFW_EXPOSE_NATIVE_WIN32
+if(WIN32)
+    target_link_libraries(Unvoxeller_editor PRIVATE opengl32)
+
+     target_compile_definitions(Unvoxeller_editor
+        PRIVATE 
+        GLFW_EXPOSE_NATIVE_WIN32
         )
     
 elseif(APPLE)
@@ -91,7 +97,7 @@ elseif(APPLE)
     find_library(IOKIT_LIBRARY IOKit REQUIRED)
     find_library(COREVIDEO_LIBRARY CoreVideo REQUIRED)
 
-    target_link_libraries(voxeller_editor PRIVATE
+    target_link_libraries(Unvoxeller_editor PRIVATE
         OpenGL::GL
         ${COCOA_LIBRARY}
         ${IOKIT_LIBRARY}

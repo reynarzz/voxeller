@@ -1,6 +1,6 @@
 
 
-#include <Voxeller/VoxParser.h>
+#include <Unvoxeller/VoxParser.h>
 
 #include <fstream>
 #include <iostream>
@@ -12,7 +12,7 @@
 #include <memory>
 #include <cstdint>
 
-namespace Voxeller
+namespace Unvoxeller
 {
     int VoxParser::modelIndex = 0;
     

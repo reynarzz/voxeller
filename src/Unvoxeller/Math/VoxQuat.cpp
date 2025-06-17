@@ -1,7 +1,7 @@
-﻿#include <Voxeller/Math/VoxQuat.h>
+﻿#include <Unvoxeller/Math/VoxQuat.h>
 #include <cmath>
 
-namespace Voxeller
+namespace Unvoxeller
 {
 
 	// -- Constructors & axis‐angle

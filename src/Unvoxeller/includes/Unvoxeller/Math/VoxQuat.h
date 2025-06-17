@@ -1,10 +1,10 @@
 #pragma once
-#include <voxeller/api.h>
-#include <Voxeller/Math/VoxVector.h>
+#include <Unvoxeller/api.h>
+#include <Unvoxeller/Math/VoxVector.h>
 
-namespace Voxeller
+namespace Unvoxeller
 {
-	struct VOXELLER_API vox_quat
+	struct UNVOXELLER_API vox_quat
 	{
 		f32 x, y, z, w;  // vector part (x,y,z), scalar part (w)
 

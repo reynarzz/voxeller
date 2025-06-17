@@ -1,7 +1,7 @@
 ﻿#include <cmath>
-#include <Voxeller/Math/VoxVector.h>
+#include <Unvoxeller/Math/VoxVector.h>
 
-namespace Voxeller
+namespace Unvoxeller
 {
 
 	#ifdef _MSC_VER

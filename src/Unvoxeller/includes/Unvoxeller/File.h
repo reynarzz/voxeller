@@ -1,10 +1,10 @@
 #pragma once
 #include <string>
-#include <voxeller/api.h>
+#include <Unvoxeller/api.h>
 
-namespace Voxeller
+namespace Unvoxeller
 {
-    struct VOXELLER_API File 
+    struct UNVOXELLER_API File 
     {
         static std::string GetExecutableFullPath();
         static std::string GetExecutableDir();

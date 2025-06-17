@@ -8,23 +8,23 @@
 #endif
 #include <algorithm>
 #include <cassert>
-#include <Voxeller/GreedyMesher.h>
+#include <Unvoxeller/GreedyMesher.h>
 #include <assimp/postprocess.h>
 // Include Assimp headers for creating and exporting 3D assets
 #include <assimp/scene.h>
 #include <assimp/Exporter.hpp>
 #include <assimp/DefaultLogger.hpp>
 #include <assimp/material.h>
-#include <Voxeller/VoxParser.h>
-#include <Voxeller/Log/Log.h>
-#include <Voxeller/VertexMerger.h>
+#include <Unvoxeller/VoxParser.h>
+#include <Unvoxeller/Log/Log.h>
+#include <Unvoxeller/VertexMerger.h>
 
 // Include stb_image_write for saving texture atlas as PNG
 //#define STB_IMAGE_WRITE_IMPLEMENTATION
 #include <stb/stb_image_write.h>
 
-// Assume the Voxeller namespace and structures from the provided data structure are available:
-using namespace Voxeller;
+// Assume the Unvoxeller namespace and structures from the provided data structure are available:
+using namespace Unvoxeller;
 
 // A simple structure for 3D vertex with position, normal, UV
 struct Vertex
@@ -85,7 +85,7 @@ struct MyTraits : public OpenMesh::DefaultTraits {
 		OpenMesh::Attributes::TexCoord2D);
 };
 using TriMesh = OpenMesh::TriMesh_ArrayKernelT<MyTraits>;
-#include <Voxeller/TjunctionsFixer.h>
+#include <Unvoxeller/TjunctionsFixer.h>
 
 
 // Import an aiMesh into OpenMesh

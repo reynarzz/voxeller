@@ -11,7 +11,7 @@ namespace VoxellerApp
 #ifndef NDEBUG
         spdlog::set_pattern("[%T] [%n] %v");
 
-        core = spdlog::stdout_color_mt("Voxeller");
+        core = spdlog::stdout_color_mt("Core");
         app = spdlog::stdout_color_mt("App");
 
         core->set_level(spdlog::level::trace);

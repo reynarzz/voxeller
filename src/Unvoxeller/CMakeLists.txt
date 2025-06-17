@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.14)
-project(voxeller_core LANGUAGES CXX)
+project(Unvoxeller_core LANGUAGES CXX)
 
 # -----------------------------------------------------------------------------
 # 1) Assimp configuration (as before)
@@ -38,7 +38,7 @@ add_subdirectory(
 # -----------------------------------------------------------------------------
 # 3) Collect your sources & create your library
 # -----------------------------------------------------------------------------
-file(GLOB_RECURSE VOXELLER_SRC
+file(GLOB_RECURSE UNVOXELLER_SRC
     CONFIGURE_DEPENDS
     ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/*.h
@@ -47,21 +47,25 @@ file(GLOB_RECURSE VOXELLER_SRC
 
 
 # optional: organize your IDE/project view
-foreach(FILE ${VOXELLER_SRC})
+foreach(FILE ${UNVOXELLER_SRC})
   file(RELATIVE_PATH REL_PATH "${CMAKE_SOURCE_DIR}" "${FILE}")
   get_filename_component(FOLDER "${REL_PATH}" PATH)
   source_group("${FOLDER}" FILES "${FILE}")
 endforeach()
 
 
-add_library(voxeller SHARED ${VOXELLER_SRC})
+add_library(Unvoxeller SHARED ${UNVOXELLER_SRC})
 
-target_compile_definitions(voxeller PRIVATE VOXELLER_BUILD_DLL VOXELLER_API_EXPORT)
+ set_target_properties(Unvoxeller PROPERTIES
+        OUTPUT_NAME "Unvoxeller"
+)
+
+target_compile_definitions(Unvoxeller PRIVATE UNVOXELLER_BUILD_DLL UNVOXELLER_API_EXPORT)
 
 # -----------------------------------------------------------------------------
 # 4) Include directories
 # -----------------------------------------------------------------------------
-target_include_directories(voxeller PUBLIC
+target_include_directories(Unvoxeller PUBLIC
   ${CMAKE_CURRENT_SOURCE_DIR}/includes
   ${ROOT_DIR}/third/shared          # so we pick up both assimp/, spdlog/ and OpenMesh includes
 )
@@ -69,7 +73,7 @@ target_include_directories(voxeller PUBLIC
 # -----------------------------------------------------------------------------
 # 5) Link libraries
 # -----------------------------------------------------------------------------
-target_link_libraries(voxeller PRIVATE
+target_link_libraries(Unvoxeller PRIVATE
   assimp
   spdlog
 

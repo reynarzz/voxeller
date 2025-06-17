@@ -3,15 +3,15 @@
 #include <memory>
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
-#include <Voxeller/api.h>
+#include <Unvoxeller/api.h>
 
 namespace VoxellerApp
 {
 	// Forward declared loggers
-	VOXELLER_API extern std::shared_ptr<spdlog::logger> core;
-	VOXELLER_API extern std::shared_ptr<spdlog::logger> app;
+	UNVOXELLER_API extern std::shared_ptr<spdlog::logger> core;
+	UNVOXELLER_API extern std::shared_ptr<spdlog::logger> app;
 
-	VOXELLER_API void init();  // Call this once during startup
+	UNVOXELLER_API void init();  // Call this once during startup
 }
 
 #ifdef NDEBUG  // Release build
@@ -19,7 +19,7 @@ namespace VoxellerApp
 #define LOG_WARN(...)
 #define LOG_ERROR(...)
 #else
-	#ifdef VOXELLER_API_EXPORT
+	#ifdef UNVOXELLER_API_EXPORT
 		#define LOG_INFO(...)     VoxellerApp::core->info(__VA_ARGS__)
 		#define LOG_WARN(...)     VoxellerApp::core->warn(__VA_ARGS__)
 		#define LOG_ERROR(...)    VoxellerApp::core->error(__VA_ARGS__)

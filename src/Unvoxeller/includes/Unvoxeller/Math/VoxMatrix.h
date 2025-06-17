@@ -1,12 +1,12 @@
 #pragma once
-#include <voxeller/api.h>
-#include <Voxeller/Types.h>
-#include <Voxeller/Math/VoxVector.h>
+#include <Unvoxeller/api.h>
+#include <Unvoxeller/Types.h>
+#include <Unvoxeller/Math/VoxVector.h>
 
-namespace Voxeller
+namespace Unvoxeller
 {
 	//–– 2×2 f32 matrix
-	struct VOXELLER_API vox_mat2
+	struct UNVOXELLER_API vox_mat2
 	{
 		f32 m00, m01;
 		f32 m10, m11;
@@ -32,7 +32,7 @@ namespace Voxeller
 	};
 
 	//–– 3×3 f32 matrix
-	struct VOXELLER_API vox_mat3
+	struct UNVOXELLER_API vox_mat3
 	{
 		f32 m00, m01, m02;
 		f32 m10, m11, m12;
@@ -60,7 +60,7 @@ namespace Voxeller
 	};
 
 	//–– 4×4 f32 matrix
-	struct VOXELLER_API vox_mat4
+	struct UNVOXELLER_API vox_mat4
 	{
 		f32 m00, m01, m02, m03;
 		f32 m10, m11, m12, m13;
@@ -90,7 +90,7 @@ namespace Voxeller
 	};
 
 	//–– 2×2 integer matrix
-	struct VOXELLER_API vox_imat2
+	struct UNVOXELLER_API vox_imat2
 	{
 		s32 m00, m01;
 		s32 m10, m11;
@@ -114,7 +114,7 @@ namespace Voxeller
 	};
 
 	//–– 3×3 integer matrix
-	struct VOXELLER_API vox_imat3
+	struct UNVOXELLER_API vox_imat3
 	{
 		s32 m00, m01, m02;
 		s32 m10, m11, m12;
@@ -140,7 +140,7 @@ namespace Voxeller
 	};
 
 	//–– 4×4 integer matrix
-	struct VOXELLER_API vox_imat4 
+	struct UNVOXELLER_API vox_imat4 
 	{
 		s32 m00, m01, m02, m03;
 		s32 m10, m11, m12, m13;

@@ -2,17 +2,17 @@
 #include <string>
 #include <vector>
 #include <functional>
-#include <Voxeller/api.h>
-#include <Voxeller/Math/VoxVector.h>
+#include <Unvoxeller/api.h>
+#include <Unvoxeller/Math/VoxVector.h>
 
-namespace Voxeller
+namespace Unvoxeller
 {
 	enum class ModelFormat
 	{
 		FBX, OBJ,
 	};
 
-	struct VOXELLER_API MeshInfo
+	struct UNVOXELLER_API MeshInfo
 	{
 		s32 Vertices;
 		s32 Indices;
@@ -52,7 +52,7 @@ namespace Voxeller
 		Palette
 	};
 
-	struct VOXELLER_API PaletteTextureConfig
+	struct UNVOXELLER_API PaletteTextureConfig
 	{
 		bool UseColumns = false;
 
@@ -60,7 +60,7 @@ namespace Voxeller
 		s32 Max = 255;
 	};
 
-	struct VOXELLER_API TextureData
+	struct UNVOXELLER_API TextureData
 	{
 		std::vector<unsigned char> Buffer;
 		TextureFormat Format;
@@ -68,7 +68,7 @@ namespace Voxeller
 		f32 Height;
 	};
 
-	struct VOXELLER_API ConvertResult
+	struct UNVOXELLER_API ConvertResult
 	{
 		ConvertMSG Msg;
 		std::vector<MeshInfo> meshes;
@@ -76,13 +76,13 @@ namespace Voxeller
 		std::vector<TextureData> Textures;
 	};
 
-	struct VOXELLER_API ExportResults
+	struct UNVOXELLER_API ExportResults
 	{
 		ConvertResult Convert = {};
 		std::string OutPath = "";
 	};
 
-	struct VOXELLER_API ConvertOptions
+	struct UNVOXELLER_API ConvertOptions
 	{
 		// Remove T-Juntions
 		bool RemoveTJunctions = false;
@@ -135,18 +135,18 @@ namespace Voxeller
 		vox_vec3 Pivot{ 0.5f, 0.5f, 0.5f };
 	};
 
-	struct VOXELLER_API ExportOptions
+	struct UNVOXELLER_API ExportOptions
 	{
 		ConvertOptions ConvertOptions;
 		ModelFormat OutputFormat = ModelFormat::FBX;
 	};
 
-	struct VOXELLER_API MemData
+	struct UNVOXELLER_API MemData
 	{
 		ConvertResult Convert;
 	};
 
-	class VOXELLER_API GreedyMesher
+	class UNVOXELLER_API GreedyMesher
 	{
 	public:
 		static ExportResults ExportVoxToModel(const std::string& inVoxPath, const std::string& outExportPath, const ExportOptions& options);

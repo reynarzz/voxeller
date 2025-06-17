@@ -1,6 +1,6 @@
-#include <Voxeller/Math/VoxMatrix.h>
+#include <Unvoxeller/Math/VoxMatrix.h>
 
-namespace Voxeller
+namespace Unvoxeller
 {
     //––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
     // 2×2 float (column-major storage: mXY = column X, row Y)
@@ -411,4 +411,4 @@ namespace Voxeller
         *this = *this * s; return *this;
     }
 
-} // namespace Voxeller
+} // namespace Unvoxeller

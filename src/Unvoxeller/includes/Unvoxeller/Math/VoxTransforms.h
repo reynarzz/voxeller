@@ -1,9 +1,9 @@
 #pragma once
 
-#include <Voxeller/Math/VoxMatrix.h>
-#include <Voxeller/Math/VoxQuat.h>
+#include <Unvoxeller/Math/VoxMatrix.h>
+#include <Unvoxeller/Math/VoxQuat.h>
 
-namespace Voxeller 
+namespace Unvoxeller 
 {
     // Create a perspective projection matrix
     // fovY: vertical field of view in radians

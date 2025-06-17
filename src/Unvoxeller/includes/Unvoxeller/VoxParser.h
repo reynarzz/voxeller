@@ -4,11 +4,11 @@
 #include <vector>
 #include <unordered_map>
 #include <limits>
-#include <Voxeller/Math/VoxMath.h>
+#include <Unvoxeller/Math/VoxMath.h>
 #include <memory>
 
 
-namespace Voxeller
+namespace Unvoxeller
 {
 
 	//–– File header (magic + version)
@@ -198,5 +198,5 @@ namespace Voxeller
 			uint32_t contentBytes, uint32_t childrenBytes);
 	};
 
-} // namespace Voxeller
+} // namespace Unvoxeller
 
