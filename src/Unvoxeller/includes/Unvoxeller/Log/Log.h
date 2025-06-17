@@ -7,10 +7,11 @@
 
 namespace VoxellerApp
 {
+#ifndef NDEBUG 
 	// Forward declared loggers
 	UNVOXELLER_API extern std::shared_ptr<spdlog::logger> core;
 	UNVOXELLER_API extern std::shared_ptr<spdlog::logger> app;
-
+#endif
 	UNVOXELLER_API void init();  // Call this once during startup
 }
 
