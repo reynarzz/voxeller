@@ -20,7 +20,7 @@ esac
 # ── 4) Choose archive extension
 EXT="zip"
 if [[ "$PLATFORM" == "darwin" ]]; then
-  EXT="dmg"
+  EXT="zip"
 fi
 
 # ── 5) Build filename & URL
@@ -47,16 +47,6 @@ echo "🗜️  Extracting into $DEST_DIR..."
 if [[ "$EXT" == "zip" ]]; then
   unzip -q "$ARCHIVE_PATH" -d "$SCRIPT_DIR"
   mv "$SCRIPT_DIR/android-ndk-${NDK_VERSION}" "$DEST_DIR"
-else
-  # macOS .dmg handling
- 	MNT="/Volumes/android-ndk-${REVISION}"
-  hdiutil attach "$ARCHIVE_PATH" -mountpoint "$MNT" -nobrowse
-  
-  # create our target and copy everything from the root of the volume
-  mkdir -p "$DEST_DIR"
-  cp -R "$MNT/"* "$DEST_DIR"
-  
-  hdiutil detach "$MNT"
 fi
 
 # ── 9) Cleanup

@@ -14,6 +14,17 @@
       }
     },
     {
+      "name": "desktop-debug",
+      "displayName": "Desktop Debug",
+      "description": "Build for host (macOS/Windows/Linux)",
+      "hidden": false,
+      "binaryDir": "${sourceDir}/build-desktop",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+		"BUILD_EDITOR":     "ON"
+      }
+    },
+    {
       "name": "android-armeabi-v7a",
       "displayName": "Android armeabi-v7a",
       "generator": "Ninja",
@@ -113,6 +124,11 @@
      "name": "desktop-release",
      "configurePreset": "desktop-release",
      "configuration": "Release"
+  },
+  {
+     "name": "desktop-debug",
+     "configurePreset": "desktop-debug",
+     "configuration": "Debug"
   },
   {
      "name": "android-armeabi-v7a",
