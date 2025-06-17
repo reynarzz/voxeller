@@ -68,7 +68,7 @@ int main()
 
 	if (!win) 
 	{
-		LOG_ERROR("glfw init error");
+		LOG_ERROR("glfw window creation error");
 		glfwTerminate();
 		return -1;
 	}
