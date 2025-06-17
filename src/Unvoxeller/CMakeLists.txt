@@ -12,6 +12,10 @@ set(ASSIMP_BUILD_SAMPLES     OFF CACHE BOOL "" FORCE)
 set(ASSIMP_BUILD_EXPORTERS   ON  CACHE BOOL "" FORCE)
 set(ASSIMP_NO_EXPORT         OFF CACHE BOOL "" FORCE)
 
+set(BUILD_SHARED_LIBS    OFF CACHE BOOL "" FORCE)
+set(ASSIMP_BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+set(SPDLOG_BUILD_SHARED OFF CACHE BOOL "" FORCE)
+
 # compute project root from this CMakeLists location
 get_filename_component(ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR} DIRECTORY)
 get_filename_component(ROOT_DIR ${ROOT_DIR} DIRECTORY)
@@ -78,14 +82,14 @@ set(_out_subdir $<IF:$<BOOL:${BUILD_VOXELLER_SHARED}>,shared,static>)
 )
 
 install(TARGETS Unvoxeller
-        ARCHIVE   DESTINATION lib
-        LIBRARY   DESTINATION lib
-        RUNTIME   DESTINATION bin   # on Windows
+        ARCHIVE   DESTINATION lib COMPONENT Voxeller
+        LIBRARY   DESTINATION lib COMPONENT Voxeller
+        RUNTIME   DESTINATION bin COMPONENT Voxeller
         # for iOS/Xcode builds, you may want install(dir) instead
 )
 
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/includes/Unvoxeller
-        DESTINATION include)
+        DESTINATION include COMPONENT Voxeller)
 
 #target_compile_definitions(Unvoxeller PRIVATE UNVOXELLER_BUILD_DLL UNVOXELLER_API_EXPORT)
 

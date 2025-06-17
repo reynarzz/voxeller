@@ -62,7 +62,7 @@ add_executable(Unvoxeller_editor
 )
 
 install(TARGETS Unvoxeller_editor
-        RUNTIME DESTINATION bin)
+        RUNTIME DESTINATION bin COMPONENT Voxeller)
 
 if(BUILD_VOXELLER_SHARED)
   target_compile_definitions(Unvoxeller_editor PRIVATE 
