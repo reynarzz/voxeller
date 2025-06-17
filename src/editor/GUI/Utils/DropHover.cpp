@@ -1,96 +1,142 @@
 #ifdef _WIN32
 
-
 #include "DropHoverEvents.h"
 #include <windows.h>
-#include <shellapi.h>
+#include <shlobj_core.h>
+#include <objidl.h>
+#include <oleidl.h>
+#include <combaseapi.h>
 
 #define GLFW_EXPOSE_NATIVE_WIN32
 #include <GLFW/glfw3.h>
 #include <GLFW/glfw3native.h>
 
+// Static callback storage
 DropHoverEvents::DropCallback DropHoverEvents::dropCallback = nullptr;
 DropHoverEvents::HoverCallback DropHoverEvents::hoverCallback = nullptr;
 
-static WNDPROC originalWndProc = nullptr;
-static HWND hwnd = nullptr;
+static HWND        g_hwnd = nullptr;
+static IDropTarget* g_dropTarget = nullptr;
+static LONG        g_refCount = 1;
+static int         g_lastX = -1, g_lastY = -1;
 
-static int lastX = -1;
-static int lastY = -1;
+//-----------------------------------------------------------------------------
+// COM-based IDropTarget implementation
+class DropTargetImpl : public IDropTarget {
+public:
+	// IUnknown
+	HRESULT __stdcall QueryInterface(REFIID riid, void** ppv) override
+	{
+		if (!ppv) return E_POINTER;
+		if (riid == IID_IUnknown || riid == IID_IDropTarget)
+		{
+			*ppv = static_cast<IDropTarget*>(this);
+			AddRef();
+			return S_OK;
+		}
+		*ppv = nullptr;
+		return E_NOINTERFACE;
+	}
+	ULONG __stdcall AddRef() override
+	{
+		return InterlockedIncrement(&g_refCount);
+	}
+	ULONG __stdcall Release() override
+	{
+		LONG c = InterlockedDecrement(&g_refCount);
+		if (c == 0) delete this;
+		return c;
+	}
 
-LRESULT CALLBACK CustomWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) 
+	// IDropTarget
+	HRESULT __stdcall DragEnter(IDataObject* /*pDataObj*/, DWORD /*key*/, POINTL pt, DWORD* effect) override
+	{
+		g_lastX = g_lastY = -1;
+		return DragOver(0, pt, effect);
+	}
+	HRESULT __stdcall DragOver(DWORD /*key*/, POINTL pt, DWORD* effect) override
+	{
+		if (DropHoverEvents::hoverCallback && (pt.x != g_lastX || pt.y != g_lastY))
+		{
+			g_lastX = pt.x;
+			g_lastY = pt.y;
+			DropHoverEvents::hoverCallback({ pt.x, pt.y });
+		}
+		*effect = DROPEFFECT_COPY;
+		return S_OK;
+	}
+	HRESULT __stdcall DragLeave() override
+	{
+		g_lastX = g_lastY = -1;
+		return S_OK;
+	}
+	HRESULT __stdcall Drop(IDataObject* pDataObj, DWORD /*key*/, POINTL pt, DWORD* effect) override
+	{
+		FORMATETC fmt = { CF_HDROP, nullptr, DVASPECT_CONTENT, -1, TYMED_HGLOBAL };
+		STGMEDIUM stg = {};
+		if (FAILED(pDataObj->GetData(&fmt, &stg))) return E_FAIL;
+
+		HDROP hDrop = static_cast<HDROP>(GlobalLock(stg.hGlobal));
+		if (!hDrop) { ReleaseStgMedium(&stg); return E_FAIL; }
+
+		UINT count = DragQueryFileA(hDrop, 0xFFFFFFFF, nullptr, 0);
+		std::vector<std::string> paths;
+		paths.reserve(count);
+		char buf[MAX_PATH];
+		for (UINT i = 0; i < count; ++i) {
+			DragQueryFileA(hDrop, i, buf, MAX_PATH);
+			paths.emplace_back(buf);
+		}
+
+		GlobalUnlock(stg.hGlobal);
+		ReleaseStgMedium(&stg);
+
+		if (DropHoverEvents::dropCallback) {
+			DropHoverEvents::dropCallback({ paths, pt.x, pt.y });
+		}
+		*effect = DROPEFFECT_COPY;
+		return S_OK;
+	}
+};
+
+//-----------------------------------------------------------------------------
+void DropHoverEvents::Initialize(void* glfwWindow)
 {
-    switch (msg) 
-    {
-        case WM_DROPFILES: 
-        {
-            HDROP hDrop = (HDROP)wParam;
-            UINT count = DragQueryFileA(hDrop, 0xFFFFFFFF, NULL, 0);
-            std::vector<std::string> paths;
-            for (UINT i = 0; i < count; ++i) 
-            {
-                char path[MAX_PATH];
-                DragQueryFileA(hDrop, i, path, MAX_PATH);
-                paths.emplace_back(path);
-            }
-            POINT pt;
-            DragQueryPoint(hDrop, &pt);
-            if (DropHoverEvents::dropCallback) 
-            {
-                DropHoverEvents::dropCallback({ paths, pt.x, pt.y });
-            }
-            DragFinish(hDrop);
-            return 0;
-        }
-        case WM_MOUSEMOVE: 
-        {
-            if (DropHoverEvents::hoverCallback) 
-            {
-                POINT pt;
-                GetCursorPos(&pt);
-                ScreenToClient(hWnd, &pt);
-                if (pt.x != lastX || pt.y != lastY)
-                {
-                    lastX = pt.x;
-                    lastY = pt.y;
-                    DropHoverEvents::hoverCallback({ pt.x, pt.y });
-                }
-            }
-            break;
-        }
-    }
+	g_hwnd = glfwGetWin32Window(static_cast<GLFWwindow*>(glfwWindow));
+	if (!g_hwnd) return;
 
-    return CallWindowProc(originalWndProc, hWnd, msg, wParam, lParam);
+	// Initialize COM for OLE drag & drop
+	if (FAILED(OleInitialize(nullptr))) {
+		OutputDebugStringA("OleInitialize failed\n");
+		return;
+	}
+
+	// Register drop target
+	g_dropTarget = new DropTargetImpl();
+	RegisterDragDrop(g_hwnd, g_dropTarget);
 }
 
-void DropHoverEvents::Initialize(void* glfwWindow) 
+void DropHoverEvents::Shutdown()
 {
-    HWND hwnd = glfwGetWin32Window(static_cast<GLFWwindow*>(glfwWindow));
-    DragAcceptFiles(hwnd, TRUE);
-    originalWndProc = (WNDPROC)SetWindowLongPtr(hwnd, GWLP_WNDPROC, (LONG_PTR)CustomWndProc);
+	if (g_hwnd && g_dropTarget)
+	{
+		RevokeDragDrop(g_hwnd);
+		g_dropTarget->Release();
+		g_dropTarget = nullptr;
+	}
+	OleUninitialize();
+	g_hwnd = nullptr;
+	g_lastX = g_lastY = -1;
 }
 
-void DropHoverEvents::Shutdown() 
+void DropHoverEvents::SetDropCallback(DropCallback cb)
 {
-    if (hwnd && originalWndProc) 
-    {
-        SetWindowLongPtr(hwnd, GWLP_WNDPROC, (LONG_PTR)originalWndProc);
-        originalWndProc = nullptr;
-        hwnd = nullptr;
-    }
-    
-    lastX = -1;
-    lastY = -1;
+	dropCallback = std::move(cb);
 }
 
-void DropHoverEvents::SetDropCallback(DropCallback cb) 
+void DropHoverEvents::SetHoverCallback(HoverCallback cb)
 {
-    dropCallback = cb;
+	hoverCallback = std::move(cb);
 }
 
-void DropHoverEvents::SetHoverCallback(HoverCallback cb) 
-{
-    hoverCallback = cb;
-}
-
-#endif
+#endif // _WIN32

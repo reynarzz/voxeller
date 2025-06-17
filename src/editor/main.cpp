@@ -48,7 +48,7 @@ int main()
 
 	if (glfwInit() == GLFW_TRUE)
 	{
-		 LOG_EDITOR_INFO("Success GLFW initialization");
+		LOG_EDITOR_INFO("Success GLFW initialization");
 	}
 	else
 	{
@@ -71,32 +71,36 @@ int main()
 
 	const s32 status = gladLoadGLLoader((GLADloadproc)glfwGetProcAddress);
 
-   if(status == 0)
-   {
-      LOG_EDITOR_ERROR("Error: Glad initialization");
-   }
-   else
-   {
-      LOG_CORE_INFO("Success: Glad initialization");
-   }
+	if (status == 0)
+	{
+		LOG_EDITOR_ERROR("Error: Glad initialization");
+	}
+	else
+	{
+		LOG_CORE_INFO("Success: Glad initialization");
+	}
 
-   DropHoverEvents::Initialize(win);
+	DropHoverEvents::Initialize(win);
 
-   DropHoverEvents::SetDropCallback([](DropEvent info)
-   {
-      LOG_EDITOR_INFO("Dropped position ({0}, {1}): ", info.x, info.y);
+	DropHoverEvents::SetDropCallback([](DropEvent info)
+		{
+			LOG_EDITOR_INFO("Dropped position ({0}, {1}): ", info.x, info.y);
 
-      for (size_t i = 0; i < info.paths.size(); i++)
-      {
-         LOG_EDITOR_INFO("Droped: " + info.paths[i]);
-      }
-   });
+			for (size_t i = 0; i < info.paths.size(); i++)
+			{
+				LOG_EDITOR_INFO("Droped: " + info.paths[i]);
+			}
+		});
 
-   DropHoverEvents::SetHoverCallback([](HoverEvent info)
-   {
-      LOG_EDITOR_INFO("Hover position ({0}, {1}): ", info.x, info.y);
-   });
-   //Unvoxer
+	DropHoverEvents::SetHoverCallback([](HoverEvent info)
+		{
+			LOG_EDITOR_INFO("Hover position ({0}, {1}): ", info.x, info.y);
+		});
+
+	LOG_CORE_INFO("Dir: {0}", Voxeller::File::GetExecutableDir());
+
+
+	//Unvoxer
 	imgui.Init(win);
 
 	Voxeller::ExportOptions exportOptions{};
@@ -125,7 +129,7 @@ int main()
 	//std::string path = "testvox/nda/Ambulance_1.vox";
 	//std::string output = "testvox/nda/export/Output.fbx";
 	std::string output = Voxeller::File::GetExecutableDir() + "/testvox/nda/export/Output.fbx";
-   
+
 	Voxeller::GreedyMesher::ExportVoxToModel(path, output, exportOptions);
 
 	while (!glfwWindowShouldClose(win))
