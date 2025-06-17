@@ -61,9 +61,11 @@ add_executable(Unvoxeller_editor
     $<$<BOOL:APPLE>:${CMAKE_CURRENT_SOURCE_DIR}/GUI/Utils/DropHover.mm>
 )
 
+if(BUILD_VOXELLER_SHARED)
   target_compile_definitions(Unvoxeller_editor PRIVATE 
         UNVOXELLER_LIB
         )
+endif()
 
     set_target_properties(Unvoxeller_editor PROPERTIES
         OUTPUT_NAME "Unvoxeller"

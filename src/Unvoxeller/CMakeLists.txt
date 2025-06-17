@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.14)
 project(Unvoxeller_core LANGUAGES CXX)
 
+
+
 # -----------------------------------------------------------------------------
 # 1) Assimp configuration (as before)
 # -----------------------------------------------------------------------------
@@ -54,13 +56,27 @@ foreach(FILE ${UNVOXELLER_SRC})
 endforeach()
 
 
-add_library(Unvoxeller SHARED ${UNVOXELLER_SRC})
+#add_library(Unvoxeller SHARED ${UNVOXELLER_SRC})
+
+if(BUILD_VOXELLER_SHARED)
+  add_library(Unvoxeller SHARED ${UNVOXELLER_SRC})
+  target_compile_definitions(Unvoxeller
+    PRIVATE
+      UNVOXELLER_API_EXPORT
+  )
+else()
+  add_library(Unvoxeller STATIC ${UNVOXELLER_SRC})
+  target_compile_definitions(Unvoxeller
+    PRIVATE
+      UNVOXELLER_BUILD_STATIC
+  )
+endif()
 
  set_target_properties(Unvoxeller PROPERTIES
         OUTPUT_NAME "Unvoxeller"
 )
 
-target_compile_definitions(Unvoxeller PRIVATE UNVOXELLER_BUILD_DLL UNVOXELLER_API_EXPORT)
+#target_compile_definitions(Unvoxeller PRIVATE UNVOXELLER_BUILD_DLL UNVOXELLER_API_EXPORT)
 
 # -----------------------------------------------------------------------------
 # 4) Include directories

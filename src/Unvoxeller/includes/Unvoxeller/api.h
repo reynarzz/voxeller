@@ -10,7 +10,7 @@
 #define VXAPI extern "C" __declspec(dllexport)
 
 // When consuming the DLL (outside)
-#elif defined(VOXELLER_LIB)
+#elif defined(UNVOXELLER_LIB)
 #define UNVOXELLER_API __declspec(dllimport)
 #define VXAPI extern "C" __declspec(dllimport)
 

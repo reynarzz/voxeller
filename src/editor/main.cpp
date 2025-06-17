@@ -1,6 +1,3 @@
-//
-#define VOXELLER_LIB
-
 #include <Unvoxeller/Unvoxeller.h>
 #include <gl/glad.h>
 #include <GLFW/glfw3.h>
