@@ -20,6 +20,7 @@
       "binaryDir": "${sourceDir}/android-build/armeabi-v7a",
       "toolchainFile": "${sourceDir}/third/android-ndk/build/cmake/android.toolchain.cmake",
       "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
         "ANDROID_ABI":      "armeabi-v7a",
         "ANDROID_PLATFORM": "android-21",
         "ANDROID_STL":      "c++_static",
@@ -33,6 +34,7 @@
       "binaryDir": "${sourceDir}/android-build/arm64-v8a",
       "toolchainFile": "${sourceDir}/third/android-ndk/build/cmake/android.toolchain.cmake",
       "cacheVariables": {
+      "CMAKE_BUILD_TYPE": "Release",
        "ANDROID_ABI": "arm64-v8a",
        "ANDROID_PLATFORM": "android-21",
        "ANDROID_STL": "c++_static",
@@ -46,6 +48,7 @@
       "binaryDir": "${sourceDir}/android-build/x86",
       "toolchainFile": "${sourceDir}/third/android-ndk/build/cmake/android.toolchain.cmake",
       "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
         "ANDROID_ABI": "x86",
         "ANDROID_PLATFORM": "android-21",
         "ANDROID_STL": "c++_static",
@@ -59,6 +62,7 @@
       "binaryDir": "${sourceDir}/android-build/x86_64",
       "toolchainFile": "${sourceDir}/third/android-ndk/build/cmake/android.toolchain.cmake",
       "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
         "ANDROID_ABI":      "x86_64",
         "ANDROID_PLATFORM": "android-21",
         "ANDROID_STL":      "c++_static",
@@ -71,10 +75,17 @@
       "generator": "Xcode",
       "binaryDir": "${sourceDir}/ios-build/device",
       "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
         "CMAKE_SYSTEM_NAME":          "iOS",
         "CMAKE_OSX_DEPLOYMENT_TARGET":"12.0",
         "CMAKE_OSX_ARCHITECTURES":    "arm64",
-        "BUILD_EDITOR":               "OFF"
+        "BUILD_EDITOR":               "OFF",
+        "CMAKE_XCODE_ATTRIBUTE_SKIP_INSTALL": "YES",
+        "CMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED":  "NO",
+           "CMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_REQUIRED":"NO",
+           "CMAKE_XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY":   "",
+           "CMAKE_XCODE_ATTRIBUTE_DEVELOPMENT_TEAM":     "",
+           "CMAKE_XCODE_ATTRIBUTE_CODE_SIGN_ENTITLEMENTS":""
       }
     },
     {
@@ -83,37 +94,55 @@
       "generator": "Xcode",
       "binaryDir": "${sourceDir}/ios-build/simulator",
       "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
         "CMAKE_SYSTEM_NAME":          "iOS",
         "CMAKE_OSX_DEPLOYMENT_TARGET":"12.0",
         "CMAKE_OSX_ARCHITECTURES":    "x86_64;arm64",
-        "BUILD_EDITOR":               "OFF"
+        "BUILD_EDITOR":               "OFF",
+        "CMAKE_XCODE_ATTRIBUTE_SKIP_INSTALL": "YES",
+        "CMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED":  "NO",
+           "CMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_REQUIRED":"NO",
+           "CMAKE_XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY":   "",
+           "CMAKE_XCODE_ATTRIBUTE_DEVELOPMENT_TEAM":     "",
+           "CMAKE_XCODE_ATTRIBUTE_CODE_SIGN_ENTITLEMENTS":""
       }
     }
   ],
   "buildPresets": [
   {
+     "name": "desktop-release",
+     "configurePreset": "desktop-release",
+     "configuration": "Release"
+  },
+  {
      "name": "android-armeabi-v7a",
-     "configurePreset": "android-armeabi-v7a"
+     "configurePreset": "android-armeabi-v7a",
+     "configuration": "Release"
    },
    {
      "name": "android-arm64-v8a",
-     "configurePreset": "android-arm64-v8a"
+     "configurePreset": "android-arm64-v8a",
+     "configuration": "Release"
    },
    {
      "name": "android-x86",
-     "configurePreset": "android-x86"
+     "configurePreset": "android-x86",
+     "configuration": "Release"
    },
    {
      "name": "android-x86_64",
-     "configurePreset": "android-x86_64"
+     "configurePreset": "android-x86_64",
+     "configuration": "Release"
    },
    {
 	  "name": "ios-device",
-	  "configurePreset": "ios-device"
+	  "configurePreset": "ios-device",
+      "configuration": "Release"
 	},
 	{
 	  "name": "ios-simulator",
-	  "configurePreset": "ios-simulator"
+	  "configurePreset": "ios-simulator",
+      "configuration": "Release"
 	}
  ]
 }

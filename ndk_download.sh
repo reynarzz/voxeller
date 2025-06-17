@@ -49,9 +49,13 @@ if [[ "$EXT" == "zip" ]]; then
   mv "$SCRIPT_DIR/android-ndk-${NDK_VERSION}" "$DEST_DIR"
 else
   # macOS .dmg handling
-  MNT="/Volumes/android-ndk-${NDK_VERSION}"
+ 	MNT="/Volumes/android-ndk-${REVISION}"
   hdiutil attach "$ARCHIVE_PATH" -mountpoint "$MNT" -nobrowse
-  cp -R "$MNT/android-ndk-${NDK_VERSION}" "$DEST_DIR"
+  
+  # create our target and copy everything from the root of the volume
+  mkdir -p "$DEST_DIR"
+  cp -R "$MNT/"* "$DEST_DIR"
+  
   hdiutil detach "$MNT"
 fi
 

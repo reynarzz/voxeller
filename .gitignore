@@ -5,3 +5,5 @@ cmakefiles
 /.vscode
 /android-build
 /third/android-ndk
+/ios-build
+*.dmg
