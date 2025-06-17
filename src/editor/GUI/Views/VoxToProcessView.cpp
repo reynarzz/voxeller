@@ -115,6 +115,11 @@ bool CornerButton(
 	bool hovered, held;
 	bool pressed = ImGui::ButtonBehavior(bb, id, &hovered, &held);
 
+	if (hovered)
+	{
+		ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
+	}
+
 	// Animated hover transition
 	static std::unordered_map<ImGuiID, float> hoverLerp;
 	float& t = hoverLerp[id];
@@ -534,7 +539,8 @@ bool Dropdown(const char* label, int* currentIndex, const std::vector<std::strin
 	ImGui::SetNextWindowPos(popupPos);
 
 	// 9. Combo
-	if (ImGui::BeginCombo("##combo", preview, ImGuiComboFlags_NoArrowButton)) {
+	if (ImGui::BeginCombo("##combo", preview, ImGuiComboFlags_NoArrowButton)) 
+	{
 		ImGuiWindow* popup = ImGui::GetCurrentWindow();
 		ImDrawList* draw = popup->DrawList;
 
@@ -550,6 +556,11 @@ bool Dropdown(const char* label, int* currentIndex, const std::vector<std::strin
 				*currentIndex = i;
 				changed = true;
 			}
+
+			if (ImGui::IsItemHovered())
+			{
+				ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
+			}
 			if (isSelected)
 				ImGui::SetItemDefaultFocus();
 		}
@@ -557,6 +568,10 @@ bool Dropdown(const char* label, int* currentIndex, const std::vector<std::strin
 		ImGui::EndCombo();
 	}
 
+	if (ImGui::IsItemHovered())
+	{
+		ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
+	}
 	// 10. Draw arrow
 	ImDrawList* drawList = ImGui::GetWindowDrawList();
 	float arrowSize = buttonHeight * 0.35f;
@@ -711,9 +726,9 @@ void VoxToProcessView::UpdateGUI()
 
 				//ImGui::Text(std::string("Vox " + std::to_string(i)).c_str());
 
-
-					// Handle click
-				if (isSelected && currentSelection != i) {
+				// Handle click
+				if (isSelected && currentSelection != i) 
+				{
 					prevSelection = currentSelection;
 					currentSelection = i;
 					// your on‐select logic…

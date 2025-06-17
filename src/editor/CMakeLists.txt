@@ -80,6 +80,11 @@ target_link_libraries(voxeller_editor PRIVATE
 
 if(WIN32)
     target_link_libraries(voxeller_editor PRIVATE opengl32)
+
+     target_compile_definitions(voxeller_editor
+        PRIVATE GLFW_EXPOSE_NATIVE_WIN32
+        )
+    
 elseif(APPLE)
     find_package(OpenGL REQUIRED)
     find_library(COCOA_LIBRARY Cocoa REQUIRED)

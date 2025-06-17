@@ -53,6 +53,8 @@ namespace VoxellerEditor
 		ImGuiIO& io = ImGui::GetIO();
 		(void)io;
 
+		//io.MouseDrawCursor = false;
+		//io.ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange;
 		// Disable writing to disk by nulling out the filename:
 		io.IniFilename = nullptr;
 

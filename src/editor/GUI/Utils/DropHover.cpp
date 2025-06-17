@@ -7,7 +7,6 @@
 #include <oleidl.h>
 #include <combaseapi.h>
 
-#define GLFW_EXPOSE_NATIVE_WIN32
 #include <GLFW/glfw3.h>
 #include <GLFW/glfw3native.h>
 
@@ -62,7 +61,15 @@ public:
 			g_lastY = pt.y;
 			DropHoverEvents::hoverCallback({ pt.x, pt.y });
 		}
-		*effect = DROPEFFECT_COPY;
+		/**effect = DROPEFFECT_COPY;*/
+
+		bool allowDrop = false;
+		if (allowDrop)
+			*effect = DROPEFFECT_COPY;
+		else
+			*effect = DROPEFFECT_NONE;
+
+
 		return S_OK;
 	}
 	HRESULT __stdcall DragLeave() override

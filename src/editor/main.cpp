@@ -12,8 +12,9 @@
 #include <GUI/Utils/DropHoverEvents.h>
 
 #include <Voxeller/File.h>
-
+#include <GUI/Utils/Cursor.h>
 #include <iostream>
+#include <imgui/imgui.h>
 
 using namespace VoxellerEditor;
 
@@ -21,6 +22,8 @@ ImGuiApp imgui{};
 
 void Render(GLFWwindow* window)
 {
+	//Cursor::SetMode(CursorMode::NoDrop);
+
 	glfwPollEvents();
 	f32 color = 0.05f;
 
@@ -30,6 +33,7 @@ void Render(GLFWwindow* window)
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	imgui.Update();
+
 	glfwSwapBuffers(window);
 }
 
@@ -94,11 +98,13 @@ int main()
 
 	DropHoverEvents::SetHoverCallback([](HoverEvent info)
 		{
+
 			LOG_EDITOR_INFO("Hover position ({0}, {1}): ", info.x, info.y);
 		});
 
 	LOG_CORE_INFO("Dir: {0}", Voxeller::File::GetExecutableDir());
 
+	Cursor::Initialize(win);
 
 	//Unvoxer
 	imgui.Init(win);
@@ -135,6 +141,8 @@ int main()
 	while (!glfwWindowShouldClose(win))
 	{
 		Render(win);
+
+
 	}
 
 	glfwTerminate();
