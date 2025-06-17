@@ -60,13 +60,15 @@ namespace Voxeller
         vox->layers.clear();  // assuming vox_file has a container for layers
 
         vox->palette.resize(default_palette.size());
-        for (size_t i = 0; i < default_palette.size(); ++i) {
+        for (size_t i = 0; i < default_palette.size(); ++i) 
+        {
             uint32_t c = default_palette[i];
             vox->palette[i].r = uint8_t((c >> 0) & 0xFF);
             vox->palette[i].g = uint8_t((c >> 8) & 0xFF);
             vox->palette[i].b = uint8_t((c >> 16) & 0xFF);
             vox->palette[i].a = uint8_t((c >> 24) & 0xFF);
         }
+        
         // track if we ever see an RGBA chunk
         bool sawRGBA = false;
         // Read file magic and version
@@ -178,7 +180,7 @@ namespace Voxeller
         }
         uint32_t numModels = 0;
         voxFile.read(reinterpret_cast<char*>(&numModels), 4);
-        // We could store numModels if needed, but it’s mainly for verification.
+        // We could store numModels if needed, but itï¿½s mainly for verification.
         // Skip any child chunks bytes (should be none for PACK)
         if (childrenBytes > 0) {
             voxFile.seekg(childrenBytes, std::ios::cur);

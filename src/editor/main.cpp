@@ -4,13 +4,16 @@
 #include <Voxeller/Voxeller.h>
 #include <gl/glad.h>
 #include <GLFW/glfw3.h>
-#include <Voxeller/Log/Log.h>
 #include <GUI/ImGuiInit.h>
 
 #include <Voxeller/GreedyMesher.h>
+#include <voxeller/Math/VoxMath.h>
+#include <Voxeller/Log/Log.h>
+
+#include <Voxeller/File.h>
+
 #include <iostream>
 
-#include <voxeller/Math/VoxMath.h>
 using namespace VoxellerEditor;
 
 ImGuiApp imgui{};
@@ -99,18 +102,19 @@ int main()
 	Voxeller::vox_vec3 a2s = -as;
 
 	//Chicken_van_2.vox
-	std::string path = "B:/Projects/Voxeller/bin/Debug/testvox/nda/Ambulance_1.vox"; // Test this!
+	std::string path = Voxeller::File::GetExecutableDir() + "/testvox/nda/Ambulance_1.vox"; // Test this!
 	//std::string path = "B:/Projects/Voxeller/bin/Debug/testvox/room.vox"; 
 	//std::string path = "testvox/nda/Ambulance_1.vox";
 	//std::string output = "testvox/nda/export/Output.fbx";
-	std::string output = "B:/Projects/Voxeller/bin/Debug/testvox/nda/export/Output.fbx";
+	std::string output = Voxeller::File::GetExecutableDir() + "/testvox/nda/export/Output.fbx";
+   
 	Voxeller::GreedyMesher::ExportVoxToModel(path, output, exportOptions);
 
 	while (!glfwWindowShouldClose(win))
 	{
 		Render(win);
 	}
-   
+
 	glfwTerminate();
 	return -1;
 }

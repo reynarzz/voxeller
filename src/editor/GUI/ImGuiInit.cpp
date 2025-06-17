@@ -4,8 +4,9 @@
 
 #include "backends/imgui_impl_glfw.h"
 #include "backends/imgui_impl_opengl3.h"
-#include <GUI/Views/VoxToProcessView.h>
 
+#include <GUI/Views/VoxToProcessView.h>
+#include <Voxeller/File.h>
 
 namespace VoxellerEditor
 {
@@ -20,8 +21,10 @@ namespace VoxellerEditor
 		//   - path: the file path to your .ttf
 		//   - size: font size in pixels
 		//   - glyphRanges: optional to limit which glyphs get baked
+
+		const std::string fontPath = Voxeller::File::GetExecutableDir() + "/assets/fonts/ProductSans-Medium.ttf";
 		ImFont* myFont = io.Fonts->AddFontFromFileTTF(
-			"assets/fonts/ProductSans-Medium.ttf",
+			fontPath.c_str(),
 			16.0f,               // size in pixels
 			nullptr,             // ImFontConfig*, or nullptr
 			io.Fonts->GetGlyphRangesDefault()
@@ -41,6 +44,7 @@ namespace VoxellerEditor
 		//ImGui_ImplOpenGL3_CreateFontsTexture();
 		io.FontDefault = myFont;
 	}
+	
 	void ImGuiApp::Init(void* internalWindow)
 	{
 		// Setup Dear ImGui context

@@ -3,6 +3,13 @@
 
 namespace Voxeller
 {
+
+	#ifdef _MSC_VER
+    #define RAND() std::rand()
+#else
+    #define RAND() rand()
+#endif
+
 	vox_vec2::vox_vec2() : x(0), y(0) {}
 	vox_vec2::vox_vec2(f32 _x, f32 _y) : x(_x), y(_y) {}
 
@@ -414,8 +421,8 @@ namespace Voxeller
 
 	vox_vec3 randomUnitSphere()
 	{
-		float z = 2.f * (std::rand() / float(RAND_MAX)) - 1.f;
-		float t = 2.f * PI * (std::rand() / float(RAND_MAX));
+		float z = 2.f * (RAND() / float(RAND_MAX)) - 1.f;
+		float t = 2.f * PI * (RAND() / float(RAND_MAX));
 		float r = std::sqrt(1.f - z * z);
 		return { r * std::cos(t), r * std::sin(t), z };
 	}
