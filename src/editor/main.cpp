@@ -84,9 +84,9 @@ int main()
 		LOG_INFO("Success: Glad initialization");
 	}
 
-	DropHoverEvents::Initialize(win);
+	DropAndDrop::Initialize(win);
 
-	DropHoverEvents::SetDropCallback([](DropEvent info)
+	DropAndDrop::SetDropCallback([](DropEvent info)
 		{
 			LOG_INFO("Dropped position ({0}, {1}): ", info.x, info.y);
 
@@ -96,7 +96,7 @@ int main()
 			}
 		});
 
-	DropHoverEvents::SetHoverCallback([](HoverEvent info)
+	DropAndDrop::SetHoverCallback([](HoverEvent info)
 		{
 
 			LOG_INFO("Hover position ({0}, {1}): ", info.x, info.y);

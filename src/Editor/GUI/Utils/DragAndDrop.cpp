@@ -11,8 +11,8 @@
 #include <GLFW/glfw3native.h>
 
 // Static callback storage
-DropHoverEvents::DropCallback DropHoverEvents::dropCallback = nullptr;
-DropHoverEvents::HoverCallback DropHoverEvents::hoverCallback = nullptr;
+DropAndDrop::DropCallback DropAndDrop::dropCallback = nullptr;
+DropAndDrop::HoverCallback DropAndDrop::hoverCallback = nullptr;
 
 static HWND        g_hwnd = nullptr;
 static IDropTarget* g_dropTarget = nullptr;
@@ -55,11 +55,11 @@ public:
 	}
 	HRESULT __stdcall DragOver(DWORD /*key*/, POINTL pt, DWORD* effect) override
 	{
-		if (DropHoverEvents::hoverCallback && (pt.x != g_lastX || pt.y != g_lastY))
+		if (DropAndDrop::hoverCallback && (pt.x != g_lastX || pt.y != g_lastY))
 		{
 			g_lastX = pt.x;
 			g_lastY = pt.y;
-			DropHoverEvents::hoverCallback({ pt.x, pt.y });
+			DropAndDrop::hoverCallback({ pt.x, pt.y });
 		}
 		*effect = DROPEFFECT_COPY;
 
@@ -91,8 +91,8 @@ public:
 		GlobalUnlock(stg.hGlobal);
 		ReleaseStgMedium(&stg);
 
-		if (DropHoverEvents::dropCallback) {
-			DropHoverEvents::dropCallback({ paths, pt.x, pt.y });
+		if (DropAndDrop::dropCallback) {
+			DropAndDrop::dropCallback({ paths, pt.x, pt.y });
 		}
 		*effect = DROPEFFECT_COPY;
 		return S_OK;
@@ -100,7 +100,7 @@ public:
 };
 
 //-----------------------------------------------------------------------------
-void DropHoverEvents::Initialize(void* glfwWindow)
+void DropAndDrop::Initialize(void* glfwWindow)
 {
 	g_hwnd = glfwGetWin32Window(static_cast<GLFWwindow*>(glfwWindow));
 	if (!g_hwnd) return;
@@ -116,7 +116,7 @@ void DropHoverEvents::Initialize(void* glfwWindow)
 	RegisterDragDrop(g_hwnd, g_dropTarget);
 }
 
-void DropHoverEvents::Shutdown()
+void DropAndDrop::Shutdown()
 {
 	if (g_hwnd && g_dropTarget)
 	{
@@ -129,12 +129,12 @@ void DropHoverEvents::Shutdown()
 	g_lastX = g_lastY = -1;
 }
 
-void DropHoverEvents::SetDropCallback(DropCallback cb)
+void DropAndDrop::SetDropCallback(DropCallback cb)
 {
 	dropCallback = std::move(cb);
 }
 
-void DropHoverEvents::SetHoverCallback(HoverCallback cb)
+void DropAndDrop::SetHoverCallback(HoverCallback cb)
 {
 	hoverCallback = std::move(cb);
 }
