@@ -61,14 +61,7 @@ public:
 			g_lastY = pt.y;
 			DropHoverEvents::hoverCallback({ pt.x, pt.y });
 		}
-		/**effect = DROPEFFECT_COPY;*/
-
-		bool allowDrop = false;
-		if (allowDrop)
-			*effect = DROPEFFECT_COPY;
-		else
-			*effect = DROPEFFECT_NONE;
-
+		*effect = DROPEFFECT_COPY;
 
 		return S_OK;
 	}

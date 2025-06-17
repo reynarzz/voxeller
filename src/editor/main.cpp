@@ -104,7 +104,6 @@ int main()
 
 	LOG_CORE_INFO("Dir: {0}", Voxeller::File::GetExecutableDir());
 
-	Cursor::Initialize(win);
 
 	//Unvoxer
 	imgui.Init(win);
