@@ -119,12 +119,12 @@ int Init()
 
 	Unvoxeller::ExportOptions exportOptions{};
 	exportOptions.OutputFormat = Unvoxeller::ModelFormat::FBX;
-	exportOptions.ConvertOptions.RemoveTJunctions = false;
-	exportOptions.ConvertOptions.WeldVertices = false;
+	exportOptions.ConvertOptions.RemoveTJunctions = true;
+	exportOptions.ConvertOptions.WeldVertices = true;
 	exportOptions.ConvertOptions.FlatShading = true;
 	exportOptions.ConvertOptions.SeparateTexturesPerMesh = false;
 	exportOptions.ConvertOptions.MaterialPerMesh = true;
-	exportOptions.ConvertOptions.Scale = { 12.3f, 12.3f, 12.3f };
+	exportOptions.ConvertOptions.Scale = { 1.3f, 1.3f, 1.3f };
 	//exportOptions.ConvertOptions.Pivot = { 0.5f, 0.0f, 0.5f };
 	exportOptions.ConvertOptions.ExportFramesSeparatelly = true;
 	exportOptions.ConvertOptions.ExportMeshesSeparatelly = false;
@@ -133,14 +133,20 @@ int Init()
 	exportOptions.ConvertOptions.MeshesToWorldCenter = false;
 	exportOptions.ConvertOptions.TexturesPOT = false;
 
+
+	// TODO:
+	exportOptions.ConvertOptions.RemoveOccludedFaces = false;
+	exportOptions.ConvertOptions.OptimizeTextures = false;
+	exportOptions.ConvertOptions. = false;
+
 	Unvoxeller::vox_quat s{};
 	Unvoxeller::vox_vec3 as;
 	Unvoxeller::vox_vec3 a2s = -as;
 
 	//Chicken_van_2.vox
-	std::string path = Unvoxeller::File::GetExecutableDir() + "/testvox/nda/Ambulance_2.vox"; // Test this!
+	//std::string path = Unvoxeller::File::GetExecutableDir() + "/testvox/nda/Ambulance_1.vox"; // Test this!
 	//std::string path = Unvoxeller::File::GetExecutableDir() + "/testvox/monu2.vox"; // Test this!
-	//std::string path = "B:/Projects/Unvoxeller/bin/Debug/testvox/room.vox"; 
+	std::string path = Unvoxeller::File::GetExecutableDir() + "/testvox/room.vox";
 	//std::string path = "testvox/nda/Ambulance_1.vox";
 	//std::string output = "testvox/nda/export/Output.fbx";
 	std::string output = Unvoxeller::File::GetExecutableDir() + "/testvox/nda/export/Output.fbx";

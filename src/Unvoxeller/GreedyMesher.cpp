@@ -846,35 +846,35 @@ static void BuildMeshFromFaces(
 	std::vector<aiVector3D> accum(mesh->mNumVertices, aiVector3D{ 0,0,0 });
 
 	// for each triangle face...
-	for (unsigned int f = 0; f < mesh->mNumFaces; ++f) {
-		const aiFace& face = mesh->mFaces[f];
-		unsigned i0 = face.mIndices[0],
-			i1 = face.mIndices[1],
-			i2 = face.mIndices[2];
+	//for (unsigned int f = 0; f < mesh->mNumFaces; ++f) {
+	//	const aiFace& face = mesh->mFaces[f];
+	//	unsigned i0 = face.mIndices[0],
+	//		i1 = face.mIndices[1],
+	//		i2 = face.mIndices[2];
 
-		aiVector3D A = mesh->mVertices[i0];
-		aiVector3D B = mesh->mVertices[i1];
-		aiVector3D C = mesh->mVertices[i2];
+	//	aiVector3D A = mesh->mVertices[i0];
+	//	aiVector3D B = mesh->mVertices[i1];
+	//	aiVector3D C = mesh->mVertices[i2];
 
-		// face normal = (B−A) × (C−A)
-		aiVector3D fn = crossProduct(B - A, C - A).Normalize();
-		fn.Normalize();
+	//	// face normal = (B−A) × (C−A)
+	//	aiVector3D fn = crossProduct(B - A, C - A).Normalize();
+	//	fn.Normalize();
 
-		if (flatShading)
-		{
-			// assign same normal to all three corners
-			mesh->mNormals[i0] = fn;
-			mesh->mNormals[i1] = fn;
-			mesh->mNormals[i2] = fn;
-		}
-		else
-		{
-			// accumulate for smoothing
-			accum[i0] += fn;
-			accum[i1] += fn;
-			accum[i2] += fn;
-		}
-	}
+	//	if (flatShading)
+	//	{
+	//		// assign same normal to all three corners
+	//		mesh->mNormals[i0] = fn;
+	//		mesh->mNormals[i1] = fn;
+	//		mesh->mNormals[i2] = fn;
+	//	}
+	//	else
+	//	{
+	//		// accumulate for smoothing
+	//		accum[i0] += fn;
+	//		accum[i1] += fn;
+	//		accum[i2] += fn;
+	//	}
+	//}
 
 	// if smooth shading, normalize the per‐vertex sums
 	if (!flatShading)
