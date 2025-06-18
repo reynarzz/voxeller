@@ -42,6 +42,9 @@ add_subdirectory(
   ${CMAKE_BINARY_DIR}/third_party/openmesh
 )
 
+set_target_properties(OpenMeshCore PROPERTIES DEBUG_POSTFIX "" )
+set_target_properties(OpenMeshTools PROPERTIES DEBUG_POSTFIX "" )
+
 # -----------------------------------------------------------------------------
 # 3) Collect your sources & create your library
 # -----------------------------------------------------------------------------
@@ -108,8 +111,23 @@ target_include_directories(Unvoxeller PUBLIC
 target_link_libraries(Unvoxeller PRIVATE
   assimp
   spdlog
+)
 
-  # OpenMesh core & tools
+
+if(APPLE)
+target_link_libraries(Unvoxeller PRIVATE
+  assimp
+  spdlog
   OpenMeshCoreStatic
   OpenMeshToolsStatic
 )
+else()
+target_link_libraries(Unvoxeller PRIVATE
+  assimp
+  spdlog
+  OpenMeshCore
+  OpenMeshTools
+)
+endif()
+
+ 
