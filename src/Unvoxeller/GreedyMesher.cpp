@@ -1416,7 +1416,7 @@ static std::vector<aiScene*> GetModels(const vox_file* voxData, const s32 frameI
 			imageName = baseName + "_atlas.png";
 			SaveAtlasImage(imageName, textureData->Width, textureData->Height, textureData->Buffer);
 
-
+			// Very slow
 			for (size_t i = 0; i < mergedFaces.size(); i++)
 			{
 				modelsData[mergedFaces[i].modelIndex].push_back(mergedFaces[i]);

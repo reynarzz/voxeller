@@ -14,6 +14,9 @@
 
 // TODO:
 // - Fix small offset happening.
+// - Reuse colors in texture (check which faces have the same colors, and set an id, to ref an island).
+// - Pallete textures (decide the max width/height. Note not override POT)
+// - Localization: English, Spanish, French, Chinese, Japanese, German.
 
 using namespace VoxellerEditor;
 
