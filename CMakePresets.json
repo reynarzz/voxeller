@@ -10,7 +10,7 @@
       "binaryDir": "${sourceDir}/bin/desktop-debug",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
-		"BUILD_EDITOR":     "ON"
+	"BUILD_EDITOR":     "ON"
       }
     },
     {
@@ -22,7 +22,7 @@
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
       "CMAKE_INSTALL_PREFIX": "${sourceDir}/publish/desktop",  
-		"BUILD_EDITOR":     "ON"
+	"BUILD_EDITOR":     "ON"
       }
     },
     {

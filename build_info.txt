@@ -6,6 +6,10 @@
 #For Shipping the library (the one wil be sold)
 -Run ndk_download.sh
 -Ninja to path
+
+#Build the editor with no dependencies (just the executable)
+Set this "-DBUILD_VOXELLER_SHARED=OFF"
+
 #build platforms with: 
 	cmake --preset {architectureName}
         cmake --build --preset {architectureName}

@@ -21,3 +21,12 @@ The last voxel convert tool you will ever need.
 [#Fix to publish]
 -Faces winding problem?
 -Translation off by one voxel.
+
+[#Publishing]
+Publishing consist of 3 types, so we can sell components separatelly
+   1: Complete:
+	This contains the editor (single file exe), and all the libraries (shared) for diff compilers: windows, mac, android, ios, linux
+   2:Editor:
+        Just the editor executable, single file, without dependencies.
+   3:Libraries:
+        All the libraries (shared), windows, mac, android, ios, linux. All for diff compilers
