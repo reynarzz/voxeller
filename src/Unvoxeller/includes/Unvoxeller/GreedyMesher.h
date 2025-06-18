@@ -83,11 +83,6 @@ namespace Unvoxeller
 		std::string OutPath = "";
 	};
 
-	// Create LOD from meshes.
-	struct UNVOXELLER_API LODOptions 
-	{
-		std::array<f32, 10> Factors = {0,0,0,0,0,0,0,0,0,0};
-	};
 
 	struct UNVOXELLER_API ConvertOptions
 	{
@@ -143,8 +138,8 @@ namespace Unvoxeller
 
 		TextureType TextureType = TextureType::Atlas;
 		
-		// To create n lods set factors, Factor[0] = LOD1, Factor[1] = LOD2
-		LODOptions Lods;
+		// To create n lods set factors (0.0 - 1.0), 1.0 = no change, Factor[0] = LOD1, Factor[1] = LOD2
+		std::array<f32, 10> Lods = { 0,0,0,0,0,0,0,0,0,0 };
 
 		// Scale, Ex, if 1.0, every single voxel will take up 1 unit.
 		vox_vec3 Scale = { 1.0f, 1.0f, 1.0f };

@@ -141,6 +141,8 @@ int Init()
 	exportOptions.ConvertOptions.RemoveOccludedFaces = false;
 	exportOptions.ConvertOptions.OptimizeTextures = false;
 	exportOptions.ConvertOptions.TextureType = {};
+	exportOptions.ConvertOptions.Lods = { 0.8f, 0.4f };
+
 
 	Unvoxeller::vox_quat s{};
 	Unvoxeller::vox_vec3 as;
