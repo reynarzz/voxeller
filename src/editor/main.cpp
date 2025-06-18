@@ -16,6 +16,10 @@ using namespace VoxellerEditor;
 
 std::unique_ptr<ImGuiApp> imgui = nullptr;
 
+// TODO:
+   // When I flipped a mesh, I should flip the normals as well
+
+
 void Render(GLFWwindow* window)
 {
 	//Cursor::SetMode(CursorMode::NoDrop);

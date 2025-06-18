@@ -626,6 +626,18 @@ static void BuildMeshFromFaces(
 	std::unordered_map<VertKey, unsigned int, VertKeyHash> vertMap;
 	vertMap.reserve(faces.size() * 4);
 
+	const float det =
+		rotation->m00 * (rotation->m11 * rotation->m22 - rotation->m12 * rotation->m21)
+		- rotation->m01 * (rotation->m10 * rotation->m22 - rotation->m12 * rotation->m20)
+		+ rotation->m02 * (rotation->m10 * rotation->m21 - rotation->m11 * rotation->m20);
+
+	// det == +1 → pure rotation (right-handed), det == –1 → includes a mirror (left-handed)
+
+	// 2) Before you emit each face’s indices, test for winding.
+	//    We'll say “shouldInvert” is true when det < 0:
+	const bool shouldInvert = (det < 0.0f);
+
+
 	auto addVertex = [&](float vx, float vy, float vz,
 		float nx, float ny, float nz,
 		float u, float v) -> unsigned int
@@ -724,12 +736,20 @@ static void BuildMeshFromFaces(
 		// compute the geometric normal of (P0,P1,P2)
 		vox_vec3 triN = cross(P1 - P0, P2 - P0);
 
+		bool baseIsCCW = (dot(triN, faceN) > 0.0f);
+
+		// 3) Combine them: if we ‘shouldInvert’, flip the test
+		bool finalIsCCW = shouldInvert ? !baseIsCCW : baseIsCCW;
+
+
 		// if the triangle normal lines up with your face normal, use CCW, otherwise flip
-		if (dot(triN, faceN) > 0.0f) {
+		if (finalIsCCW)
+		{
 			// P0→P1→P2 is already CCW when viewed from outside
 			indices.insert(indices.end(), { i0, i1, i2,   i0, i2, i3 });
 		}
-		else {
+		else 
+		{
 			// it’s backwards, so swap 1↔2
 			indices.insert(indices.end(), { i0, i2, i1,   i0, i3, i2 });
 		}
@@ -769,17 +789,22 @@ static void BuildMeshFromFaces(
 		float nz = verts[i].nz;
 
 		// apply MagicaVoxel rotation (if any)
-		if (rotation) {
+		if (rotation) 
+		{
 			float tx = rotation->m00 * x + rotation->m01 * y + rotation->m02 * z;
 			float ty = rotation->m10 * x + rotation->m11 * y + rotation->m12 * z;
 			float tz = rotation->m20 * x + rotation->m21 * y + rotation->m22 * z;
-			x = tx; y = ty; z = tz;
+			x = tx; 
+			y = ty; 
+			z = tz;
+
 			tx = rotation->m00 * nx + rotation->m01 * ny + rotation->m02 * nz;
 			ty = rotation->m10 * nx + rotation->m11 * ny + rotation->m12 * nz;
 			tz = rotation->m20 * nx + rotation->m21 * ny + rotation->m22 * nz;
-			/*	nx = tx;
-				ny = ty;
-				nz = tz;*/
+
+			nx = tx;
+			ny = ty;
+			nz = tz;
 		}
 
 		// swizzle into Assimp (X,Z,Y)
@@ -787,7 +812,8 @@ static void BuildMeshFromFaces(
 		aiVector3D norm{ nx, nz, ny };
 
 		// apply MagicaVoxel translation (with Y↔Z swap)
-		if (translation) {
+		if (translation) 
+		{
 			pos.x += translation->x;
 			pos.y += translation->z;
 			pos.z += translation->y;
@@ -798,7 +824,7 @@ static void BuildMeshFromFaces(
 		norm.x = -norm.x;
 
 		// ** NEW: re-normalize to unit length **
-		norm.Normalize();
+		//norm = norm.Normalize();
 
 		mesh->mVertices[i] = pos;
 		mesh->mNormals[i] = norm;
@@ -1549,7 +1575,7 @@ static std::vector<aiScene*> GetModels(const vox_file* voxData, const s32 frameI
 		}
 
 		// Set all the nodes to the root.
-		for (size_t i = 0; i < shapeNodes.size(); ++i)
+		for (size_t i = 0; i < scene->mRootNode->mNumChildren; ++i)
 		{
 			scene->mRootNode->mChildren[i] = shapeNodes[i];
 		}
