@@ -1288,11 +1288,29 @@ std::shared_ptr<TextureData> GetTexture(std::vector<FaceRect>& faces, const std:
 	return textureData;
 }
 
+static std::shared_ptr<TextureData> BuildImage(bool generateTextures, bool texturesPOT, std::vector<FaceRect>& faces, 
+											   const std::vector<color>& palette, const std::vector<vox_model>& models)
+{
+
+	s32 texWidth = 16, texHeight = 16;
+	if (generateTextures)
+	{
+		// TODO: to create an atlas of all the meshes, the property colorIndex, in face should be updated.
+		const auto textureData = GetTexture(faces, palette, models, texturesPOT);
+
+
+		texWidth = textureData->Width;
+		texHeight = textureData->Height;
+
+		return textureData;
+	}
+
+	return nullptr;
+}
 
 // TODO: start simple, from the begining, the whole code base has a problem of code duplication.
 static std::vector<aiScene*> GetModels(const vox_file* voxData, const s32 frameIndex, const std::string& outputPath, const ConvertOptions& options)
 {
-	size_t dot = outputPath.find_last_of('.');
 
 	struct MeshWrapData
 	{
@@ -1308,15 +1326,20 @@ static std::vector<aiScene*> GetModels(const vox_file* voxData, const s32 frameI
 
 	const std::vector<vox_vec3>& pivots = options.Pivots;// Rotate(wxf.rot, options.Pivot);
 
+	struct ModelData 
+	{
+		std::vector<FaceRect> faces;
+	};
+
 	if (voxData->shapes.size() > 0)
 	{
 		const bool canIteratePivots = pivots.size() > 1 && pivots.size() == voxData->shapes.size();
 
-		if (pivots.size() == 0) 
+		if (pivots.size() == 0)
 		{
 			LOG_WARN("Default pivot '(0.5, 0.5, 0.5)' will be used for all meshes.");
 		}
-		else if (pivots.size() == 1)  
+		else if (pivots.size() == 1)
 		{
 			LOG_WARN("First pivot will be used for all meshes.");
 		}
@@ -1324,21 +1347,94 @@ static std::vector<aiScene*> GetModels(const vox_file* voxData, const s32 frameI
 		{
 			LOG_WARN("Pivots '{0}' do not match the amount of meshes: {1}. Using default (0.5, 0.5, 0.5)", pivots.size(), voxData->shapes.size());
 		}
-		else 
+		else
 		{
 			LOG_INFO("Custom pivots in use: '{0}'", pivots.size());
+		}
+
+		std::vector<color> pallete = voxData->palette;
+		std::shared_ptr<TextureData> textureData = nullptr;
+		std::string imageName = "";
+		std::string baseName = outputPath;
+		const size_t dot = outputPath.find_last_of('.');
+		std::vector<FaceRect> faces;
+
+		std::vector<FaceRect> mergedFaces = {};
+		
+		std::unordered_map<s32, std::vector<FaceRect>> modelsData = {};
+
+		if (dot != std::string::npos)
+		{
+			baseName = outputPath.substr(0, outputPath.find_last_of('.'));
+		}
+
+
+		for (auto& shpKV : voxData->shapes)
+		{
+			const vox_nSHP& shape = shpKV.second;
+
+			int modelId = -1;
+
+			if (shape.models.size() == 1)
+			{
+				modelId = shape.models[0].modelID;
+			}
+			else
+			{
+				for (const auto& m : shape.models)
+				{
+					if (m.frameIndex == frameIndex)
+					{
+						modelId = m.modelID;
+						break;
+					}
+				}
+			}
+
+			if (modelId < 0)
+			{
+				continue;
+			}
+
+			faces = GreedyMesh_Atlas(voxData->voxModels[modelId], voxData->sizes[modelId], modelId);
+
+			// --- Below
+
+			if (!options.SeparateTexturesPerMesh)
+			{
+				textureData;
+
+				FaceRect e;
+				mergedFaces.insert(mergedFaces.end(), faces.begin(), faces.end());
+			}
+		}
+
+		if (!options.SeparateTexturesPerMesh)
+		{
+			textureData = BuildImage(options.GenerateTextures, options.TexturesPOT, mergedFaces, voxData->palette, voxData->voxModels);
+
+			LOG_INFO("Atlas export: {0}", baseName + "_atlas.png");
+
+			imageName = baseName + "_atlas.png";
+			SaveAtlasImage(imageName, textureData->Width, textureData->Height, textureData->Buffer);
+
+
+			for (size_t i = 0; i < mergedFaces.size(); i++)
+			{
+				modelsData[mergedFaces[i].modelIndex].push_back(mergedFaces[i]);
+			}
 		}
 
 		s32 shapeIndex{};
 		for (auto& shpKV : voxData->shapes)
 		{
-			vox_vec3 currentPivot { 0.5f, 0.5f, 0.5f };
+			vox_vec3 currentPivot{ 0.5f, 0.5f, 0.5f };
 
 			if (canIteratePivots)
 			{
 				currentPivot = pivots[shapeIndex];
 			}
-			else if (pivots.size() == 1) 
+			else if (pivots.size() == 1)
 			{
 				currentPivot = pivots[0];
 			}
@@ -1367,35 +1463,33 @@ static std::vector<aiScene*> GetModels(const vox_file* voxData, const s32 frameI
 
 			if (modelId < 0)
 			{
-				continue; // no model for this shape this frame
+				continue;
 			}
 
 			// TODO Move this to another function so it can be reused for everything else--------------------------------------------------------------------------------------------------
 
 			// Generate mesh for this shape/model
-			std::vector<FaceRect> faces = GreedyMesh_Atlas(voxData->voxModels[modelId], voxData->sizes[modelId], modelId);
 
-			std::string imageName = "";
-
-			s32 texWidth = 16, texHeight = 16;
-			if (options.GenerateTextures)
+			if (options.SeparateTexturesPerMesh)
 			{
-				// TODO: to create an atlas of all the meshes, the property colorIndex, in face should be updated.
-				const auto textureData = GetTexture(faces, voxData->palette, voxData->voxModels, options.TexturesPOT);
+				faces = GreedyMesh_Atlas(voxData->voxModels[modelId], voxData->sizes[modelId], modelId);
 
-				std::string baseName = outputPath;
+				textureData = BuildImage(options.GenerateTextures, options.TexturesPOT, faces, voxData->palette, voxData->voxModels);
 
-				if (dot != std::string::npos)
+				// Remove this from here
+				if (options.GenerateTextures)
 				{
-					baseName = outputPath.substr(0, outputPath.find_last_of('.'));
+
+
+					imageName = baseName + "_frame" + std::to_string(shapeIndex++) + ".png";
+					SaveAtlasImage(imageName, textureData->Width, textureData->Height, textureData->Buffer);
 				}
-
-				imageName = baseName + "_frame" + std::to_string(shapeIndex++) + ".png";
-				SaveAtlasImage(imageName, textureData->Width, textureData->Height, textureData->Buffer);
-
-				texWidth = textureData->Width;
-				texHeight = textureData->Height;
 			}
+			else 
+			{
+				faces = modelsData[modelId];
+			}
+
 
 			aiMesh* mesh = new aiMesh();
 
@@ -1419,9 +1513,9 @@ static std::vector<aiScene*> GetModels(const vox_file* voxData, const s32 frameI
 			// Build mesh and apply MagicaVoxel rotation+translation directly into vertices:
 			BuildMeshFromFaces(
 				faces,
-				texWidth, texHeight,
+				textureData->Width, textureData->Height,
 				options.FlatShading,
-				voxData->palette,
+				pallete,
 				mesh,
 				box,          // pivot centering
 				wxf.rot,     // MagicaVoxel 3×3 rotation
