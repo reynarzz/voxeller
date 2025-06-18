@@ -450,7 +450,8 @@ static std::vector<FaceRect> GreedyMesh_Atlas(
 
 // A simple shelf-bin packer for placing rectangles (with added border) into a square atlas of given dimension.
 // Returns true and updates FaceRect atlas positions if successful, or false if not fitting.
-static bool PackFacesIntoAtlas(int atlasSize, std::vector<FaceRect>& rects)
+template<typename T>
+static bool PackFacesIntoAtlas(int atlasSize, T& rects)
 {
 	// Sort rectangles by height (descending) for better packing (larger first).
 	std::sort(rects.begin(), rects.end(), [](const FaceRect& a, const FaceRect& b)
@@ -1079,7 +1080,7 @@ static bool WriteSceneToFile(const std::vector<aiScene*> scenes, const std::stri
 	u32 preprocess = 0;
 
 	aiMatrix4x4 scaleMat;
-	aiMatrix4x4::Scaling(aiVector3D(options.ConvertOptions.Scale.x, options.ConvertOptions.Scale.y, options.ConvertOptions.Scale.z), scaleMat);
+	aiMatrix4x4::Scaling(aiVector3D(options.Converting.Scale.x, options.Converting.Scale.y, options.Converting.Scale.z), scaleMat);
 
 	size_t dot = outPath.find_last_of('.');
 
@@ -1087,7 +1088,7 @@ static bool WriteSceneToFile(const std::vector<aiScene*> scenes, const std::stri
 	{
 		auto scene = scenes[i];
 
-		if (options.ConvertOptions.WeldVertices)
+		if (options.Converting.Meshing.WeldVertices)
 		{
 			preprocess = aiProcess_JoinIdenticalVertices;
 			// for (size_t i = 0; i < scene->mNumMeshes; i++)
@@ -1220,8 +1221,8 @@ inline vox_vec3 Rotate(const vox_mat3& m, const vox_vec3& v)
 }
 
 
-
-std::shared_ptr<TextureData> GetTexture(std::vector<FaceRect>& faces, const std::vector<color>& palette,
+template<typename T>
+std::shared_ptr<TextureData> GetTexture(T& faces, const std::vector<color>& palette,
 	const std::vector<vox_model>& models, const bool texturesPOT)
 {
 	int atlasDim = 16;
@@ -1400,18 +1401,15 @@ static std::vector<aiScene*> GetModels(const vox_file* voxData, const s32 frameI
 
 			// --- Below
 
-			if (!options.SeparateTexturesPerMesh)
+			if (!options.Texturing.SeparateTexturesPerMesh)
 			{
-				textureData;
-
-				FaceRect e;
 				mergedFaces.insert(mergedFaces.end(), faces.begin(), faces.end());
 			}
 		}
 
-		if (!options.SeparateTexturesPerMesh)
+		if (!options.Texturing.SeparateTexturesPerMesh)
 		{
-			textureData = BuildImage(options.GenerateTextures, options.TexturesPOT, mergedFaces, voxData->palette, voxData->voxModels);
+			textureData = BuildImage(options.Texturing.GenerateTextures, options.Texturing.TexturesPOT, mergedFaces, voxData->palette, voxData->voxModels);
 
 			LOG_INFO("Atlas export: {0}", baseName + "_atlas.png");
 
@@ -1470,14 +1468,14 @@ static std::vector<aiScene*> GetModels(const vox_file* voxData, const s32 frameI
 
 			// Generate mesh for this shape/model
 
-			if (options.SeparateTexturesPerMesh)
+			if (options.Texturing.SeparateTexturesPerMesh)
 			{
 				faces = GreedyMesh_Atlas(voxData->voxModels[modelId], voxData->sizes[modelId], modelId);
 
-				textureData = BuildImage(options.GenerateTextures, options.TexturesPOT, faces, voxData->palette, voxData->voxModels);
+				textureData = BuildImage(options.Texturing.GenerateTextures, options.Texturing.TexturesPOT, faces, voxData->palette, voxData->voxModels);
 
 				// Remove this from here
-				if (options.GenerateTextures)
+				if (options.Texturing.GenerateTextures)
 				{
 
 
@@ -1514,7 +1512,7 @@ static std::vector<aiScene*> GetModels(const vox_file* voxData, const s32 frameI
 			BuildMeshFromFaces(
 				faces,
 				textureData->Width, textureData->Height,
-				options.FlatShading,
+				options.Meshing.FlatShading,
 				pallete,
 				mesh,
 				box,          // pivot centering
@@ -1527,9 +1525,9 @@ static std::vector<aiScene*> GetModels(const vox_file* voxData, const s32 frameI
 
 			// Assign material index...
 
-			if (options.GenerateMaterials)
+			if (options.Meshing.GenerateMaterials)
 			{
-				mesh->mMaterialIndex = options.MaterialPerMesh && !options.ExportMeshesSeparatelly ? materialIndex++ : 0;
+				mesh->mMaterialIndex = options.Meshing.MaterialPerMesh && !options.ExportMeshesSeparatelly ? materialIndex++ : 0;
 			}
 			else
 			{
@@ -1564,7 +1562,7 @@ static std::vector<aiScene*> GetModels(const vox_file* voxData, const s32 frameI
 
 			aiVector3D cent(cxx, cyy, czz);
 
-			if (options.MeshesToWorldCenter)
+			if (options.Meshing.MeshesToWorldCenter)
 			{
 				for (unsigned int i = 0; i < mesh->mNumVertices; ++i)
 				{
@@ -1626,7 +1624,7 @@ static std::vector<aiScene*> GetModels(const vox_file* voxData, const s32 frameI
 			sceneSplit->mNumMeshes = 1;
 			sceneSplit->mMeshes = new aiMesh * [1] { meshes[i].Mesh };
 
-			if (options.GenerateMaterials)
+			if (options.Meshing.GenerateMaterials)
 			{
 				aiString texPath(meshes[i].imageName);
 				aiMaterial* mat = new aiMaterial();
@@ -1658,9 +1656,9 @@ static std::vector<aiScene*> GetModels(const vox_file* voxData, const s32 frameI
 
 		// TODO: set one material per mesh, or share a material? for shared materials, the texture individial export option should be turned off, since the material needs the whole atlas.
 
-		if (options.GenerateMaterials)
+		if (options.Meshing.GenerateMaterials)
 		{
-			if (options.MaterialPerMesh)
+			if (options.Meshing.MaterialPerMesh)
 			{
 				scene->mNumMaterials = meshes.size();
 				scene->mMaterials = new aiMaterial * [meshes.size()];
@@ -1686,7 +1684,7 @@ static std::vector<aiScene*> GetModels(const vox_file* voxData, const s32 frameI
 
 			s32 matIndex = meshes[i].Mesh->mMaterialIndex;
 
-			if (options.GenerateMaterials)
+			if (options.Meshing.GenerateMaterials)
 			{
 				aiString texPath(meshes[i].imageName);
 				aiMaterial* mat = new aiMaterial();
@@ -1713,7 +1711,7 @@ static std::vector<aiScene*> GetModels(const vox_file* voxData, const s32 frameI
 			sceneitem->mMaterials = new aiMaterial * [1] {new aiMaterial};
 		}
 
-		if (options.RemoveTJunctions)
+		if (options.Meshing.RemoveTJunctions)
 		{
 			for (unsigned int i = 0; i < sceneitem->mNumMeshes; ++i)
 			{
@@ -1812,8 +1810,8 @@ const std::vector<aiScene*> Run(const vox_file* voxData, const std::string& outp
 		scene->mMeshes = new aiMesh * [meshCount];
 		scene->mMaterials = new aiMaterial * [meshCount];
 		scene->mNumMeshes = (unsigned int)meshCount;
-		scene->mNumMaterials = (unsigned int)(options.SeparateTexturesPerMesh ? meshCount : 1);
-		if (options.SeparateTexturesPerMesh) {
+		scene->mNumMaterials = (unsigned int)(options.Texturing.SeparateTexturesPerMesh ? meshCount : 1);
+		if (options.Texturing.SeparateTexturesPerMesh) {
 			// each mesh gets its own material
 			for (size_t i = 0; i < meshCount; ++i) {
 				scene->mMaterials[i] = new aiMaterial();
@@ -1832,7 +1830,7 @@ const std::vector<aiScene*> Run(const vox_file* voxData, const std::string& outp
 		// Iterate through frames
 		int globalAtlasSize = 0;
 		std::vector<unsigned char> globalImage;
-		if (!options.SeparateTexturesPerMesh)
+		if (!options.Texturing.SeparateTexturesPerMesh)
 		{
 			// If one atlas for all, gather all faces first
 			std::vector<FaceRect> allFaces;
@@ -1845,7 +1843,7 @@ const std::vector<aiScene*> Run(const vox_file* voxData, const std::string& outp
 			}
 			// Pack combined faces
 			int dim = 16;
-			if (options.TexturesPOT) {
+			if (options.Texturing.TexturesPOT) {
 				while (true) {
 					if (PackFacesIntoAtlas(dim, allFaces)) break;
 					dim *= 2;
@@ -1902,7 +1900,7 @@ const std::vector<aiScene*> Run(const vox_file* voxData, const std::string& outp
 				auto& mdl = voxData->voxModels[modelIndex];
 				auto  box = mdl.boundingBox;
 
-				BuildMeshFromFaces(facesForMesh, globalAtlasSize, globalAtlasSize, options.FlatShading, voxData->palette, mesh, box);
+				BuildMeshFromFaces(facesForMesh, globalAtlasSize, globalAtlasSize, options.Meshing.FlatShading, voxData->palette, mesh, box);
 				LOG_INFO("Build meshes from faces, mesh: {0}", i);
 
 				// TODO: position origin issue, take into account the position of the objects, this should be used, reynardo
@@ -1911,7 +1909,7 @@ const std::vector<aiScene*> Run(const vox_file* voxData, const std::string& outp
 				//-----
 
 
-				mesh->mMaterialIndex = options.SeparateTexturesPerMesh ? (int)i : 0;
+				mesh->mMaterialIndex = options.Texturing.SeparateTexturesPerMesh ? (int)i : 0;
 				// Create node for this mesh
 				aiNode* node = new aiNode();
 				node->mName = aiString("Frame" + std::to_string(i));
@@ -1937,7 +1935,7 @@ const std::vector<aiScene*> Run(const vox_file* voxData, const std::string& outp
 
 				std::vector<FaceRect> faces = GreedyMesh_Atlas(voxData->voxModels[modelIndex], voxData->sizes[modelIndex], modelIndex);
 				int dim = 16;
-				if (options.TexturesPOT)
+				if (options.Texturing.TexturesPOT)
 				{
 					while (true)
 					{
@@ -1982,7 +1980,7 @@ const std::vector<aiScene*> Run(const vox_file* voxData, const std::string& outp
 				auto& mdl = voxData->voxModels[modelIndex];
 				auto  box = mdl.boundingBox;
 
-				BuildMeshFromFaces(faces, dim, dim, options.FlatShading, voxData->palette, mesh, box);
+				BuildMeshFromFaces(faces, dim, dim, options.Meshing.FlatShading, voxData->palette, mesh, box);
 
 				mesh->mMaterialIndex = (int)i;
 				// Node
@@ -2000,10 +1998,10 @@ const std::vector<aiScene*> Run(const vox_file* voxData, const std::string& outp
 		}
 		// If there was only one mesh in scene (no children used above), attach it directly to root node
 
-		LOG_INFO("TJuntctions: {0}", options.RemoveTJunctions);
+		LOG_INFO("TJuntctions: {0}", options.Meshing.RemoveTJunctions);
 
 		// TODO: This makes the algorithm freeze when a vox has multiple frames, and is exported as no separated
-		if (options.RemoveTJunctions)
+		if (options.Meshing.RemoveTJunctions)
 		{
 			for (unsigned int m = 0; m < scene->mNumMeshes; ++m)
 			{
@@ -2058,7 +2056,7 @@ const std::vector<aiScene*> Run(const vox_file* voxData, const std::string& outp
 ExportResults GreedyMesher::ExportVoxToModel(const std::string& inVoxPath, const std::string& outExportPath, const ExportOptions& options)
 {
 	std::shared_ptr<vox_file> voxData = VoxParser::read_vox_file(inVoxPath.c_str());
-	const auto scenes = Run(voxData.get(), outExportPath, options.ConvertOptions);
+	const auto scenes = Run(voxData.get(), outExportPath, options.Converting);
 
 	ExportResults results{};
 

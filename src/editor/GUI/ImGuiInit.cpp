@@ -11,7 +11,8 @@
 namespace VoxellerEditor
 {
 	VoxToProcessView view{};
-
+	GLFWwindow* _window = nullptr;
+	static bool g_Minimized = false;
 	void LoadFont()
 	{
 		ImGuiIO& io = ImGui::GetIO();
@@ -44,7 +45,20 @@ namespace VoxellerEditor
 		//ImGui_ImplOpenGL3_CreateFontsTexture();
 		io.FontDefault = myFont;
 	}
-	
+	void glfw_iconify_cb(GLFWwindow* wnd, int iconified)
+	{
+		g_Minimized = (iconified == GLFW_TRUE);
+		if (g_Minimized) {
+		}
+		else {
+			// immediately update framebuffer viewport & ImGui DisplaySize
+			int fbW, fbH;
+			glfwGetFramebufferSize(wnd, &fbW, &fbH);
+			glViewport(0, 0, fbW, fbH);
+			ImGuiIO& io = ImGui::GetIO();
+			io.DisplaySize = ImVec2((float)fbW, (float)fbH);
+		}
+	}
 	void ImGuiApp::Init(void* internalWindow)
 	{
 		// Setup Dear ImGui context
@@ -65,8 +79,11 @@ namespace VoxellerEditor
 		ImGui::StyleColorsDark();
 
 		// Init ImGui GLFW+OpenGL3 backend
-		ImGui_ImplGlfw_InitForOpenGL(static_cast<GLFWwindow*>(internalWindow), true);
+
+		_window = static_cast<GLFWwindow*>(internalWindow);
+		ImGui_ImplGlfw_InitForOpenGL(_window, true);
 		ImGui_ImplOpenGL3_Init("#version 150");  // or "#version 330 core", depending on your OpenGL
+		glfwSetWindowIconifyCallback(_window, glfw_iconify_cb);
 
 		LoadFont();
 	}
@@ -77,7 +94,10 @@ namespace VoxellerEditor
 		ImGui_ImplGlfw_NewFrame();
 		ImGui::NewFrame();
 
-		view.UpdateGUI();
+		if (!glfwGetWindowAttrib(_window, GLFW_ICONIFIED))
+		{
+			view.UpdateGUI();
+		}
 
 		// Render
 		ImGui::Render();

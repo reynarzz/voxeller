@@ -21,9 +21,12 @@ std::unique_ptr<ImGuiApp> imgui = nullptr;
 
 void Render(GLFWwindow* window)
 {
-	//Cursor::SetMode(CursorMode::NoDrop);
 
 	glfwPollEvents();
+
+
+	//Cursor::SetMode(CursorMode::NoDrop);
+
 	f32 color = 0.05f;
 
 	glClearColor(color, color, color, 1.0);
@@ -33,7 +36,9 @@ void Render(GLFWwindow* window)
 
 	imgui->Update();
 
+
 	glfwSwapBuffers(window);
+
 }
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
@@ -122,28 +127,29 @@ int Init()
 
 	Unvoxeller::ExportOptions exportOptions{};
 	exportOptions.OutputFormat = Unvoxeller::ModelFormat::FBX;
-	exportOptions.ConvertOptions.RemoveTJunctions = false;
-	exportOptions.ConvertOptions.WeldVertices = false;
-	exportOptions.ConvertOptions.FlatShading = true;
-	exportOptions.ConvertOptions.SeparateTexturesPerMesh = false;
-	exportOptions.ConvertOptions.MaterialPerMesh = true;
-	exportOptions.ConvertOptions.Scale = { 1.3f, 1.3f, 1.3f };
+	exportOptions.Converting.Meshing.RemoveTJunctions = false;
+	exportOptions.Converting.Meshing.WeldVertices = true;
+	exportOptions.Converting.Meshing.FlatShading = true;
+	exportOptions.Converting.Meshing.MaterialPerMesh = true;
+	exportOptions.Converting.Scale = { 1.3f, 1.3f, 1.3f };
 	//exportOptions.ConvertOptions.Pivots = { { 0.5f, 0.5f, 0.5f } };
-	exportOptions.ConvertOptions.ExportFramesSeparatelly = true;
-	exportOptions.ConvertOptions.ExportMeshesSeparatelly = false;
+	exportOptions.Converting.ExportFramesSeparatelly = true;
+	exportOptions.Converting.ExportMeshesSeparatelly = false;
 
-	exportOptions.ConvertOptions.GenerateMaterials = true;
-	exportOptions.ConvertOptions.MeshesToWorldCenter = false;
-	exportOptions.ConvertOptions.TexturesPOT = false;
+	exportOptions.Converting.Meshing.GenerateMaterials = true;
+	exportOptions.Converting.Meshing.MeshesToWorldCenter = false;
 
+	// Texturing:
+	exportOptions.Converting.Texturing.SeparateTexturesPerMesh = false;
+	exportOptions.Converting.Texturing.TexturesPOT = false;
+	exportOptions.Converting.Texturing.OptimizeTextures = false;
+	exportOptions.Converting.Texturing.TextureType = {};
 
 	// TODO:
-	exportOptions.ConvertOptions.RemoveOccludedFaces = false;
-	exportOptions.ConvertOptions.OptimizeTextures = false;
-	exportOptions.ConvertOptions.TextureType = {};
+	exportOptions.Converting.Meshing.RemoveOccludedFaces = false;
 
 	// V2
-	exportOptions.ConvertOptions.Lods = { 0.8f, 0.4f };
+	exportOptions.Converting.Lods = { 0.8f, 0.4f };
 
 
 	Unvoxeller::vox_quat s{};
@@ -151,8 +157,8 @@ int Init()
 	Unvoxeller::vox_vec3 a2s = -as;
 
 	//Chicken_van_2.vox
-	std::string path = Unvoxeller::File::GetExecutableDir() + "/testvox/nda/Ambulance_1.vox"; // Test this!
-	//std::string path = Unvoxeller::File::GetExecutableDir() + "/testvox/monu2.vox"; // Test this!
+	//std::string path = Unvoxeller::File::GetExecutableDir() + "/testvox/nda/Ambulance_1.vox"; // Test this!
+	std::string path = Unvoxeller::File::GetExecutableDir() + "/testvox/monu2.vox"; // Test this!
 	//std::string path = Unvoxeller::File::GetExecutableDir() + "/testvox/room.vox";
 	//std::string path = "testvox/nda/Ambulance_1.vox";
 	//std::string output = "testvox/nda/export/Output.fbx";
@@ -162,7 +168,14 @@ int Init()
 
 	while (!glfwWindowShouldClose(win))
 	{
-		Render(win);
+		if (glfwGetWindowAttrib(win, GLFW_ICONIFIED))
+		{
+			// Skip rendering or pause updates
+		}
+		else
+		{
+			Render(win);
+		}
 	}
 
 	glfwTerminate();
@@ -170,27 +183,27 @@ int Init()
 
 
 #ifdef _WIN32
-		#include <windows.h>
+#include <windows.h>
 
-		int WINAPI WinMain(
-			HINSTANCE hInstance,      // handle to current instance
-			HINSTANCE hPrevInstance,  // always NULL in modern Windows
-			LPSTR     lpCmdLine,      // command-line as a single string
-			int       nCmdShow        // how the window should be shown
-		)
-		{
-			return Init();
-		}
+int WINAPI WinMain(
+	HINSTANCE hInstance,      // handle to current instance
+	HINSTANCE hPrevInstance,  // always NULL in modern Windows
+	LPSTR     lpCmdLine,      // command-line as a single string
+	int       nCmdShow        // how the window should be shown
+)
+{
+	return Init();
+}
 
-		int main()
-		{
-			return Init();
-		}
+int main()
+{
+	return Init();
+}
 #else
-	int main()
-	{
-		return Init();
-	}
+int main()
+{
+	return Init();
+}
 #endif
 
 
