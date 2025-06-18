@@ -12,6 +12,9 @@
 #include <iostream>
 #include <imgui/imgui.h>
 
+// TODO:
+// - Fix small offset happening.
+
 using namespace VoxellerEditor;
 
 std::unique_ptr<ImGuiApp> imgui = nullptr;
