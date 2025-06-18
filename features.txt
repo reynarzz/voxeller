@@ -24,9 +24,15 @@ The last voxel convert tool you will ever need.
 
 [#Publishing]
 Publishing consist of 3 types, so we can sell components separatelly
-   1: Complete:
-	This contains the editor (single file exe), and all the libraries (shared) for diff compilers: windows, mac, android, ios, linux
+   1:Complete:
+	This contains the editor (single file exe), and all the libraries (shared) for different compilers: windows, mac, android, ios, linux
    2:Editor:
         Just the editor executable, single file, without dependencies.
    3:Libraries:
-        All the libraries (shared), windows, mac, android, ios, linux. All for diff compilers
+        All the libraries (shared), windows, mac, android, ios, linux. All for different compilers.
+
+
+For unity, in windows I have to compile the libraries with the right MSVC versions:
+	MSVC 2017 toolset for Unity 2019.x, 
+	MSVC 2019 toolset for Unity 2020+
+
