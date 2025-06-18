@@ -4,6 +4,7 @@
 #include <functional>
 #include <Unvoxeller/api.h>
 #include <Unvoxeller/Math/VoxVector.h>
+#include <array>
 
 namespace Unvoxeller
 {
@@ -82,8 +83,18 @@ namespace Unvoxeller
 		std::string OutPath = "";
 	};
 
+	// Create LOD from meshes.
+	struct UNVOXELLER_API LODOptions 
+	{
+		std::array<f32, 10> Factors = {0,0,0,0,0,0,0,0,0,0};
+	};
+
 	struct UNVOXELLER_API ConvertOptions
 	{
+		ConvertOptions() : Pivots({})
+		{
+		}
+
 		// Remove T-Juntions
 		bool RemoveTJunctions = false;
 
@@ -123,6 +134,7 @@ namespace Unvoxeller
 		// Tip: use it alongside "RemoveOcludedFaces" for cleaner and performat results.
 		bool MergeMeshes = false;
 
+
 		// If true:
 		// -When exporting separated textures per mesh, materials will reuse the textures files (Ex: two materials could point to the same texture)
 		// -When using texture atlas, faces will reuse the same uv locations.
@@ -130,11 +142,15 @@ namespace Unvoxeller
 		bool OptimizeTextures = false;
 
 		TextureType TextureType = TextureType::Atlas;
+		
+		// To create n lods set factors, Factor[0] = LOD1, Factor[1] = LOD2
+		LODOptions Lods;
 
 		// Scale, Ex, if 1.0, every single voxel will take up 1 unit.
 		vox_vec3 Scale = { 1.0f, 1.0f, 1.0f };
 
-		vox_vec3 Pivot{ 0.5f, 0.5f, 0.5f };
+		// Set pivots for every mesh indexwise, if only one is added, it will be shared across meshes.
+		std::vector<vox_vec3> Pivots;
 	};
 
 	struct UNVOXELLER_API ExportOptions

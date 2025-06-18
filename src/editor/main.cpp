@@ -128,7 +128,7 @@ int Init()
 	exportOptions.ConvertOptions.SeparateTexturesPerMesh = false;
 	exportOptions.ConvertOptions.MaterialPerMesh = true;
 	exportOptions.ConvertOptions.Scale = { 1.3f, 1.3f, 1.3f };
-	//exportOptions.ConvertOptions.Pivot = { 0.5f, 0.0f, 0.5f };
+	//exportOptions.ConvertOptions.Pivots = { { 0.5f, 0.5f, 0.5f } };
 	exportOptions.ConvertOptions.ExportFramesSeparatelly = true;
 	exportOptions.ConvertOptions.ExportMeshesSeparatelly = false;
 

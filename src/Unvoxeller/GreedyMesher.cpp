@@ -1306,11 +1306,43 @@ static std::vector<aiScene*> GetModels(const vox_file* voxData, const s32 frameI
 
 	s32 materialIndex = 0;
 
+	const std::vector<vox_vec3>& pivots = options.Pivots;// Rotate(wxf.rot, options.Pivot);
+
 	if (voxData->shapes.size() > 0)
 	{
+		const bool canIteratePivots = pivots.size() > 1 && pivots.size() == voxData->shapes.size();
+
+		if (pivots.size() == 0) 
+		{
+			LOG_WARN("Default pivot '(0.5, 0.5, 0.5)' will be used for all meshes.");
+		}
+		else if (pivots.size() == 1)  
+		{
+			LOG_WARN("First pivot will be used for all meshes.");
+		}
+		else if (!canIteratePivots)
+		{
+			LOG_WARN("Pivots '{0}' do not match the amount of meshes: {1}. Using default (0.5, 0.5, 0.5)", pivots.size(), voxData->shapes.size());
+		}
+		else 
+		{
+			LOG_INFO("Custom pivots in use: '{0}'", pivots.size());
+		}
+
 		s32 shapeIndex{};
 		for (auto& shpKV : voxData->shapes)
 		{
+			vox_vec3 currentPivot { 0.5f, 0.5f, 0.5f };
+
+			if (canIteratePivots)
+			{
+				currentPivot = pivots[shapeIndex];
+			}
+			else if (pivots.size() == 1) 
+			{
+				currentPivot = pivots[0];
+			}
+
 			std::string name = shpKV.second.attributes.count("_name") ? shpKV.second.attributes.at("_name") : "vox";
 
 			const vox_nSHP& shape = shpKV.second;
@@ -1431,11 +1463,10 @@ static std::vector<aiScene*> GetModels(const vox_file* voxData, const s32 frameI
 			//  float cyy = box.minY + (box.maxY - box.minY) * options.Pivot.y;
 			//  float czz = box.minZ + (box.maxZ - box.minZ) * options.Pivot.z;
 
-			auto pivot = options.Pivot;// Rotate(wxf.rot, options.Pivot);
 			auto bbbox = ComputeMeshBoundingBox(mesh);
-			float cxx = bbbox.minX + (bbbox.maxX - bbbox.minX) * pivot.x;
-			float cyy = bbbox.minY + (bbbox.maxY - bbbox.minY) * pivot.y;
-			float czz = bbbox.minZ + (bbbox.maxZ - bbbox.minZ) * pivot.z;
+			float cxx = bbbox.minX + (bbbox.maxX - bbbox.minX) * currentPivot.x;
+			float cyy = bbbox.minY + (bbbox.maxY - bbbox.minY) * currentPivot.y;
+			float czz = bbbox.minZ + (bbbox.maxZ - bbbox.minZ) * currentPivot.z;
 
 			aiVector3D cent(cxx, cyy, czz);
 
