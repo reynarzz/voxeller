@@ -117,7 +117,7 @@ namespace Unvoxeller
 		bool GenerateTextures = true;
 
 		// Parts of meshes that are not visible will be removed.
-		bool RemoveOcludedFaces = false;
+		bool RemoveOccludedFaces = false;
 
 		// All meshes will be merged, this will overwrite texture export options, since an atlas will be exported. 
 		// Tip: use it alongside "RemoveOcludedFaces" for cleaner and performat results.

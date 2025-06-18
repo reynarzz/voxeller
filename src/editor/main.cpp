@@ -16,10 +16,6 @@ using namespace VoxellerEditor;
 
 std::unique_ptr<ImGuiApp> imgui = nullptr;
 
-// TODO:
-   // When I flipped a mesh, I should flip the normals as well
-
-
 void Render(GLFWwindow* window)
 {
 	//Cursor::SetMode(CursorMode::NoDrop);
@@ -142,8 +138,8 @@ int Init()
 	Unvoxeller::vox_vec3 a2s = -as;
 
 	//Chicken_van_2.vox
-	std::string path = Unvoxeller::File::GetExecutableDir() + "/testvox/nda/Ambulance_1.vox"; // Test this!
-	//std::string path = Unvoxeller::File::GetExecutableDir() + "/testvox/chr_knight.vox"; // Test this!
+	std::string path = Unvoxeller::File::GetExecutableDir() + "/testvox/nda/Ambulance_2.vox"; // Test this!
+	//std::string path = Unvoxeller::File::GetExecutableDir() + "/testvox/monu2.vox"; // Test this!
 	//std::string path = "B:/Projects/Unvoxeller/bin/Debug/testvox/room.vox"; 
 	//std::string path = "testvox/nda/Ambulance_1.vox";
 	//std::string output = "testvox/nda/export/Output.fbx";

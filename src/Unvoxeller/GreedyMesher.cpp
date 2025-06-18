@@ -613,8 +613,8 @@ static void BuildMeshFromFaces(
 	const std::vector<color>& palette,
 	aiMesh* mesh,
 	const bbox& box,
-	const vox_mat3* rotation = nullptr,
-	const vox_vec3* translation = nullptr
+	const vox_mat3& rotation = {},
+	const vox_vec3& translation = {}
 ) {
 	// 1) Build raw voxel-space verts & indices
 	struct Vertex { float px, py, pz, nx, ny, nz, u, v; };
@@ -626,10 +626,12 @@ static void BuildMeshFromFaces(
 	std::unordered_map<VertKey, unsigned int, VertKeyHash> vertMap;
 	vertMap.reserve(faces.size() * 4);
 
+	
+
 	const float det =
-		rotation->m00 * (rotation->m11 * rotation->m22 - rotation->m12 * rotation->m21)
-		- rotation->m01 * (rotation->m10 * rotation->m22 - rotation->m12 * rotation->m20)
-		+ rotation->m02 * (rotation->m10 * rotation->m21 - rotation->m11 * rotation->m20);
+		rotation.m00 * (rotation.m11 * rotation.m22 - rotation.m12 * rotation.m21)
+		- rotation.m01 * (rotation.m10 * rotation.m22 - rotation.m12 * rotation.m20)
+		+ rotation.m02 * (rotation.m10 * rotation.m21 - rotation.m11 * rotation.m20);
 
 	// det == +1 → pure rotation (right-handed), det == –1 → includes a mirror (left-handed)
 
@@ -789,35 +791,30 @@ static void BuildMeshFromFaces(
 		float nz = verts[i].nz;
 
 		// apply MagicaVoxel rotation (if any)
-		if (rotation) 
-		{
-			float tx = rotation->m00 * x + rotation->m01 * y + rotation->m02 * z;
-			float ty = rotation->m10 * x + rotation->m11 * y + rotation->m12 * z;
-			float tz = rotation->m20 * x + rotation->m21 * y + rotation->m22 * z;
+			float tx = rotation.m00 * x + rotation.m01 * y + rotation.m02 * z;
+			float ty = rotation.m10 * x + rotation.m11 * y + rotation.m12 * z;
+			float tz = rotation.m20 * x + rotation.m21 * y + rotation.m22 * z;
 			x = tx; 
 			y = ty; 
 			z = tz;
 
-			tx = rotation->m00 * nx + rotation->m01 * ny + rotation->m02 * nz;
-			ty = rotation->m10 * nx + rotation->m11 * ny + rotation->m12 * nz;
-			tz = rotation->m20 * nx + rotation->m21 * ny + rotation->m22 * nz;
+			tx = rotation.m00 * nx + rotation.m01 * ny + rotation.m02 * nz;
+			ty = rotation.m10 * nx + rotation.m11 * ny + rotation.m12 * nz;
+			tz = rotation.m20 * nx + rotation.m21 * ny + rotation.m22 * nz;
 
 			nx = tx;
 			ny = ty;
 			nz = tz;
-		}
 
 		// swizzle into Assimp (X,Z,Y)
 		aiVector3D pos{ x, z, y };
 		aiVector3D norm{ nx, nz, ny };
 
 		// apply MagicaVoxel translation (with Y↔Z swap)
-		if (translation) 
-		{
-			pos.x += translation->x;
-			pos.y += translation->z;
-			pos.z += translation->y;
-		}
+		
+			pos.x += translation.x;
+			pos.y += translation.z;
+			pos.z += translation.y;
 
 		// un‐mirror X to restore right‐handedness
 		pos.x = -pos.x;
@@ -1395,10 +1392,9 @@ static std::vector<aiScene*> GetModels(const vox_file* voxData, const s32 frameI
 				voxData->palette,
 				mesh,
 				box,          // pivot centering
-				&wxf.rot,     // MagicaVoxel 3×3 rotation
-				&wxf.trans    // MagicaVoxel translation
+				wxf.rot,     // MagicaVoxel 3×3 rotation
+				wxf.trans    // MagicaVoxel translation
 			);
-
 
 			// 3) Recenter every vertex so that the mesh’s center is at the origin
 
