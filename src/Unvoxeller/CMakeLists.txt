@@ -113,6 +113,16 @@ target_link_libraries(Unvoxeller PRIVATE
   spdlog
 )
 
+#TODO: Disable exceptions and RTTI in release 
+#target_compile_options(Unvoxeller PRIVATE
+#  # disable exceptions in Release
+#  $<$<AND:$<CXX_COMPILER_ID:MSVC>,$<CONFIG:Release>>:/EHs->
+#  $<$<AND:$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>>,$<CONFIG:Release>>:-fno-exceptions>
+#  # disable RTTI in Release
+#  $<$<AND:$<CXX_COMPILER_ID:MSVC>,$<CONFIG:Release>>:/GR->
+#  $<$<AND:$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>>,$<CONFIG:Release>>:-fno-rtti>
+#)
+
 
 if(APPLE)
 target_link_libraries(Unvoxeller PRIVATE
