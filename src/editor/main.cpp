@@ -127,7 +127,7 @@ int Init()
 	imgui->Init(win);
 
 	Unvoxeller::ExportOptions exportOptions{};
-	exportOptions.OutputFormat = Unvoxeller::ModelFormat::OBJ;
+	exportOptions.OutputFormat = Unvoxeller::ModelFormat::FBX;
 	exportOptions.Converting.Meshing.RemoveTJunctions = false;
 	exportOptions.Converting.Meshing.WeldVertices = false;
 	exportOptions.Converting.Meshing.FlatShading = false;
@@ -158,9 +158,9 @@ int Init()
 	Unvoxeller::vox_vec3 a2s = -as;
 
 	//Chicken_van_2.vox
-	//std::string path = Unvoxeller::File::GetExecutableDir() + "/testvox/nda/Ambulance_1.vox"; // Test this!
+	std::string path = Unvoxeller::File::GetExecutableDir() + "/testvox/nda/Ambulance_1.vox"; // Test this!
 	//std::string path = Unvoxeller::File::GetExecutableDir() + "/testvox/monu2.vox"; // Test this!
-	std::string path = Unvoxeller::File::GetExecutableDir() + "/testvox/room.vox";
+	//std::string path = Unvoxeller::File::GetExecutableDir() + "/testvox/room.vox";
 	//std::string output = "testvox/nda/export/Output.fbx";
 	std::string output = Unvoxeller::File::GetExecutableDir() + "/testvox/nda/export/Output.fbx";
 
