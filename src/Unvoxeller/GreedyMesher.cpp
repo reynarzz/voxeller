@@ -616,8 +616,155 @@ struct VertexOpt
 };
 
 // Optimize all meshes in an aiScene using meshoptimizer
+//void OptimizeAssimpScene(aiScene* scene) 
+//{
+//	for (unsigned int mi = 0; mi < scene->mNumMeshes; ++mi)
+//	{
+//		aiMesh* mesh = scene->mMeshes[mi];
+//
+//		// 1) Build interleaved vertex buffer
+//		std::vector<VertexOpt> vertices(mesh->mNumVertices);
+//
+//		for (unsigned int i = 0; i < mesh->mNumVertices; ++i) 
+//		{
+//			// Position
+//			vertices[i].pos[0] = mesh->mVertices[i].x;
+//			vertices[i].pos[1] = mesh->mVertices[i].y;
+//			vertices[i].pos[2] = mesh->mVertices[i].z;
+//			// Normal (if present)
+//			if (mesh->HasNormals()) {
+//				vertices[i].normal[0] = mesh->mNormals[i].x;
+//				vertices[i].normal[1] = mesh->mNormals[i].y;
+//				vertices[i].normal[2] = mesh->mNormals[i].z;
+//			}
+//			else {
+//				vertices[i].normal[0] = vertices[i].normal[1] = vertices[i].normal[2] = 0.0f;
+//			}
+//			// UV0 (if present)
+//			if (mesh->mTextureCoords[0]) {
+//				vertices[i].uv[0] = mesh->mTextureCoords[0][i].x;
+//				vertices[i].uv[1] = mesh->mTextureCoords[0][i].y;
+//			}
+//			else {
+//				vertices[i].uv[0] = vertices[i].uv[1] = 0.0f;
+//			}
+//		}
+//
+//		// 2) Build index buffer (assume triangles)
+//		std::vector<uint32_t> indices;
+//		indices.reserve(mesh->mNumFaces * 3);
+//		for (unsigned int f = 0; f < mesh->mNumFaces; ++f) {
+//			const aiFace& face = mesh->mFaces[f];
+//			if (face.mNumIndices == 3) {
+//				indices.push_back(face.mIndices[0]);
+//				indices.push_back(face.mIndices[1]);
+//				indices.push_back(face.mIndices[2]);
+//			}
+//			// skip non-triangular faces
+//		}
+//
+//		// 3) Weld (dedupe) vertices
+//		std::vector<uint32_t> remap(mesh->mNumVertices);
+//		size_t uniqueCount = meshopt_generateVertexRemap(
+//			remap.data(), indices.data(), indices.size(),
+//			vertices.data(), vertices.size(), sizeof(VertexOpt)
+//		);
+//
+//		std::vector<VertexOpt> newVertices(uniqueCount);
+//		std::vector<uint32_t> newIndices(indices.size());
+//
+//		meshopt_remapVertexBuffer(
+//			newVertices.data(), vertices.data(), vertices.size(), sizeof(VertexOpt), remap.data()
+//		);
+//		meshopt_remapIndexBuffer(
+//			newIndices.data(), indices.data(), indices.size(), remap.data()
+//		);
+//
+//		size_t targetIndexCount = indices.size() * 0.5; /* e.g. indices.size() * 0.5 */;
+//		float  maxError = 0.01f /* world‐space error threshold */;
+//		meshopt_simplify(
+//			newIndices.data(),   // dst indices
+//			newIndices.data(),   // src indices
+//			newIndices.size(),
+//			reinterpret_cast<const float*>(newVertices.data()),
+//			newVertices.size(),
+//			sizeof(VertexOpt),
+//			targetIndexCount,
+//			maxError,
+//			meshopt_SimplifyLockBorder  // optional: lock UV‐seams
+//		);
+//
+//
+//		// 4) Optimize for GPU caches & overdraw
+//		meshopt_optimizeVertexCache(
+//			newIndices.data(), newIndices.data(), newIndices.size(), uniqueCount
+//		);
+//
+//		meshopt_optimizeOverdraw(
+//			newIndices.data(),                           // destination indices
+//			newIndices.data(),                           // source    indices
+//			newIndices.size(),                           // index_count
+//			reinterpret_cast<const float*>(newVertices.data()), // vertex_positions (pos.x of VertexOpt must be first)
+//			newVertices.size(),                          // vertex_count
+//			sizeof(VertexOpt),                           // vertex_positions_stride (bytes between each pos)
+//			1.05f                                        // threshold
+//		);
+//
+//		
+//		size_t finalVertexCount = meshopt_optimizeVertexFetch(
+//			newVertices.data(),   // destination vertex buffer
+//			newIndices.data(),    // in/out index buffer
+//			newIndices.size(),    // index_count
+//			newVertices.data(),   // source vertex buffer
+//			newVertices.size(),   // vertex_count
+//			sizeof(VertexOpt)     // vertex_size (stride in bytes)
+//		);
+//		// 5) Write back to aiMesh (replace vertex & face arrays)
+//		// Free old data
+//		delete[] mesh->mVertices;
+//		delete[] mesh->mNormals;
+//		delete[] mesh->mTextureCoords[0];
+//
+//		// Allocate new arrays
+//		mesh->mNumVertices = static_cast<unsigned int>(uniqueCount);
+//		mesh->mVertices = new aiVector3D[mesh->mNumVertices];
+//		mesh->mNormals = new aiVector3D[mesh->mNumVertices];
+//		mesh->mTextureCoords[0] = new aiVector3D[mesh->mNumVertices];
+//
+//		for (unsigned int i = 0; i < mesh->mNumVertices; ++i) {
+//			mesh->mVertices[i] = aiVector3D(
+//				newVertices[i].pos[0], newVertices[i].pos[1], newVertices[i].pos[2]
+//			);
+//			mesh->mNormals[i] = aiVector3D(
+//				newVertices[i].normal[0], newVertices[i].normal[1], newVertices[i].normal[2]
+//			);
+//			mesh->mTextureCoords[0][i] = aiVector3D(
+//				newVertices[i].uv[0], newVertices[i].uv[1], 0.0f
+//			);
+//		}
+//
+//		// Faces
+//		size_t newFaceCount = newIndices.size() / 3;
+//		delete[] mesh->mFaces;
+//		mesh->mNumFaces = static_cast<unsigned int>(newFaceCount);
+//		mesh->mFaces = new aiFace[mesh->mNumFaces];
+//
+//		for (unsigned int f = 0; f < mesh->mNumFaces; ++f) {
+//			aiFace& face = mesh->mFaces[f];
+//			face.mNumIndices = 3;
+//			face.mIndices = new unsigned int[3];
+//			face.mIndices[0] = newIndices[f * 3 + 0];
+//			face.mIndices[1] = newIndices[f * 3 + 1];
+//			face.mIndices[2] = newIndices[f * 3 + 2];
+//		}
+//	}
+//}
+
+// New Optimizer
 void OptimizeAssimpScene(aiScene* scene) 
 {
+	LOG_INFO("Optimizing mesh");
+
 	for (unsigned int mi = 0; mi < scene->mNumMeshes; ++mi)
 	{
 		aiMesh* mesh = scene->mMeshes[mi];
@@ -663,62 +810,76 @@ void OptimizeAssimpScene(aiScene* scene)
 			// skip non-triangular faces
 		}
 
-		// 3) Weld (dedupe) vertices
-		std::vector<uint32_t> remap(mesh->mNumVertices);
-		size_t uniqueCount = meshopt_generateVertexRemap(
-			remap.data(), indices.data(), indices.size(),
+		std::vector<uint32_t> remap1(vertices.size());
+		size_t unique1 = meshopt_generateVertexRemap(
+			remap1.data(),
+			indices.data(), indices.size(),
 			vertices.data(), vertices.size(), sizeof(VertexOpt)
 		);
 
-		std::vector<VertexOpt> newVertices(uniqueCount);
-		std::vector<uint32_t> newIndices(indices.size());
+		std::vector<VertexOpt> weldedVerts(unique1);
+		std::vector<uint32_t>  weldedIdx(indices.size());
 
 		meshopt_remapVertexBuffer(
-			newVertices.data(), vertices.data(), vertices.size(), sizeof(VertexOpt), remap.data()
+			weldedVerts.data(),
+			vertices.data(), vertices.size(), sizeof(VertexOpt),
+			remap1.data()
 		);
 		meshopt_remapIndexBuffer(
-			newIndices.data(), indices.data(), indices.size(), remap.data()
+			weldedIdx.data(),
+			indices.data(), indices.size(),
+			remap1.data()
 		);
 
-		size_t targetIndexCount = indices.size() * 0.5; /* e.g. indices.size() * 0.5 */;
-		float  maxError = 0.01f /* world‐space error threshold */;
-		meshopt_simplify(
-			newIndices.data(),   // dst indices
-			newIndices.data(),   // src indices
-			newIndices.size(),
-			reinterpret_cast<const float*>(newVertices.data()),
-			newVertices.size(),
-			sizeof(VertexOpt),
-			targetIndexCount,
-			maxError,
-			meshopt_SimplifyLockBorder  // optional: lock UV‐seams
+		// 2) Simplify (this will rewrite weldedIdx in-place and return new index count)
+		size_t targetIdx = weldedIdx.size() / 10;     // e.g. half the triangles
+		float  maxError = 1.5f;                    // world-space error
+		size_t simplifiedIdxCount = meshopt_simplify(
+			weldedIdx.data(), weldedIdx.data(), weldedIdx.size(),
+			reinterpret_cast<const float*>(weldedVerts.data()),
+			weldedVerts.size(), sizeof(VertexOpt),
+			targetIdx, maxError,
+			meshopt_SimplifyLockBorder
 		);
 
+		// shrink index buffer to actual size
+		weldedIdx.resize(simplifiedIdxCount);
+		// 3) Second weld (throw away verts not referenced by any triangle)
+		std::vector<uint32_t> remap2(weldedVerts.size());
+		size_t unique2 = meshopt_generateVertexRemap(
+			remap2.data(),
+			weldedIdx.data(), weldedIdx.size(),
+			weldedVerts.data(), weldedVerts.size(), sizeof(VertexOpt)
+		);
 
-		// 4) Optimize for GPU caches & overdraw
+		std::vector<VertexOpt> finalVerts(unique2);
+		meshopt_remapVertexBuffer(
+			finalVerts.data(),
+			weldedVerts.data(), weldedVerts.size(), sizeof(VertexOpt),
+			remap2.data()
+		);
+		meshopt_remapIndexBuffer(
+			weldedIdx.data(),
+			weldedIdx.data(), weldedIdx.size(),
+			remap2.data()
+		);
+
+		// 4) GPU-friendly reordering (cache, overdraw, fetch)
 		meshopt_optimizeVertexCache(
-			newIndices.data(), newIndices.data(), newIndices.size(), uniqueCount
+			weldedIdx.data(), weldedIdx.data(), weldedIdx.size(), finalVerts.size()
 		);
-
 		meshopt_optimizeOverdraw(
-			newIndices.data(),                           // destination indices
-			newIndices.data(),                           // source    indices
-			newIndices.size(),                           // index_count
-			reinterpret_cast<const float*>(newVertices.data()), // vertex_positions (pos.x of VertexOpt must be first)
-			newVertices.size(),                          // vertex_count
-			sizeof(VertexOpt),                           // vertex_positions_stride (bytes between each pos)
-			1.05f                                        // threshold
+			weldedIdx.data(), weldedIdx.data(), weldedIdx.size(),
+			reinterpret_cast<const float*>(finalVerts.data()),
+			finalVerts.size(), sizeof(VertexOpt),
+			1.05f
+		);
+		meshopt_optimizeVertexFetch(
+			finalVerts.data(), weldedIdx.data(), weldedIdx.size(),
+			finalVerts.data(), finalVerts.size(), sizeof(VertexOpt)
 		);
 
 		
-		size_t finalVertexCount = meshopt_optimizeVertexFetch(
-			newVertices.data(),   // destination vertex buffer
-			newIndices.data(),    // in/out index buffer
-			newIndices.size(),    // index_count
-			newVertices.data(),   // source vertex buffer
-			newVertices.size(),   // vertex_count
-			sizeof(VertexOpt)     // vertex_size (stride in bytes)
-		);
 		// 5) Write back to aiMesh (replace vertex & face arrays)
 		// Free old data
 		delete[] mesh->mVertices;
@@ -726,25 +887,25 @@ void OptimizeAssimpScene(aiScene* scene)
 		delete[] mesh->mTextureCoords[0];
 
 		// Allocate new arrays
-		mesh->mNumVertices = static_cast<unsigned int>(uniqueCount);
+		mesh->mNumVertices = static_cast<unsigned int>(finalVerts.size());
 		mesh->mVertices = new aiVector3D[mesh->mNumVertices];
 		mesh->mNormals = new aiVector3D[mesh->mNumVertices];
 		mesh->mTextureCoords[0] = new aiVector3D[mesh->mNumVertices];
 
 		for (unsigned int i = 0; i < mesh->mNumVertices; ++i) {
 			mesh->mVertices[i] = aiVector3D(
-				newVertices[i].pos[0], newVertices[i].pos[1], newVertices[i].pos[2]
+				finalVerts[i].pos[0], finalVerts[i].pos[1], finalVerts[i].pos[2]
 			);
 			mesh->mNormals[i] = aiVector3D(
-				newVertices[i].normal[0], newVertices[i].normal[1], newVertices[i].normal[2]
+				finalVerts[i].normal[0], finalVerts[i].normal[1], finalVerts[i].normal[2]
 			);
 			mesh->mTextureCoords[0][i] = aiVector3D(
-				newVertices[i].uv[0], newVertices[i].uv[1], 0.0f
+				finalVerts[i].uv[0], finalVerts[i].uv[1], 0.0f
 			);
 		}
 
 		// Faces
-		size_t newFaceCount = newIndices.size() / 3;
+		size_t newFaceCount = weldedIdx.size() / 3;
 		delete[] mesh->mFaces;
 		mesh->mNumFaces = static_cast<unsigned int>(newFaceCount);
 		mesh->mFaces = new aiFace[mesh->mNumFaces];
@@ -753,9 +914,9 @@ void OptimizeAssimpScene(aiScene* scene)
 			aiFace& face = mesh->mFaces[f];
 			face.mNumIndices = 3;
 			face.mIndices = new unsigned int[3];
-			face.mIndices[0] = newIndices[f * 3 + 0];
-			face.mIndices[1] = newIndices[f * 3 + 1];
-			face.mIndices[2] = newIndices[f * 3 + 2];
+			face.mIndices[0] = weldedIdx[f * 3 + 0];
+			face.mIndices[1] = weldedIdx[f * 3 + 1];
+			face.mIndices[2] = weldedIdx[f * 3 + 2];
 		}
 	}
 }

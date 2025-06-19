@@ -1,4 +1,3 @@
-#pragma once
 #include <Unvoxeller/File.h>
 
 namespace Unvoxeller

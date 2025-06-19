@@ -163,7 +163,6 @@ int Init()
 	//std::string path = Unvoxeller::File::GetExecutableDir() + "/testvox/nda/Ambulance_1.vox"; // Test this!
 	std::string path = Unvoxeller::File::GetExecutableDir() + "/testvox/monu2.vox"; // Test this!
 	//std::string path = Unvoxeller::File::GetExecutableDir() + "/testvox/room.vox";
-	//std::string path = "testvox/nda/Ambulance_1.vox";
 	//std::string output = "testvox/nda/export/Output.fbx";
 	std::string output = Unvoxeller::File::GetExecutableDir() + "/testvox/nda/export/Output.fbx";
 
