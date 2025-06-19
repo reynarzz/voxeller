@@ -18,8 +18,6 @@
 // - Pallete textures (decide the max width/height. Note not override POT)
 // - Localization: English, Spanish, French, Chinese, Japanese, German.
 
-using namespace VoxellerEditor;
-
 std::unique_ptr<ImGuiApp> imgui = nullptr;
 
 void Render(GLFWwindow* window)
@@ -129,13 +127,13 @@ int Init()
 	imgui->Init(win);
 
 	Unvoxeller::ExportOptions exportOptions{};
-	exportOptions.OutputFormat = Unvoxeller::ModelFormat::FBX;
+	exportOptions.OutputFormat = Unvoxeller::ModelFormat::OBJ;
 	exportOptions.Converting.Meshing.RemoveTJunctions = false;
 	exportOptions.Converting.Meshing.WeldVertices = false;
-	exportOptions.Converting.Meshing.FlatShading = true;
+	exportOptions.Converting.Meshing.FlatShading = false;
 	exportOptions.Converting.Meshing.MaterialPerMesh = true;
 	exportOptions.Converting.Scale = { 1.3f, 1.3f, 1.3f };
-	//exportOptions.ConvertOptions.Pivots = { { 0.5f, 0.5f, 0.5f } };
+	exportOptions.Converting.Pivots = { { 0.5f, 0.0f, 0.5f } };
 	exportOptions.Converting.ExportFramesSeparatelly = true;
 	exportOptions.Converting.ExportMeshesSeparatelly = false;
 
@@ -161,8 +159,8 @@ int Init()
 
 	//Chicken_van_2.vox
 	//std::string path = Unvoxeller::File::GetExecutableDir() + "/testvox/nda/Ambulance_1.vox"; // Test this!
-	std::string path = Unvoxeller::File::GetExecutableDir() + "/testvox/monu2.vox"; // Test this!
-	//std::string path = Unvoxeller::File::GetExecutableDir() + "/testvox/room.vox";
+	//std::string path = Unvoxeller::File::GetExecutableDir() + "/testvox/monu2.vox"; // Test this!
+	std::string path = Unvoxeller::File::GetExecutableDir() + "/testvox/room.vox";
 	//std::string output = "testvox/nda/export/Output.fbx";
 	std::string output = Unvoxeller::File::GetExecutableDir() + "/testvox/nda/export/Output.fbx";
 

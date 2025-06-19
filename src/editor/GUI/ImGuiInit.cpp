@@ -8,108 +8,105 @@
 #include <GUI/Views/VoxToProcessView.h>
 #include <Unvoxeller/File.h>
 
-namespace VoxellerEditor
+VoxToProcessView view{};
+GLFWwindow* _window = nullptr;
+static bool g_Minimized = false;
+void LoadFont()
 {
-	VoxToProcessView view{};
-	GLFWwindow* _window = nullptr;
-	static bool g_Minimized = false;
-	void LoadFont()
-	{
+	ImGuiIO& io = ImGui::GetIO();
+	io.Fonts->Clear(); // if you want only your custom font
+
+	// 3) Add your font(s)
+	//   - path: the file path to your .ttf
+	//   - size: font size in pixels
+	//   - glyphRanges: optional to limit which glyphs get baked
+
+	const std::string fontPath = Unvoxeller::File::GetExecutableDir() + "/assets/fonts/ProductSans-Medium.ttf";
+	ImFont* myFont = io.Fonts->AddFontFromFileTTF(
+		fontPath.c_str(),
+		16.0f,               // size in pixels
+		nullptr,             // ImFontConfig*, or nullptr
+		io.Fonts->GetGlyphRangesDefault()
+	);
+	IM_ASSERT(myFont != nullptr);  // make sure it loaded
+
+	// 4) Build atlas texture
+	// This will automatically be done by the backend on the first NewFrame()
+	// or you can call:
+	//unsigned char* pixels; int width, height;
+	//io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
+	// then upload the pixels to a GPU texture and set io.Fonts->TexID = yourTextureID
+
+	// 5) (Optionally) tell your renderer backend
+	// e.g. for OpenGL:
+	//ImGui_ImplOpenGL3_DestroyFontsTexture();
+	//ImGui_ImplOpenGL3_CreateFontsTexture();
+	io.FontDefault = myFont;
+}
+void glfw_iconify_cb(GLFWwindow* wnd, int iconified)
+{
+	g_Minimized = (iconified == GLFW_TRUE);
+	if (g_Minimized) {
+	}
+	else {
+		// immediately update framebuffer viewport & ImGui DisplaySize
+		int fbW, fbH;
+		glfwGetFramebufferSize(wnd, &fbW, &fbH);
+		glViewport(0, 0, fbW, fbH);
 		ImGuiIO& io = ImGui::GetIO();
-		io.Fonts->Clear(); // if you want only your custom font
-
-		// 3) Add your font(s)
-		//   - path: the file path to your .ttf
-		//   - size: font size in pixels
-		//   - glyphRanges: optional to limit which glyphs get baked
-
-		const std::string fontPath = Unvoxeller::File::GetExecutableDir() + "/assets/fonts/ProductSans-Medium.ttf";
-		ImFont* myFont = io.Fonts->AddFontFromFileTTF(
-			fontPath.c_str(),
-			16.0f,               // size in pixels
-			nullptr,             // ImFontConfig*, or nullptr
-			io.Fonts->GetGlyphRangesDefault()
-		);
-		IM_ASSERT(myFont != nullptr);  // make sure it loaded
-
-		// 4) Build atlas texture
-		// This will automatically be done by the backend on the first NewFrame()
-		// or you can call:
-		//unsigned char* pixels; int width, height;
-		//io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
-		// then upload the pixels to a GPU texture and set io.Fonts->TexID = yourTextureID
-
-		// 5) (Optionally) tell your renderer backend
-		// e.g. for OpenGL:
-		//ImGui_ImplOpenGL3_DestroyFontsTexture();
-		//ImGui_ImplOpenGL3_CreateFontsTexture();
-		io.FontDefault = myFont;
+		io.DisplaySize = ImVec2((float)fbW, (float)fbH);
 	}
-	void glfw_iconify_cb(GLFWwindow* wnd, int iconified)
+}
+void ImGuiApp::Init(void* internalWindow)
+{
+	// Setup Dear ImGui context
+	IMGUI_CHECKVERSION();
+	ImGui::CreateContext();
+	ImGuiIO& io = ImGui::GetIO();
+	(void)io;
+
+	//io.MouseDrawCursor = false;
+	//io.ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange;
+	// Disable writing to disk by nulling out the filename:
+	io.IniFilename = nullptr;
+
+	// Optionally disable log file too (if you don't want Dear ImGui to write a .log):
+	io.LogFilename = nullptr;
+
+	// Setup Dear ImGui style
+	ImGui::StyleColorsDark();
+
+	// Init ImGui GLFW+OpenGL3 backend
+
+	_window = static_cast<GLFWwindow*>(internalWindow);
+	ImGui_ImplGlfw_InitForOpenGL(_window, true);
+	ImGui_ImplOpenGL3_Init("#version 150");  // or "#version 330 core", depending on your OpenGL
+	glfwSetWindowIconifyCallback(_window, glfw_iconify_cb);
+
+	LoadFont();
+}
+
+void ImGuiApp::Update()
+{
+	ImGui_ImplOpenGL3_NewFrame();
+	ImGui_ImplGlfw_NewFrame();
+	ImGui::NewFrame();
+
+	if (!glfwGetWindowAttrib(_window, GLFW_ICONIFIED))
 	{
-		g_Minimized = (iconified == GLFW_TRUE);
-		if (g_Minimized) {
-		}
-		else {
-			// immediately update framebuffer viewport & ImGui DisplaySize
-			int fbW, fbH;
-			glfwGetFramebufferSize(wnd, &fbW, &fbH);
-			glViewport(0, 0, fbW, fbH);
-			ImGuiIO& io = ImGui::GetIO();
-			io.DisplaySize = ImVec2((float)fbW, (float)fbH);
-		}
-	}
-	void ImGuiApp::Init(void* internalWindow)
-	{
-		// Setup Dear ImGui context
-		IMGUI_CHECKVERSION();
-		ImGui::CreateContext();
-		ImGuiIO& io = ImGui::GetIO();
-		(void)io;
-
-		//io.MouseDrawCursor = false;
-		//io.ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange;
-		// Disable writing to disk by nulling out the filename:
-		io.IniFilename = nullptr;
-
-		// Optionally disable log file too (if you don't want Dear ImGui to write a .log):
-		io.LogFilename = nullptr;
-		
-		// Setup Dear ImGui style
-		ImGui::StyleColorsDark();
-
-		// Init ImGui GLFW+OpenGL3 backend
-
-		_window = static_cast<GLFWwindow*>(internalWindow);
-		ImGui_ImplGlfw_InitForOpenGL(_window, true);
-		ImGui_ImplOpenGL3_Init("#version 150");  // or "#version 330 core", depending on your OpenGL
-		glfwSetWindowIconifyCallback(_window, glfw_iconify_cb);
-
-		LoadFont();
+		view.UpdateGUI();
 	}
 
-	void ImGuiApp::Update()
-	{
-		ImGui_ImplOpenGL3_NewFrame();
-		ImGui_ImplGlfw_NewFrame();
-		ImGui::NewFrame();
+	// Render
+	ImGui::Render();
+	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+}
 
-		if (!glfwGetWindowAttrib(_window, GLFW_ICONIFIED))
-		{
-			view.UpdateGUI();
-		}
-
-		// Render
-		ImGui::Render();
-		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-	}
-
-	ImGuiApp::~ImGuiApp()
-	{
-		ImGui_ImplOpenGL3_Shutdown();
-		ImGui_ImplGlfw_Shutdown();
-		ImGui::DestroyContext();
-	}
+ImGuiApp::~ImGuiApp()
+{
+	ImGui_ImplOpenGL3_Shutdown();
+	ImGui_ImplGlfw_Shutdown();
+	ImGui::DestroyContext();
 }
 
 
