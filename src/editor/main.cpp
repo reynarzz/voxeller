@@ -131,7 +131,7 @@ int Init()
 	Unvoxeller::ExportOptions exportOptions{};
 	exportOptions.OutputFormat = Unvoxeller::ModelFormat::FBX;
 	exportOptions.Converting.Meshing.RemoveTJunctions = false;
-	exportOptions.Converting.Meshing.WeldVertices = true;
+	exportOptions.Converting.Meshing.WeldVertices = false;
 	exportOptions.Converting.Meshing.FlatShading = true;
 	exportOptions.Converting.Meshing.MaterialPerMesh = true;
 	exportOptions.Converting.Scale = { 1.3f, 1.3f, 1.3f };

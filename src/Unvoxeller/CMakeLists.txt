@@ -16,6 +16,7 @@ set(BUILD_SHARED_LIBS    OFF CACHE BOOL "" FORCE)
 set(ASSIMP_BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
 set(SPDLOG_BUILD_SHARED OFF CACHE BOOL "" FORCE)
 set(OPENMESH_BUILD_SHARED OFF CACHE BOOL "" FORCE)
+set(MESHOPT_BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
 
 # compute project root from this CMakeLists location
 get_filename_component(ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR} DIRECTORY)
@@ -41,6 +42,13 @@ add_subdirectory(
   ${ROOT_DIR}/third/shared/OpenMesh
   ${CMAKE_BINARY_DIR}/third_party/openmesh
 )
+
+# pull in spdlog
+add_subdirectory(
+  ${ROOT_DIR}/third/shared/meshoptimizer
+  ${CMAKE_BINARY_DIR}/third_party/meshoptimizer
+)
+
 
 set_target_properties(OpenMeshCore PROPERTIES DEBUG_POSTFIX "" )
 set_target_properties(OpenMeshTools PROPERTIES DEBUG_POSTFIX "" )
@@ -111,6 +119,7 @@ target_include_directories(Unvoxeller PUBLIC
 target_link_libraries(Unvoxeller PRIVATE
   assimp
   spdlog
+  meshoptimizer
 )
 
 #TODO: Disable exceptions and RTTI in release 
@@ -125,19 +134,15 @@ target_link_libraries(Unvoxeller PRIVATE
 
 
 if(APPLE)
-target_link_libraries(Unvoxeller PRIVATE
-  assimp
-  spdlog
-  OpenMeshCoreStatic
-  OpenMeshToolsStatic
-)
+    target_link_libraries(Unvoxeller PRIVATE
+      OpenMeshCoreStatic
+      OpenMeshToolsStatic
+    )
 else()
-target_link_libraries(Unvoxeller PRIVATE
-  assimp
-  spdlog
-  OpenMeshCore
-  OpenMeshTools
-)
+    target_link_libraries(Unvoxeller PRIVATE
+      OpenMeshCore
+      OpenMeshTools
+    )
 endif()
 
  

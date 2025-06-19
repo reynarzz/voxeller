@@ -18,6 +18,8 @@
 #include <Unvoxeller/VoxParser.h>
 #include <Unvoxeller/Log/Log.h>
 #include <Unvoxeller/VertexMerger.h>
+#include <meshoptimizer/src/meshoptimizer.h>
+
 
 // Include stb_image_write for saving texture atlas as PNG
 //#define STB_IMAGE_WRITE_IMPLEMENTATION
@@ -606,6 +608,159 @@ inline aiVector3D crossProduct(const aiVector3D& a, const aiVector3D& b)
 	);
 }
 
+struct VertexOpt
+{
+	float pos[3];
+	float normal[3];
+	float uv[2];
+};
+
+// Optimize all meshes in an aiScene using meshoptimizer
+void OptimizeAssimpScene(aiScene* scene) 
+{
+	for (unsigned int mi = 0; mi < scene->mNumMeshes; ++mi)
+	{
+		aiMesh* mesh = scene->mMeshes[mi];
+
+		// 1) Build interleaved vertex buffer
+		std::vector<VertexOpt> vertices(mesh->mNumVertices);
+
+		for (unsigned int i = 0; i < mesh->mNumVertices; ++i) 
+		{
+			// Position
+			vertices[i].pos[0] = mesh->mVertices[i].x;
+			vertices[i].pos[1] = mesh->mVertices[i].y;
+			vertices[i].pos[2] = mesh->mVertices[i].z;
+			// Normal (if present)
+			if (mesh->HasNormals()) {
+				vertices[i].normal[0] = mesh->mNormals[i].x;
+				vertices[i].normal[1] = mesh->mNormals[i].y;
+				vertices[i].normal[2] = mesh->mNormals[i].z;
+			}
+			else {
+				vertices[i].normal[0] = vertices[i].normal[1] = vertices[i].normal[2] = 0.0f;
+			}
+			// UV0 (if present)
+			if (mesh->mTextureCoords[0]) {
+				vertices[i].uv[0] = mesh->mTextureCoords[0][i].x;
+				vertices[i].uv[1] = mesh->mTextureCoords[0][i].y;
+			}
+			else {
+				vertices[i].uv[0] = vertices[i].uv[1] = 0.0f;
+			}
+		}
+
+		// 2) Build index buffer (assume triangles)
+		std::vector<uint32_t> indices;
+		indices.reserve(mesh->mNumFaces * 3);
+		for (unsigned int f = 0; f < mesh->mNumFaces; ++f) {
+			const aiFace& face = mesh->mFaces[f];
+			if (face.mNumIndices == 3) {
+				indices.push_back(face.mIndices[0]);
+				indices.push_back(face.mIndices[1]);
+				indices.push_back(face.mIndices[2]);
+			}
+			// skip non-triangular faces
+		}
+
+		// 3) Weld (dedupe) vertices
+		std::vector<uint32_t> remap(mesh->mNumVertices);
+		size_t uniqueCount = meshopt_generateVertexRemap(
+			remap.data(), indices.data(), indices.size(),
+			vertices.data(), vertices.size(), sizeof(VertexOpt)
+		);
+
+		std::vector<VertexOpt> newVertices(uniqueCount);
+		std::vector<uint32_t> newIndices(indices.size());
+
+		meshopt_remapVertexBuffer(
+			newVertices.data(), vertices.data(), vertices.size(), sizeof(VertexOpt), remap.data()
+		);
+		meshopt_remapIndexBuffer(
+			newIndices.data(), indices.data(), indices.size(), remap.data()
+		);
+
+		size_t targetIndexCount = indices.size() * 0.5; /* e.g. indices.size() * 0.5 */;
+		float  maxError = 0.01f /* world‐space error threshold */;
+		meshopt_simplify(
+			newIndices.data(),   // dst indices
+			newIndices.data(),   // src indices
+			newIndices.size(),
+			reinterpret_cast<const float*>(newVertices.data()),
+			newVertices.size(),
+			sizeof(VertexOpt),
+			targetIndexCount,
+			maxError,
+			meshopt_SimplifyLockBorder  // optional: lock UV‐seams
+		);
+
+
+		// 4) Optimize for GPU caches & overdraw
+		meshopt_optimizeVertexCache(
+			newIndices.data(), newIndices.data(), newIndices.size(), uniqueCount
+		);
+
+		meshopt_optimizeOverdraw(
+			newIndices.data(),                           // destination indices
+			newIndices.data(),                           // source    indices
+			newIndices.size(),                           // index_count
+			reinterpret_cast<const float*>(newVertices.data()), // vertex_positions (pos.x of VertexOpt must be first)
+			newVertices.size(),                          // vertex_count
+			sizeof(VertexOpt),                           // vertex_positions_stride (bytes between each pos)
+			1.05f                                        // threshold
+		);
+
+		
+		size_t finalVertexCount = meshopt_optimizeVertexFetch(
+			newVertices.data(),   // destination vertex buffer
+			newIndices.data(),    // in/out index buffer
+			newIndices.size(),    // index_count
+			newVertices.data(),   // source vertex buffer
+			newVertices.size(),   // vertex_count
+			sizeof(VertexOpt)     // vertex_size (stride in bytes)
+		);
+		// 5) Write back to aiMesh (replace vertex & face arrays)
+		// Free old data
+		delete[] mesh->mVertices;
+		delete[] mesh->mNormals;
+		delete[] mesh->mTextureCoords[0];
+
+		// Allocate new arrays
+		mesh->mNumVertices = static_cast<unsigned int>(uniqueCount);
+		mesh->mVertices = new aiVector3D[mesh->mNumVertices];
+		mesh->mNormals = new aiVector3D[mesh->mNumVertices];
+		mesh->mTextureCoords[0] = new aiVector3D[mesh->mNumVertices];
+
+		for (unsigned int i = 0; i < mesh->mNumVertices; ++i) {
+			mesh->mVertices[i] = aiVector3D(
+				newVertices[i].pos[0], newVertices[i].pos[1], newVertices[i].pos[2]
+			);
+			mesh->mNormals[i] = aiVector3D(
+				newVertices[i].normal[0], newVertices[i].normal[1], newVertices[i].normal[2]
+			);
+			mesh->mTextureCoords[0][i] = aiVector3D(
+				newVertices[i].uv[0], newVertices[i].uv[1], 0.0f
+			);
+		}
+
+		// Faces
+		size_t newFaceCount = newIndices.size() / 3;
+		delete[] mesh->mFaces;
+		mesh->mNumFaces = static_cast<unsigned int>(newFaceCount);
+		mesh->mFaces = new aiFace[mesh->mNumFaces];
+
+		for (unsigned int f = 0; f < mesh->mNumFaces; ++f) {
+			aiFace& face = mesh->mFaces[f];
+			face.mNumIndices = 3;
+			face.mIndices = new unsigned int[3];
+			face.mIndices[0] = newIndices[f * 3 + 0];
+			face.mIndices[1] = newIndices[f * 3 + 1];
+			face.mIndices[2] = newIndices[f * 3 + 2];
+		}
+	}
+}
+
+
 // Build the actual geometry (vertices and indices) for a mesh from the FaceRect list and a given texture atlas configuration.
 static void BuildMeshFromFaces(
 	const std::vector<FaceRect>& faces,
@@ -1043,6 +1198,7 @@ static bool WriteSceneToFile(const std::vector<aiScene*> scenes, const std::stri
 
 	// Determine export format from extension
 
+
 	std::string ext = "";
 
 	switch (options.OutputFormat)
@@ -1087,6 +1243,8 @@ static bool WriteSceneToFile(const std::vector<aiScene*> scenes, const std::stri
 	for (size_t i = 0; i < scenes.size(); i++)
 	{
 		auto scene = scenes[i];
+
+		OptimizeAssimpScene(scene);
 
 		if (options.Converting.Meshing.WeldVertices)
 		{
