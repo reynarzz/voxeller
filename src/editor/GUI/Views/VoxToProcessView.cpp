@@ -11,6 +11,8 @@
 #include <Rendering/OpenGL/GLTexture.h>
 #include <Unvoxeller/Log/Log.h>
 #include <filesystem>
+#include <GUI/Utils/GUIUtils.h>
+
 
 std::shared_ptr<Texture> textureTest = nullptr;
 
@@ -472,9 +474,9 @@ void ViewportWindow()
 // Cast it through intptr_t so the full 64-bit range is preserved,
 // then to ImTextureID (which on most backends is just void*)
 
-	ImageRounded((intptr_t*)std::static_pointer_cast<GLTexture>(textureTest)->GetID(), ImGui::GetWindowSize(), 10);
+	ImageRounded(TEXTURE_TO_IMGUI(textureTest), ImGui::GetWindowSize(), 10);
 	
-
+	
 	//ImGui::Image(nullptr, ImGui::GetWindowSize());
 
 	f32 spacing = 1;
