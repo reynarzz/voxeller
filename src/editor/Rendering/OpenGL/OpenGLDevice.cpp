@@ -1,4 +1,5 @@
 #include "OpenGLDevice.h"
+#include "GLTexture.h"
 
 
 void OpenGLDevice::Initialize()
@@ -10,9 +11,10 @@ const DeviceInfo& OpenGLDevice::GetInfo() const
 {
 	return {};
 }
-void* OpenGLDevice::CreateTexture(const TextureDescriptor* desc)
+
+std::shared_ptr<Texture> OpenGLDevice::CreateTexture(const TextureDescriptor* desc)
 {
-	return nullptr;
+	return std::static_pointer_cast<Texture>(std::make_shared<GLTexture>(desc));
 }
 
 void* OpenGLDevice::CreateShader(const ShaderDescriptor* desc)

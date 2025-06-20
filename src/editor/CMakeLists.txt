@@ -88,12 +88,19 @@ target_link_libraries(Unvoxeller_editor PRIVATE
 )
 
 
+    target_compile_definitions(Unvoxeller_editor
+        PRIVATE 
+        STB_IMAGE_IMPLEMENTATION
+    )
+
+
 if(WIN32)
     target_link_libraries(Unvoxeller_editor PRIVATE opengl32)
 
      target_compile_definitions(Unvoxeller_editor
         PRIVATE 
         GLFW_EXPOSE_NATIVE_WIN32
+        STB_IMAGE_IMPLEMENTATION
         )
     
          if(MSVC)

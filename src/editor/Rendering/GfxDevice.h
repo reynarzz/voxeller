@@ -1,15 +1,10 @@
 #pragma once
 #include <string>
+#include <Rendering/Texture.h>
 
-struct MeshDescriptor
-{
-
-};
-
-struct TextureDescriptor
-{
-
-};
+// Descriptors;
+#include <Rendering/MeshDescriptor.h>
+#include <Rendering/TextureDescriptor.h>
 
 struct ShaderDescriptor
 {
@@ -45,7 +40,7 @@ class GfxDevice
 public:
 	virtual void Initialize() = 0;
 	virtual const DeviceInfo& GetInfo() const = 0;
-	virtual void* CreateTexture(const TextureDescriptor* desc) = 0;
+	virtual std::shared_ptr<Texture> CreateTexture(const TextureDescriptor* desc) = 0;
 	virtual void* CreateShader(const ShaderDescriptor* desc) = 0;
 	virtual void* CreateMesh(const MeshDescriptor* desc) = 0;
 

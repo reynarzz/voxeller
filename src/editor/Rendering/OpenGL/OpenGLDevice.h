@@ -5,7 +5,7 @@ class OpenGLDevice : public GfxDevice
 {
 	void Initialize() override;
 	const DeviceInfo& GetInfo() const override;
-	void* CreateTexture(const TextureDescriptor* desc) override;
+	std::shared_ptr<Texture> CreateTexture(const TextureDescriptor* desc) override;
 	void* CreateShader(const ShaderDescriptor* desc) override;
 	void* CreateMesh(const MeshDescriptor* desc) override;
 

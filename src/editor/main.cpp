@@ -10,7 +10,8 @@
 
 #include <Unvoxeller/File.h>
 #include <iostream>
-#include <imgui/imgui.h>
+
+#include <Rendering/RenderingSystem.h>
 
 // TODO:
 // - Fix small offset happening.
@@ -19,14 +20,11 @@
 // - Localization: English, Spanish, French, Chinese, Japanese, German.
 
 std::unique_ptr<ImGuiApp> imgui = nullptr;
+std::unique_ptr<RenderingSystem> _renderingSystem = nullptr;
 
 void Render(GLFWwindow* window)
 {
-
 	glfwPollEvents();
-
-
-	//Cursor::SetMode(CursorMode::NoDrop);
 
 	f32 color = 0.05f;
 
@@ -35,6 +33,7 @@ void Render(GLFWwindow* window)
 
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+	_renderingSystem->Update();
 	imgui->Update();
 
 
@@ -163,9 +162,16 @@ int Init()
 	//std::string path = Unvoxeller::File::GetExecutableDir() + "/testvox/room.vox";
 	//std::string output = "testvox/nda/export/Output.fbx";
 	std::string output = Unvoxeller::File::GetExecutableDir() + "/testvox/nda/export/Output.fbx";
-
+	
+	
 	Unvoxeller::GreedyMesher::ExportVoxToModel(path, output, exportOptions);
+	
+	std::string texPath = Unvoxeller::File::GetExecutableDir() + "/testvox/nda/export/Output_atlas.png";
 
+	_renderingSystem = std::make_unique<RenderingSystem>();
+	_renderingSystem->Initialize();
+	
+	
 	while (!glfwWindowShouldClose(win))
 	{
 		if (glfwGetWindowAttrib(win, GLFW_ICONIFIED))
