@@ -4,6 +4,8 @@
 class VoxToProcessView : public ViewBase
 {
 public:
+VoxToProcessView();
+
         void OnShowView() override;
      void UpdateGUI() override;
      void OnCloseView() override;

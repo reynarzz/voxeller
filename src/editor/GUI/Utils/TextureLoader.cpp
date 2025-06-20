@@ -3,7 +3,7 @@
 #include <stb/stb_image.h>
 
 
-std::shared_ptr<TextureLoadData> LoadRawTexture(const std::string &path)
+std::shared_ptr<TextureLoadData> TextureLoader::LoadRawTexture(const std::string &path)
 {
     std::shared_ptr<TextureLoadData> data = std::make_shared<TextureLoadData>();
 
@@ -14,7 +14,7 @@ std::shared_ptr<TextureLoadData> LoadRawTexture(const std::string &path)
     return data;
 }
 
-std::shared_ptr<Texture> Loadexture(const std::string &path)
+std::shared_ptr<Texture> TextureLoader::LoadTexture(const std::string &path)
 {
     auto tex = LoadRawTexture(path);
 

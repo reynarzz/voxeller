@@ -6,6 +6,33 @@
 #include <string>
 #include <algorithm>
 #include <functional>
+#include <GUI/Utils/TextureLoader.h>
+#include <Unvoxeller/File.h>
+#include <Rendering/OpenGL/GLTexture.h>
+#include <Unvoxeller/Log/Log.h>
+#include <filesystem>
+
+std::shared_ptr<Texture> textureTest = nullptr;
+
+VoxToProcessView::VoxToProcessView()
+{
+	std::string texPath = Unvoxeller::File::GetExecutableDir() + "/testvox/nda/export/Output_atlas.png";
+
+		if(!std::filesystem::exists(texPath))
+		{
+			LOG_ERROR("FIle path doesn't exists: {0}", texPath);
+			return;
+		}
+		else
+		{
+			LOG_ERROR("Texture exists: {0}", texPath);
+
+		}
+	auto t = TextureLoader::LoadRawTexture(texPath);
+
+	LOG_INFO("RAW tex: ({0}, {1})", t->desc.width, t->desc.height);
+	textureTest= TextureLoader::LoadTexture(texPath);
+}
 
 void VoxToProcessView::OnShowView()
 {
@@ -264,12 +291,12 @@ void TitleLabel(const char* title)
 }
 
 void ImageRounded(
-	ImTextureID tex,
+	intptr_t* tex,
 	const ImVec2& size,
 	float rounding = 8.0f,
 	ImDrawFlags corners = ImDrawFlags_RoundCornersAll,
-	const ImVec2& uv0 = ImVec2(0, 0),
-	const ImVec2& uv1 = ImVec2(1, 1),
+	const ImVec2& uv0 = ImVec2(0, 1),
+	const ImVec2& uv1 = ImVec2(1, 0),
 	const ImVec4& tint_col = ImVec4(1, 1, 1, 1),
 	const ImVec4& border_col = ImVec4(0, 0, 0, 0))
 {
@@ -441,7 +468,13 @@ void ViewportWindow()
 
 	ImGui::Begin("Viewport", &open, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize);
 
-	ImageRounded(10, ImGui::GetWindowSize(), 0);
+
+// Cast it through intptr_t so the full 64-bit range is preserved,
+// then to ImTextureID (which on most backends is just void*)
+
+	ImageRounded((intptr_t*)std::static_pointer_cast<GLTexture>(textureTest)->GetID(), ImGui::GetWindowSize(), 10);
+	
+
 	//ImGui::Image(nullptr, ImGui::GetWindowSize());
 
 	f32 spacing = 1;

@@ -100,8 +100,11 @@ int Init()
 	}
 
 	glfwSetFramebufferSizeCallback(win, framebuffer_size_callback);
-	imgui = std::make_unique<ImGuiApp>();
 
+	_renderingSystem = std::make_unique<RenderingSystem>();
+	_renderingSystem->Initialize();
+	
+	
 	DropAndDrop::Initialize(win);
 
 	DropAndDrop::SetDropCallback([](DropEvent info)
@@ -123,6 +126,8 @@ int Init()
 	LOG_INFO("Dir: {0}", Unvoxeller::File::GetExecutableDir());
 
 	//Unvoxer
+	imgui = std::make_unique<ImGuiApp>();
+
 	imgui->Init(win);
 
 	Unvoxeller::ExportOptions exportOptions{};
@@ -168,8 +173,6 @@ int Init()
 	
 	std::string texPath = Unvoxeller::File::GetExecutableDir() + "/testvox/nda/export/Output_atlas.png";
 
-	_renderingSystem = std::make_unique<RenderingSystem>();
-	_renderingSystem->Initialize();
 	
 	
 	while (!glfwWindowShouldClose(win))

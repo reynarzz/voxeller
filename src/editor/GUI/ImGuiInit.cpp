@@ -8,7 +8,8 @@
 #include <GUI/Views/VoxToProcessView.h>
 #include <Unvoxeller/File.h>
 
-VoxToProcessView view{};
+std::unique_ptr<VoxToProcessView> view = nullptr;
+
 GLFWwindow* _window = nullptr;
 static bool g_Minimized = false;
 void LoadFont()
@@ -83,6 +84,8 @@ void ImGuiApp::Init(void* internalWindow)
 	ImGui_ImplOpenGL3_Init("#version 150");  // or "#version 330 core", depending on your OpenGL
 	glfwSetWindowIconifyCallback(_window, glfw_iconify_cb);
 
+	view = std::make_unique<VoxToProcessView>();
+
 	LoadFont();
 }
 
@@ -94,7 +97,7 @@ void ImGuiApp::Update()
 
 	if (!glfwGetWindowAttrib(_window, GLFW_ICONIFIED))
 	{
-		view.UpdateGUI();
+		view->UpdateGUI();
 	}
 
 	// Render
