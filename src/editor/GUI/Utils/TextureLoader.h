@@ -15,7 +15,7 @@ struct TextureLoadData
 class TextureLoader
 {
 public:
-static std::shared_ptr<TextureLoadData> LoadRawTexture(const std::string& path);
-static std::shared_ptr<Texture> LoadTexture(const std::string& path);
+    static std::shared_ptr<TextureLoadData> LoadRawTexture(const std::string& path);
+    static std::shared_ptr<Texture> LoadTexture(const std::string& path);
 };
 
