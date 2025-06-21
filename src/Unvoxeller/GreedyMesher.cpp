@@ -1817,7 +1817,8 @@ static std::vector<aiScene*> GetModels(const vox_file* voxData, const s32 frameI
 			baseName = outputPath.substr(0, outputPath.find_last_of('.'));
 		}
 
-
+if (!options.Texturing.SeparateTexturesPerMesh)
+			{
 		for (auto& shpKV : voxData->shapes)
 		{
 			const vox_nSHP& shape = shpKV.second;
@@ -1849,14 +1850,9 @@ static std::vector<aiScene*> GetModels(const vox_file* voxData, const s32 frameI
 
 			// --- Below
 
-			if (!options.Texturing.SeparateTexturesPerMesh)
-			{
+			
 				mergedFaces.insert(mergedFaces.end(), faces.begin(), faces.end());
 			}
-		}
-
-		if (!options.Texturing.SeparateTexturesPerMesh)
-		{
 			textureData = BuildImage(options.Texturing.GenerateTextures, options.Texturing.TexturesPOT, mergedFaces, voxData->palette, voxData->voxModels);
 
 			LOG_INFO("Atlas export: {0}", baseName + "_atlas.png");
