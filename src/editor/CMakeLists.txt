@@ -9,6 +9,11 @@ add_subdirectory(${ROOT_DIR}/third/editor/glfw
 ${CMAKE_BINARY_DIR}/third_party/glfw
 )
 
+add_subdirectory(${ROOT_DIR}/third/editor/nativefiledialog
+${CMAKE_BINARY_DIR}/third_party/nativefiledialog
+)
+
+
 # ImGui source files
 set(IMGUI_SRC
     ${ROOT_DIR}/third/editor/imgui/imgui.cpp
@@ -85,6 +90,7 @@ target_link_libraries(Unvoxeller_editor PRIVATE
     Unvoxeller
     glfw
     spdlog
+    nfd
 )
 
 
