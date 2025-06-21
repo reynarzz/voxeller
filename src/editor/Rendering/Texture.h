@@ -10,9 +10,9 @@ public:
     s32 GetHeight() const;
 
     static std::shared_ptr<Texture> Create(const TextureDescriptor* desc);
-    virtual ~Texture() = 0;
     
 protected:
+    virtual ~Texture() = 0;
     s32 Width;
     s32 Height;
 };

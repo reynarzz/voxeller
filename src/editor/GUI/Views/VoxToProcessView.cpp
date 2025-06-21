@@ -15,6 +15,7 @@
 
 
 std::shared_ptr<Texture> textureTest = nullptr;
+std::shared_ptr<Texture> blackImage = nullptr;
 
 VoxToProcessView::VoxToProcessView()
 {
@@ -30,9 +31,12 @@ VoxToProcessView::VoxToProcessView()
 			LOG_ERROR("Texture exists: {0}", texPath);
 
 		}
-	auto t = TextureLoader::LoadRawTexture(texPath);
 
-	LOG_INFO("RAW tex: ({0}, {1})", t->desc.width, t->desc.height);
+		u8 black[] = { 0xFF, 0x00, 0xFF, 0xFF };
+		TextureDescriptor tex = {1, 1, 4, black};
+
+		blackImage = Texture::Create(&tex);
+
 	textureTest= TextureLoader::LoadTexture(texPath);
 }
 
@@ -474,9 +478,16 @@ void ViewportWindow()
 // Cast it through intptr_t so the full 64-bit range is preserved,
 // then to ImTextureID (which on most backends is just void*)
 
-	ImageRounded(TEXTURE_TO_IMGUI(textureTest), ImGui::GetWindowSize(), 10);
+	std::shared_ptr<Texture> tex = textureTest;
+
+	if(!textureTest)
+	{
+		tex = blackImage;
+	}
 	
+	ImageRounded(TEXTURE_TO_IMGUI(tex), ImGui::GetWindowSize(), 10);
 	
+
 	//ImGui::Image(nullptr, ImGui::GetWindowSize());
 
 	f32 spacing = 1;
