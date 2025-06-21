@@ -6,7 +6,7 @@
 
 void OpenGLDevice::Initialize()
 {
-
+	// Create screen framebuffer
 }
 
 const DeviceInfo& OpenGLDevice::GetInfo() const
@@ -29,16 +29,15 @@ std::shared_ptr<Mesh> OpenGLDevice::CreateMesh(const MeshDescriptor* desc)
 	return std::make_shared<GLMesh>(desc);
 }
 
-void OpenGLDevice::DrawMesh(const Mesh *mesh)
+void OpenGLDevice::DrawRenderable(const RenderableObject *renderable)
 {
-	const GLMesh* glMesh = static_cast<const GLMesh*>(mesh);
+	const GLMesh* glMesh = static_cast<const GLMesh*>(renderable->GetMesh().lock().get());
 	glMesh->Bind();
 	
 	// Bind pipeline
 
 	// Draw
 	glDrawElements(GL_TRIANGLES, glMesh->GetIndexCount(), GL_UNSIGNED_INT, nullptr);
-	
 }
 
 void OpenGLDevice::SetPipelineData(const PipelineData* data)
@@ -68,5 +67,19 @@ void OpenGLDevice::SetPipelineData(const PipelineData* data)
 			glDisable(GL_BLEND);
 		}
 	}
-	
+}
+
+void OpenGLDevice::Begin()
+{
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+}
+
+void OpenGLDevice::End()
+{
+
+}
+
+std::weak_ptr<RenderTarget> OpenGLDevice::GetRenderTarget() const 
+{
+    return _renderTarget;
 }

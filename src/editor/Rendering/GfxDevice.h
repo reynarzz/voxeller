@@ -4,11 +4,14 @@
 #include <Rendering/Mesh.h>
 #include <Rendering/Shader.h>
 #include <Rendering/PipelineData.h>
+#include <Rendering/RenderableObject.h>
+#include <Rendering/RenderTarget.h>
 
 // Descriptors;
 #include <Rendering/MeshDescriptor.h>
 #include <Rendering/TextureDescriptor.h>
 #include <Rendering/ShaderDescriptor.h>
+
 
 struct DeviceInfo
 {
@@ -27,9 +30,14 @@ public:
 	virtual std::shared_ptr<Mesh> CreateMesh(const MeshDescriptor* desc) = 0;
 
 	virtual void SetPipelineData(const PipelineData* data);
-	virtual void DrawMesh(const Mesh* mesh) = 0;
+	virtual void DrawRenderable(const RenderableObject* renderable) = 0;
+	virtual void Begin() = 0;
+	virtual void End() = 0;
+	
+	virtual std::weak_ptr<RenderTarget> GetRenderTarget() const = 0;
 
 protected:
 	bool NeedChangePipeline(const PipelineData*  data);
+	std::shared_ptr<RenderTarget> _renderTarget;
 private:
 };

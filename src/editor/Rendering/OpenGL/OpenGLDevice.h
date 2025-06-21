@@ -10,6 +10,9 @@ class OpenGLDevice : public GfxDevice
 	std::shared_ptr<Mesh> CreateMesh(const MeshDescriptor* desc) override;
 
 	void SetPipelineData(const PipelineData* data) override;
+	void DrawRenderable(const RenderableObject* renderable) override;
+	std::weak_ptr<RenderTarget> GetRenderTarget() const override;
 
-	void DrawMesh(const Mesh* mesh) override;
+	void Begin() override;
+	void End() override;
 };

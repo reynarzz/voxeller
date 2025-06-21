@@ -19,3 +19,14 @@ std::weak_ptr<Mesh> RenderableObject::GetMesh() const
 {
     return _mesh;
 }
+
+void RenderableObject::Destroy() 
+{
+    _pendingForDestroy = true;
+}
+
+bool RenderableObject::ShouldDestroy() const
+{
+    return _pendingForDestroy;
+}
+

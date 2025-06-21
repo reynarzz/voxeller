@@ -1,10 +1,10 @@
 #include "RenderingSystem.h"
 
 // For now force openGL
-
 #include <Rendering/OpenGL/OpenGLDevice.h>
 
 std::shared_ptr<GfxDevice> RenderingSystem::_device = nullptr;
+std::vector<const RenderableObject*> RenderingSystem::_renderables = {};
 
 RenderingSystem::RenderingSystem()
 {
@@ -20,41 +20,53 @@ void RenderingSystem::Initialize()
 void RenderingSystem::Update()
 {
     _meshesToDestroy.clear();
-    _meshesToDestroy.reserve(_meshes.size());
+    _meshesToDestroy.reserve(_renderables.size());
 
-    for (size_t i = 0; i < _meshes.size(); i++)
+    for (size_t i = 0; i < _renderables.size(); i++)
     {
-       const auto mesh = _meshes[i];
+        const auto renderable = _renderables[i];
 
-        if(mesh->ShouldDestroy())
+        if(renderable->ShouldDestroy())
         {
-            _meshesToDestroy.push_back({i, mesh});
+            _meshesToDestroy.push_back({i, renderable});
         }
     }
-    
+
     std::sort(_meshesToDestroy.rbegin(), _meshesToDestroy.rend());
     
     for (const auto& toDestroy : _meshesToDestroy)
     {
-        std::swap(_meshes[toDestroy.first], _meshes.back());
-        _meshes.pop_back();
+        std::swap(_renderables[toDestroy.first], _renderables.back());
+        _renderables.pop_back();
     }
 
-    for (size_t i = 0; i < _meshes.size(); i++)
+    _device->Begin();
+
+    for (size_t i = 0; i < _renderables.size(); i++)
     {
-       const Mesh* mesh = _meshes[i];
-       const PipelineData* data = _pipelinesConfigs->GetPipelineData(mesh->GetPipeline());
-
+       const RenderableObject* renderable = _renderables[i];
+       const PipelineData* data = _pipelinesConfigs->GetPipelineData(renderable->GetRenderType());
+       
        _device->SetPipelineData(data);
-       _device->DrawMesh(mesh);
+
+       // Set uniforms (camera view, etc..)
+       
+       // Draw
+       _device->DrawRenderable(renderable);
     }
+
+    _device->End();
 }
 
-void RenderingSystem::PushMesh(Mesh *mesh)
+void RenderingSystem::PushRenderable(const RenderableObject *renderable)
 {
-    _meshes.push_back(mesh);
+    _renderables.push_back(renderable);
 }
 
+const std::weak_ptr<RenderTarget> RenderingSystem::GetRenderTarget()
+{
+    return _device->GetRenderTarget();
+}
 
 std::weak_ptr<GfxDevice> RenderingSystem::GetDevice()
 {

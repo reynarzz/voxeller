@@ -5,6 +5,7 @@
 #include <Rendering/PipelineConfigurations.h>
 #include <vector>
 #include <Rendering/Mesh.h>
+#include <Rendering/RenderableObject.h>
 
 class RenderingSystem
 {
@@ -15,13 +16,15 @@ public:
     void Initialize();
     void Update();
 
-    void PushMesh(Mesh* mesh);
+    static void PushRenderable(const RenderableObject* renderable);
     
+    const static std::weak_ptr<RenderTarget> GetRenderTarget();
     static std::weak_ptr<GfxDevice> GetDevice();
 
 private:
     static std::shared_ptr<GfxDevice> _device;
+    static std::vector<const RenderableObject*> _renderables;
+
     std::unique_ptr<PipelineConfigurations> _pipelinesConfigs = nullptr;
-    std::vector<Mesh*> _meshes = {};
-    std::vector<std::pair<s32, Mesh*>> _meshesToDestroy = {};
+    std::vector<std::pair<s32, const RenderableObject*>> _meshesToDestroy = {};
 };

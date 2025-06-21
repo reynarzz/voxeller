@@ -16,7 +16,6 @@ s32 Texture::GetHeight() const
     return Height;
 }
 
-
 Texture::~Texture()
 {        
    
