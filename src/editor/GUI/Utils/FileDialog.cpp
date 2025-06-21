@@ -14,7 +14,7 @@ static void openFIle()
 	NFD_Init();
 
 	nfdu8char_t* outPath;
-	nfdu8filteritem_t filters[2] = { { "Source code", "shred,cpp,cc" }, { "Headers", "h,hpp" } };
+    nfdu8filteritem_t filters[2] = { { "Source code", "c,cpp,cc" }, { "Headers", "h,hpp" } };
 	nfdopendialogu8args_t args = { 0 };
 	args.filterList = filters;
 	args.filterCount = 2;

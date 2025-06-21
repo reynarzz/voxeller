@@ -861,7 +861,13 @@ void VoxToProcessView::UpdateGUI()
 	bool pressed = CornerButton("+", TextAlign::Center, { buttonUpWidth, buttonUpHeight }, IM_COL32(65, 105, 255, 255), IM_COL32(255, 255, 255, 255), 20, ImDrawFlags_RoundCornersAll);
 	if(pressed)
 	{
-		FileDialog::OpenFiles("", { { "Voxels", "vox"}} );
+		auto selectedFiles = FileDialog::OpenFiles("", { { "Voxels", "vox"}} );
+
+		for (auto txt : selectedFiles)
+		{
+			LOG_INFO(txt);
+		}
+		
 	}
 	
 	ImGui::SameLine();
