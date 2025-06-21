@@ -3,7 +3,7 @@
 #include <Rendering/PipelineRenderType.h>
 #include <Rendering/Texture.h>
 #include <Rendering/Mesh.h>
-
+#include <Rendering/RenderableTransform.h>
 
 class RenderableObject
 {
@@ -14,14 +14,20 @@ public:
     void SetMesh(std::weak_ptr<Mesh> mesh);
     std::weak_ptr<Mesh> GetMesh() const;
     
+    void SetTexture(std::weak_ptr<Texture> texture);
+    const std::weak_ptr<Texture> GetTexture() const;
+
     void Destroy();
     bool ShouldDestroy() const;
+
+    RenderableTransform& GetTransform();
+    const RenderableTransform& GetTransform() const;
 
 private:
     bool _pendingForDestroy = false;
 
-    PipelineRenderType Pipeline;
+    RenderableTransform _transform={};
     std::weak_ptr<Mesh> _mesh = {};
-    std::vector<std::weak_ptr<Texture>> _textures = {};
+    std::weak_ptr<Texture> _texture = {};
     PipelineRenderType _renderType = PipelineRenderType::Opaque;
 };

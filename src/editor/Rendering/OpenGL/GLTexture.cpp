@@ -31,7 +31,7 @@ u32 GLTexture::GetID() const
     return _id;
 }
 
-void GLTexture::Bind(s32 index)
+void GLTexture::Bind(s32 index) const
 {
     GL_CALL(glActiveTexture(GL_TEXTURE0 + index));
     GL_CALL(glBindTexture(GL_TEXTURE_2D, _id));

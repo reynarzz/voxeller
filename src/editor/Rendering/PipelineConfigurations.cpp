@@ -25,10 +25,13 @@ std::shared_ptr<PipelineData> PipelineConfigurations::CreateOpaquePipeline(GfxDe
 {
     auto pipelineData = std::make_shared<PipelineData>();
 
-    // TODO: 
+    // TODO: Create the opaque shader
+
     ShaderDescriptor desc{};
     //desc.Vertex.resize();
 
+    u32 CameraViewMatrixLocation=0;
+	u32 ModelMatrixLocation=0;
 
     pipelineData->ZWrite = true;
     pipelineData->Blending = false;
@@ -40,10 +43,8 @@ std::shared_ptr<PipelineData> PipelineConfigurations::CreateOpaquePipeline(GfxDe
 std::shared_ptr<PipelineData> PipelineConfigurations::CreateTransparentPipeline(GfxDevice* device)
 {
     auto pipelineData = std::make_shared<PipelineData>();
-    pipelineData->ZWrite = false;
-    pipelineData->Blending = true;
 
-
+    // TODO: Transparent
 
     return pipelineData;
 }

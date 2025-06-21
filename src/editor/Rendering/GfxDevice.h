@@ -6,6 +6,7 @@
 #include <Rendering/PipelineData.h>
 #include <Rendering/RenderableObject.h>
 #include <Rendering/RenderTarget.h>
+#include <Rendering/RendererState.h>
 
 // Descriptors;
 #include <Rendering/MeshDescriptor.h>
@@ -35,6 +36,7 @@ public:
 	virtual void End() = 0;
 	
 	virtual std::weak_ptr<RenderTarget> GetRenderTarget() const = 0;
+	virtual void SetRendererGlobalState(const RendererState& uniforms) = 0;
 
 protected:
 	bool NeedChangePipeline(const PipelineData*  data);

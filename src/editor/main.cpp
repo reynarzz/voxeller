@@ -18,6 +18,10 @@
 // - Reuse colors in texture (check which faces have the same colors, and set an id, to ref an island).
 // - Pallete textures (decide the max width/height. Note not override POT)
 // - Localization: English, Spanish, French, Chinese, Japanese, German.
+// - Finish shader creation.
+// - Implement frame buffer for OpenGL
+// - Fix app UX
+
 
 std::unique_ptr<ImGuiApp> imgui = nullptr;
 std::unique_ptr<RenderingSystem> _renderingSystem = nullptr;
@@ -26,29 +30,17 @@ void Render(GLFWwindow* window)
 {
 	glfwPollEvents();
 
-	f32 color = 0.05f;
-
-	glClearColor(color, color, color, 1.0);
-	//glClearColor(77.0f / 255.0f, 83.0f / 255.0f, 90.0f / 255.0f, 1.0);
-
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
 	_renderingSystem->Update();
+
 	imgui->Update();
 
-
 	glfwSwapBuffers(window);
-
 }
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
-
-	// tell OpenGL about it:
-
 	Render(window);
 }
-
 
 int Init()
 {
@@ -162,8 +154,8 @@ int Init()
 	Unvoxeller::vox_vec3 a2s = -as;
 
 	//Chicken_van_2.vox
-	std::string path = Unvoxeller::File::GetExecutableDir() + "/testvox/nda/Ambulance_1.vox"; // Test this!
-	//std::string path = Unvoxeller::File::GetExecutableDir() + "/testvox/monu2.vox"; // Test this!
+	//std::string path = Unvoxeller::File::GetExecutableDir() + "/testvox/nda/Ambulance_1.vox"; // Test this!
+	std::string path = Unvoxeller::File::GetExecutableDir() + "/testvox/monu2.vox"; // Test this!
 	//std::string path = Unvoxeller::File::GetExecutableDir() + "/testvox/room.vox";
 	//std::string output = "testvox/nda/export/Output.fbx";
 	std::string output = Unvoxeller::File::GetExecutableDir() + "/testvox/nda/export/Output.fbx";
@@ -173,7 +165,12 @@ int Init()
 	
 	std::string texPath = Unvoxeller::File::GetExecutableDir() + "/testvox/nda/export/Output_atlas.png";
 
-	
+	auto renderable = std::make_shared<RenderableObject>();
+
+	renderable->GetTransform().SetPosition({});
+
+	//RenderingSystem::PushRenderable(renderable.get());
+
 	
 	while (!glfwWindowShouldClose(win))
 	{

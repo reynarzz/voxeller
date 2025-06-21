@@ -13,6 +13,12 @@ class OpenGLDevice : public GfxDevice
 	void DrawRenderable(const RenderableObject* renderable) override;
 	std::weak_ptr<RenderTarget> GetRenderTarget() const override;
 
+	void SetRendererGlobalState(const RendererState& uniforms) override;
+
+
 	void Begin() override;
 	void End() override;
+
+private:
+	
 };

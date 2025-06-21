@@ -42,13 +42,19 @@ void RenderingSystem::Update()
 
     _device->Begin();
 
+    // Move
+	constexpr f32 colorTest = 0.05f;
+    RendererState state{};
+    state.Color = { colorTest, colorTest, colorTest, 1.0f};
+    
+    _device->SetRendererGlobalState(state);
+
     for (size_t i = 0; i < _renderables.size(); i++)
     {
        const RenderableObject* renderable = _renderables[i];
        const PipelineData* data = _pipelinesConfigs->GetPipelineData(renderable->GetRenderType());
        
        _device->SetPipelineData(data);
-
        // Set uniforms (camera view, etc..)
        
        // Draw

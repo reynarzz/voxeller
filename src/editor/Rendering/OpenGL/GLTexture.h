@@ -11,7 +11,7 @@ public:
     GLTexture(const TextureDescriptor* desc);
     ~GLTexture() override;
     u32 GetID() const;
-    void Bind(s32 index);
+    void Bind(s32 index) const;
 
 private:
     u32 _id = 0;

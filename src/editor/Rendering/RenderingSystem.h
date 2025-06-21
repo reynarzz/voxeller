@@ -20,6 +20,8 @@ public:
     
     const static std::weak_ptr<RenderTarget> GetRenderTarget();
     static std::weak_ptr<GfxDevice> GetDevice();
+    
+    void SetViewMatrix(void* viewM);
 
 private:
     static std::shared_ptr<GfxDevice> _device;

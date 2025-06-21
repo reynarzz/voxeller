@@ -87,6 +87,9 @@ namespace Unvoxeller
 		vox_mat4& operator+=(const vox_mat4& o);
 		vox_mat4& operator*=(const vox_mat4& o);
 		vox_mat4& operator*=(f32 s);
+
+		f32* data()             { return &m00; }
+    	const f32* data() const { return &m00; }
 	};
 
 	//–– 2×2 integer matrix
