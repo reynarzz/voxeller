@@ -6,13 +6,10 @@ class OpenGLDevice : public GfxDevice
 	void Initialize() override;
 	const DeviceInfo& GetInfo() const override;
 	std::shared_ptr<Texture> CreateTexture(const TextureDescriptor* desc) override;
-	void* CreateShader(const ShaderDescriptor* desc) override;
-	void* CreateMesh(const MeshDescriptor* desc) override;
+	std::shared_ptr<Shader> CreateShader(const ShaderDescriptor* desc) override;
+	std::shared_ptr<Mesh> CreateMesh(const MeshDescriptor* desc) override;
 
-	void UpdateMesh(const void** res) override;
-	void UpdateTexture(const void** res) override;
+	void SetPipelineData(const PipelineData* data) override;
 
-	bool DestroyShader(void*) override;
-	bool DestroyTexture(void*) override;
-	bool DestroyMesh(void*) override;
+	void DrawMesh(const Mesh* mesh) override;
 };

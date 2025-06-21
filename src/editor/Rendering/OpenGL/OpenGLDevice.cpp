@@ -1,6 +1,8 @@
 #include "OpenGLDevice.h"
+#include "GLInclude.h"
 #include "GLTexture.h"
-
+#include "GLMesh.h"
+#include "GLShader.h"
 
 void OpenGLDevice::Initialize()
 {
@@ -14,39 +16,51 @@ const DeviceInfo& OpenGLDevice::GetInfo() const
 
 std::shared_ptr<Texture> OpenGLDevice::CreateTexture(const TextureDescriptor* desc)
 {
-	return std::static_pointer_cast<Texture>(std::make_shared<GLTexture>(desc));
+	return std::make_shared<GLTexture>(desc);
 }
 
-void* OpenGLDevice::CreateShader(const ShaderDescriptor* desc)
+std::shared_ptr<Shader> OpenGLDevice::CreateShader(const ShaderDescriptor* desc)
 {
-	return nullptr;
+	return std::make_shared<GLShader>(desc);
 }
 
-void* OpenGLDevice::CreateMesh(const MeshDescriptor* desc)
+std::shared_ptr<Mesh> OpenGLDevice::CreateMesh(const MeshDescriptor* desc)
 {
-	return nullptr;
+	return std::make_shared<GLMesh>(desc);
 }
 
-void OpenGLDevice::UpdateMesh(const void** res)
+void OpenGLDevice::DrawMesh(const Mesh *mesh)
 {
+	const GLMesh* glMesh = static_cast<const GLMesh*>(mesh);
+	glMesh->Bind();
+	
+	// Bind pipeline
+
+	// Draw
+	glDrawElements(GL_TRIANGLES, glMesh->GetIndexCount(), GL_UNSIGNED_INT, nullptr);
+	
 }
 
-void OpenGLDevice::UpdateTexture(const void** res)
+void OpenGLDevice::SetPipelineData(const PipelineData *data)
 {
-}
+	if(data->ZWrite)
+	{
+		glEnable(GL_DEPTH_TEST);
+	}
+	else
+	{
+		glDisable(GL_DEPTH_TEST);
+	}
+	
+	if(data->Blending)
+	{
+		glEnable(GL_BLEND);
 
-bool OpenGLDevice::DestroyShader(void*)
-{
-	return false;
+		// We are going to support just one type of blending.
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	}
+	else
+	{
+		glDisable(GL_BLEND);
+	}
 }
-
-bool OpenGLDevice::DestroyTexture(void*)
-{
-	return false;
-}
-
-bool OpenGLDevice::DestroyMesh(void*)
-{
-	return false;
-}
-

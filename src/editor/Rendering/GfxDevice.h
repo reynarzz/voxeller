@@ -1,38 +1,20 @@
 #pragma once
 #include <string>
 #include <Rendering/Texture.h>
+#include <Rendering/Mesh.h>
+#include <Rendering/Shader.h>
+#include <Rendering/PipelineData.h>
 
 // Descriptors;
 #include <Rendering/MeshDescriptor.h>
 #include <Rendering/TextureDescriptor.h>
-
-struct ShaderDescriptor
-{
-	std::string vertexBuffer;
-	std::string fragmentBuffer;
-};
+#include <Rendering/ShaderDescriptor.h>
 
 struct DeviceInfo
 {
 	std::string Name;
 
 };
-
-
-struct ShaderObject
-{
-
-};
-
-struct PilelineData
-{
-	bool ZWrite = true;
-	bool Bleding = false;
-	ShaderObject Shader;
-
-};
-
-
 
 // Base class for devices
 class GfxDevice
@@ -41,17 +23,11 @@ public:
 	virtual void Initialize() = 0;
 	virtual const DeviceInfo& GetInfo() const = 0;
 	virtual std::shared_ptr<Texture> CreateTexture(const TextureDescriptor* desc) = 0;
-	virtual void* CreateShader(const ShaderDescriptor* desc) = 0;
-	virtual void* CreateMesh(const MeshDescriptor* desc) = 0;
+	virtual std::shared_ptr<Shader> CreateShader(const ShaderDescriptor* desc) = 0;
+	virtual std::shared_ptr<Mesh> CreateMesh(const MeshDescriptor* desc) = 0;
 
-	virtual void UpdateMesh(const void** res) = 0;
-	virtual void UpdateTexture(const void** res) = 0;
-
-	virtual bool DestroyShader(void*) = 0;
-	virtual bool DestroyTexture(void*) = 0;
-	virtual bool DestroyMesh(void*) = 0;
-	// virtual void SetPipelineData(const PilelineData* data) = 0;
-	// virtual void DrawMesh(const void* mesh) = 0;
+	virtual void SetPipelineData(const PipelineData* data) = 0;
+	virtual void DrawMesh(const Mesh* mesh) = 0;
 private:
 
 };

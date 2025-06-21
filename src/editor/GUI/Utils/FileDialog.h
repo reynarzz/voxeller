@@ -14,7 +14,7 @@ public:
 
 	static void DisplayFolder(const std::string& path, bool highlight = false);
 
-	static std::string save_file(const std::string& openPath, const std::string& defaultName, 
+	static std::string SaveFile(const std::string& openPath, const std::string& defaultName, 
                                  const std::vector<std::pair<std::string, std::string>>& filters = {});
 
 };

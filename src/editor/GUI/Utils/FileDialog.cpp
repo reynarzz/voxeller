@@ -188,7 +188,7 @@ std::vector<std::string> FileDialog::OpenFolders(const std::string& openPath)
 	return outPathStr;
 }
 
-std::string FileDialog::save_file(const std::string& openPath, const std::string& defaultName, const std::vector<std::pair<std::string, std::string>>& filters)
+std::string FileDialog::SaveFile(const std::string& openPath, const std::string& defaultName, const std::vector<std::pair<std::string, std::string>>& filters)
 {
 	init();
 	auto internalFilters = to_internal_filter(filters);

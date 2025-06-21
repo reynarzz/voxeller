@@ -1,16 +1,19 @@
 #pragma once
 #include <vector>
 #include <Unvoxeller/Types.h>
+#include <Unvoxeller/Math/VoxVector.h>
+#include <Rendering/PipelineRenderType.h>
 
 struct Vertex
 {
-    f32 x, y, z;
-    f32 nx, ny, nz;
-    f32 u, v;
+    Unvoxeller::vox_vec3 Position;
+    Unvoxeller::vox_vec3 Normal;
+    Unvoxeller::vox_vec2 UV;
 };
 
 struct MeshDescriptor
 {
+    PipelineRenderType RenderType;
     std::vector<Vertex> Vertices;
     std::vector<u32> Indices;
 };
