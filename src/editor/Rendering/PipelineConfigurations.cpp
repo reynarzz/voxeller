@@ -9,16 +9,16 @@ PipelineConfigurations::PipelineConfigurations(GfxDevice* device)
     };
 }
 
-const std::weak_ptr<PipelineData> PipelineConfigurations::GetPipelineData(const PipelineRenderType type) const
+const PipelineData* PipelineConfigurations::GetPipelineData(const PipelineRenderType type) const
 {
     auto it = _pipelinesData.find(type);
 
     if(it != _pipelinesData.end())
     {
-        return it->second;
+        return it->second.get();
     }
     
-    return {};
+    return nullptr;
 }
 
 std::shared_ptr<PipelineData> PipelineConfigurations::CreateOpaquePipeline(GfxDevice* device)

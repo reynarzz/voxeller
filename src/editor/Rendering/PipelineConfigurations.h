@@ -11,7 +11,7 @@ public:
     PipelineConfigurations(GfxDevice* device);
     ~PipelineConfigurations();
 
-    const std::weak_ptr<PipelineData> GetPipelineData(const PipelineRenderType type) const;
+    const PipelineData* GetPipelineData(const PipelineRenderType type) const;
 
 private:
 

@@ -26,8 +26,10 @@ public:
 	virtual std::shared_ptr<Shader> CreateShader(const ShaderDescriptor* desc) = 0;
 	virtual std::shared_ptr<Mesh> CreateMesh(const MeshDescriptor* desc) = 0;
 
-	virtual void SetPipelineData(const PipelineData* data) = 0;
+	virtual void SetPipelineData(const PipelineData* data);
 	virtual void DrawMesh(const Mesh* mesh) = 0;
-private:
 
+protected:
+	bool NeedChangePipeline(const PipelineData*  data);
+private:
 };

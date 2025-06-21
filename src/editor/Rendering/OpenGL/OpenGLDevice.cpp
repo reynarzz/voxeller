@@ -41,26 +41,32 @@ void OpenGLDevice::DrawMesh(const Mesh *mesh)
 	
 }
 
-void OpenGLDevice::SetPipelineData(const PipelineData *data)
+void OpenGLDevice::SetPipelineData(const PipelineData* data)
 {
-	if(data->ZWrite)
+	if(NeedChangePipeline(data))
 	{
-		glEnable(GL_DEPTH_TEST);
-	}
-	else
-	{
-		glDisable(GL_DEPTH_TEST);
+		GfxDevice::SetPipelineData(data);
+
+		if(data->ZWrite)
+		{
+			glEnable(GL_DEPTH_TEST);
+		}
+		else
+		{
+			glDisable(GL_DEPTH_TEST);
+		}
+
+		if(data->Blending)
+		{
+			glEnable(GL_BLEND);
+
+			// We are going to support just one type of blending.
+			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		}
+		else
+		{
+			glDisable(GL_BLEND);
+		}
 	}
 	
-	if(data->Blending)
-	{
-		glEnable(GL_BLEND);
-
-		// We are going to support just one type of blending.
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	}
-	else
-	{
-		glDisable(GL_BLEND);
-	}
 }
