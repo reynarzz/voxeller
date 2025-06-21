@@ -12,7 +12,7 @@
 #include <Unvoxeller/Log/Log.h>
 #include <filesystem>
 #include <GUI/Utils/GUIUtils.h>
-
+#include <GUI/Utils/FileDialog.h>
 
 std::shared_ptr<Texture> textureTest = nullptr;
 std::shared_ptr<Texture> blackImage = nullptr;
@@ -858,7 +858,12 @@ void VoxToProcessView::UpdateGUI()
 	f32 buttonDownWidth = 25;
 	f32 buttonDOwnHeight = 25;
 	ImGui::SetCursorPosX(ImGui::GetWindowSize().x / 2.0 - buttonDownWidth);
-	CornerButton("+", TextAlign::Center, { buttonUpWidth, buttonUpHeight }, IM_COL32(65, 105, 255, 255), IM_COL32(255, 255, 255, 255), 20, ImDrawFlags_RoundCornersAll);
+	bool pressed = CornerButton("+", TextAlign::Center, { buttonUpWidth, buttonUpHeight }, IM_COL32(65, 105, 255, 255), IM_COL32(255, 255, 255, 255), 20, ImDrawFlags_RoundCornersAll);
+	if(pressed)
+	{
+		FileDialog::OpenFiles("", { { "Voxels", "vox"}} );
+	}
+	
 	ImGui::SameLine();
 	CornerButton("++", TextAlign::Center, { buttonUpWidth, buttonUpHeight }, IM_COL32(65, 105, 255, 255), IM_COL32(255, 255, 255, 255), 30, ImDrawFlags_RoundCornersAll);
 	ImGui::SameLine();

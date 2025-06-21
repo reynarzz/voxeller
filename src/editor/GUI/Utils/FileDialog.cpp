@@ -18,6 +18,7 @@ static void openFIle()
 	nfdopendialogu8args_t args = { 0 };
 	args.filterList = filters;
 	args.filterCount = 2;
+    
 	nfdresult_t result = NFD_OpenDialogU8_With(&outPath, &args);
 
 	//NFD_SaveDialogU8_With();
