@@ -13,6 +13,8 @@
 #include <filesystem>
 #include <GUI/Utils/GUIUtils.h>
 #include <GUI/Utils/FileDialog.h>
+#include <Rendering/RenderingSystem.h>
+
 
 std::shared_ptr<Texture> textureTest = nullptr;
 std::shared_ptr<Texture> blackImage = nullptr;
@@ -485,9 +487,10 @@ void ViewportWindow()
 		tex = blackImage;
 	}
 	
-	ImageRounded(TEXTURE_TO_IMGUI(tex), ImGui::GetWindowSize(), 10);
+	//ImageRounded(TEXTURE_TO_IMGUI(tex), ImGui::GetWindowSize(), 10);
+	ImageRounded(RENDER_TARGET_TO_IMGUI(RenderingSystem::GetRenderTarget().lock().get()), ImGui::GetWindowSize(), 10);
 	
-
+	
 	//ImGui::Image(nullptr, ImGui::GetWindowSize());
 
 	f32 spacing = 1;

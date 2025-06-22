@@ -44,6 +44,75 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 	Render(window);
 }
 
+static std::shared_ptr<RenderableObject> GetTestRenderableObject()
+{
+	MeshDescriptor mDesc{};
+	
+	auto renderable = std::make_shared<RenderableObject>();
+
+	renderable->GetTransform().SetPosition({});
+	mDesc.RenderType = MeshRenderType::TRIANGLES;
+
+	mDesc.Vertices = {
+		// Back face (−Z)
+		{{-0.5f, -0.5f, -0.5f}, { 0.0f,  0.0f, -1.0f}, {0.0f, 0.0f}},
+		{{ 0.5f, -0.5f, -0.5f}, { 0.0f,  0.0f, -1.0f}, {1.0f, 0.0f}},
+		{{ 0.5f,  0.5f, -0.5f}, { 0.0f,  0.0f, -1.0f}, {1.0f, 1.0f}},
+		{{-0.5f,  0.5f, -0.5f}, { 0.0f,  0.0f, -1.0f}, {0.0f, 1.0f}},
+
+		// Front face (+Z)
+		{{-0.5f, -0.5f,  0.5f}, { 0.0f,  0.0f,  1.0f}, {0.0f, 0.0f}},
+		{{ 0.5f, -0.5f,  0.5f}, { 0.0f,  0.0f,  1.0f}, {1.0f, 0.0f}},
+		{{ 0.5f,  0.5f,  0.5f}, { 0.0f,  0.0f,  1.0f}, {1.0f, 1.0f}},
+		{{-0.5f,  0.5f,  0.5f}, { 0.0f,  0.0f,  1.0f}, {0.0f, 1.0f}},
+
+		// Left face (−X)
+		{{-0.5f, -0.5f, -0.5f}, {-1.0f,  0.0f,  0.0f}, {0.0f, 0.0f}},
+		{{-0.5f,  0.5f, -0.5f}, {-1.0f,  0.0f,  0.0f}, {1.0f, 0.0f}},
+		{{-0.5f,  0.5f,  0.5f}, {-1.0f,  0.0f,  0.0f}, {1.0f, 1.0f}},
+		{{-0.5f, -0.5f,  0.5f}, {-1.0f,  0.0f,  0.0f}, {0.0f, 1.0f}},
+
+		// Right face (+X)
+		{{ 0.5f, -0.5f, -0.5f}, { 1.0f,  0.0f,  0.0f}, {0.0f, 0.0f}},
+		{{ 0.5f,  0.5f, -0.5f}, { 1.0f,  0.0f,  0.0f}, {1.0f, 0.0f}},
+		{{ 0.5f,  0.5f,  0.5f}, { 1.0f,  0.0f,  0.0f}, {1.0f, 1.0f}},
+		{{ 0.5f, -0.5f,  0.5f}, { 1.0f,  0.0f,  0.0f}, {0.0f, 1.0f}},
+
+		// Bottom face (−Y)
+		{{-0.5f, -0.5f, -0.5f}, { 0.0f, -1.0f,  0.0f}, {0.0f, 0.0f}},
+		{{-0.5f, -0.5f,  0.5f}, { 0.0f, -1.0f,  0.0f}, {1.0f, 0.0f}},
+		{{ 0.5f, -0.5f,  0.5f}, { 0.0f, -1.0f,  0.0f}, {1.0f, 1.0f}},
+		{{ 0.5f, -0.5f, -0.5f}, { 0.0f, -1.0f,  0.0f}, {0.0f, 1.0f}},
+
+		// Top face (+Y)
+		{{-0.5f,  0.5f, -0.5f}, { 0.0f,  1.0f,  0.0f}, {0.0f, 0.0f}},
+		{{-0.5f,  0.5f,  0.5f}, { 0.0f,  1.0f,  0.0f}, {1.0f, 0.0f}},
+		{{ 0.5f,  0.5f,  0.5f}, { 0.0f,  1.0f,  0.0f}, {1.0f, 1.0f}},
+		{{ 0.5f,  0.5f, -0.5f}, { 0.0f,  1.0f,  0.0f}, {0.0f, 1.0f}}
+	};
+
+	mDesc.Indices = {
+		// Back
+		0,  1,  2,   2,  3,  0,
+		// Front
+		4,  5,  6,   6,  7,  4,
+		// Left
+		8,  9, 10,  10, 11,  8,
+		// Right
+		12, 13, 14,  14, 15, 12,
+		// Bottom
+		16, 17, 18,  18, 19, 16,
+		// Top
+		20, 21, 22,  22, 23, 20
+	};
+
+	
+	renderable->SetMesh(Mesh::CreateMesh(&mDesc));
+	renderable->SetRenderType(PipelineRenderType::Opaque);
+
+	return renderable;
+}
+
 int Init()
 {
 	VoxellerInit();
@@ -167,12 +236,10 @@ int Init()
 	Unvoxeller::GreedyMesher::ExportVoxToModel(path, output, exportOptions);
 	
 	std::string texPath = Unvoxeller::File::GetExecutableDir() + "/testvox/nda/export/Output_atlas.png";
+	
+	auto objTtest = GetTestRenderableObject();
 
-	auto renderable = std::make_shared<RenderableObject>();
-
-	renderable->GetTransform().SetPosition({});
-		
-	//RenderingSystem::PushRenderable(renderable.get());
+	//RenderingSystem::PushRenderable(objTtest.get());
 
 	
 	while (!glfwWindowShouldClose(win))

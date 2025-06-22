@@ -11,7 +11,7 @@ public:
     void SetRenderType(const PipelineRenderType type);
     PipelineRenderType GetRenderType() const;
 
-    void SetMesh(std::weak_ptr<Mesh> mesh);
+    void SetMesh(std::shared_ptr<Mesh> mesh);
     std::weak_ptr<Mesh> GetMesh() const;
     
     void SetTexture(std::weak_ptr<Texture> texture);
@@ -25,9 +25,9 @@ public:
 
 private:
     bool _pendingForDestroy = false;
-
+    
     RenderableTransform _transform={};
-    std::weak_ptr<Mesh> _mesh = {};
+    std::shared_ptr<Mesh> _mesh = {};
     std::weak_ptr<Texture> _texture = {};
     PipelineRenderType _renderType = PipelineRenderType::Opaque;
 };

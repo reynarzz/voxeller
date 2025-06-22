@@ -5,7 +5,7 @@ void RenderableObject::SetRenderType(const PipelineRenderType type)
     _renderType = type;
 }
 
-void RenderableObject::SetMesh(std::weak_ptr<Mesh> mesh)
+void RenderableObject::SetMesh(std::shared_ptr<Mesh> mesh)
 {
     _mesh = mesh;
 }

@@ -3,6 +3,8 @@
 #include <Unvoxeller/Types.h>
 #include <Unvoxeller/Math/VoxVector.h>
 #include <Rendering/PipelineRenderType.h>
+#include <Rendering/MeshRenderType.h>
+
 
 struct Vertex
 {
@@ -13,7 +15,7 @@ struct Vertex
 
 struct MeshDescriptor
 {
-    PipelineRenderType RenderType;
+    MeshRenderType RenderType;
     std::vector<Vertex> Vertices;
     std::vector<u32> Indices;
 };
