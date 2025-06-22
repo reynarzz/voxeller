@@ -168,7 +168,7 @@ int Init()
 	auto renderable = std::make_shared<RenderableObject>();
 
 	renderable->GetTransform().SetPosition({});
-
+		
 	//RenderingSystem::PushRenderable(renderable.get());
 
 	

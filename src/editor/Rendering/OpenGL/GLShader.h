@@ -9,10 +9,16 @@ class GLShader : public Shader
 public:
     GLShader(const ShaderDescriptor* desc);
     ~GLShader();
-    u32 GetID();
-    void Bind();
-    void Unbind();
+
+    GLShader& operator=(const GLShader&) = delete;
+    GLShader(const GLShader&) = delete;
+
+    u32 GetID() const;
+    void Bind() const;
+    void Unbind() const;
 
 private:
-    u32 _id;
+
+    bool CompileShader(const char* shaderCode, u32 shaderType,  u32& shaderId);
+    u32 _id = 0;
 };
