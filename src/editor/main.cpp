@@ -4,7 +4,6 @@
 #include <GUI/ImGuiInit.h>
 
 #include <Unvoxeller/GreedyMesher.h>
-#include <Unvoxeller/Math/VoxMath.h>
 #include <Unvoxeller/Log/Log.h>
 #include <GUI/Utils/DropHoverEvents.h>
 #include <Rendering/Camera.h>
@@ -20,19 +19,25 @@
 // - Pallete textures (decide the max width/height. Note not override POT)
 // - Localization: English, Spanish, French, Chinese, Japanese, German.
 // - Finish shader creation.
-// - Implement frame buffer for OpenGL
+// - Implement frame buffer for OpenGL [Done]
 // - Fix app UX
 
 std::unique_ptr<ImGuiApp> _imgui = nullptr;
 std::unique_ptr<RenderingSystem> _renderingSystem = nullptr;
 std::unique_ptr<Camera> _camera = nullptr;
+std::shared_ptr<RenderableObject> _testRenderObject;
+
+f32 _rotY = 0;
 
 void Render(GLFWwindow* window)
 {
 	glfwPollEvents();
 
 	_camera->Update();
-	
+	_testRenderObject->GetTransform().SetRotation({_rotY,_rotY,0});
+
+	_rotY += 0.1f;
+
 	_renderingSystem->Update(_camera->GetState());
 
 	_imgui->Update();
@@ -226,10 +231,6 @@ int Init()
 	exportOptions.Converting.Lods = { 0.8f, 0.4f };
 
 	
-	Unvoxeller::vox_quat s{};
-	Unvoxeller::vox_vec3 as;
-	Unvoxeller::vox_vec3 a2s = -as;
-
 	//Chicken_van_2.vox
 	//std::string path = Unvoxeller::File::GetExecutableDir() + "/testvox/nda/Ambulance_1.vox"; // Test this!
 	std::string path = Unvoxeller::File::GetExecutableDir() + "/testvox/monu2.vox"; // Test this!
@@ -241,9 +242,9 @@ int Init()
 	
 	std::string texPath = Unvoxeller::File::GetExecutableDir() + "/testvox/nda/export/Output_atlas.png";
 	
-	auto objTtest = GetTestRenderableObject();
-	
-	RenderingSystem::PushRenderable(objTtest.get());
+	_testRenderObject = GetTestRenderableObject();
+	_testRenderObject->GetTransform().SetScale({3,3,3});
+	RenderingSystem::PushRenderable(_testRenderObject.get());
 	
 	while (!glfwWindowShouldClose(win))
 	{

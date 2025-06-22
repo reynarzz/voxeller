@@ -15,4 +15,6 @@ private:
     glm::mat4 _rotationM = glm::mat4(1.0f);
     glm::mat4 _scaleM = glm::mat4(1.0f);
     glm::mat4 _model = glm::mat4(1.0f);
+
+    void ApplyModel();
 };

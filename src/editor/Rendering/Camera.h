@@ -1,7 +1,6 @@
 #pragma once
 #include <Rendering/RendererState.h>
 
-
 class Camera
 {
     public:

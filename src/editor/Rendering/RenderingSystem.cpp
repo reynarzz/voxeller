@@ -53,7 +53,6 @@ void RenderingSystem::Update(const RendererState& state)
     }
 
     _device->SetCurrentRenderTarget(_renderTarget.get());
-
     _device->Begin(state);
     
     for (size_t i = 0; i < _renderables.size(); i++)
@@ -68,7 +67,6 @@ void RenderingSystem::Update(const RendererState& state)
     }
 
     _device->End();
-
     _device->SetCurrentRenderTarget(nullptr);
 }
 
