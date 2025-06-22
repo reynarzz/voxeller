@@ -15,7 +15,7 @@ GLTexture::GLTexture(const TextureDescriptor* desc)
 
     if(desc->GenMipMaps)
     {
-        GL_CALL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST));
+        GL_CALL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST));
     }
     else
     {

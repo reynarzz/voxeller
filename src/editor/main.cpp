@@ -36,7 +36,7 @@ void Render(GLFWwindow* window)
 	_camera->Update();
 	_testRenderObject->GetTransform().SetRotation({_rotY,_rotY,0});
 
-	_rotY += 0.3f;
+	_rotY += 0.1f;
 
 	_renderingSystem->Update(_camera->GetState());
 
@@ -243,7 +243,7 @@ int Init()
 	std::string texPath = Unvoxeller::File::GetExecutableDir() + "/testvox/nda/export/Output_atlas.png";
 	
 	_testRenderObject = GetTestRenderableObject();
-	_testRenderObject->GetTransform().SetScale({3,3,3});
+	_testRenderObject->GetTransform().SetScale({5,5,5});
 	RenderingSystem::PushRenderable(_testRenderObject.get());
 	
 	while (!glfwWindowShouldClose(win))
