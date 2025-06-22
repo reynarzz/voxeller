@@ -660,7 +660,7 @@ void RoundedChild(const char* id, std::function<void()> content, ImVec2 size, fl
 
 	// Draw rounded background
 	auto backgroundPos = pos;
-	const float offset = 3;
+	const float offset = 0;
 	backgroundPos.y -= offset;
 	drawList->AddRectFilled(backgroundPos, ImVec2(backgroundPos.x + size.x, backgroundPos.y + size.y + offset), bgColor, rounding);
 
@@ -957,17 +957,19 @@ void VoxToProcessView::UpdateGUI()
 				bool isSelected = (i == currentSelection);
 
 				//RoundedProgressButton(std::string("Button " + std::to_string(i)).c_str(), {ImGui::GetContentRegionAvail().x, 30}, 0.2f, IM_COL32(65,105,255,255), IM_COL32(255, 2, 255, 255), IM_COL32(255, 255, 255, 255) );
-				ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(1, 1));
+				ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(1, 0));
 				ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(1, 0));
 
-				ImGui::SetCursorPosX(defCursor + 10);
+				ImGui::SetCursorPosX(defCursor + 7);
 
 				Checkbox(std::string("##Checkbox " + std::to_string(i)).c_str(), &presset);
-				ImGui::SameLine();
+				ImGui::SameLine(0);
+				ImGui::SetCursorPosX(ImGui::GetCursorPosX() - 5);
 
 				Label(std::string("Vox " + std::to_string(i)).c_str());
+
 				ImGui::SameLine();
-				ImGui::SetCursorPosX(ImGui::GetWindowSize().x - 50);
+				ImGui::SetCursorPosX(ImGui::GetWindowSize().x - 30);
 				
 				CornerButton(std::string("T##D" + std::to_string(i)).c_str(), TextAlign::Center, {20, 20}, IM_COL32(255, 05, 55, 255), IM_COL32(255, 255, 255, 255), 10, ImDrawFlags_RoundCornersAll);
 
