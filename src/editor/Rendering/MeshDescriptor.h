@@ -1,16 +1,16 @@
 #pragma once
 #include <vector>
 #include <Unvoxeller/Types.h>
-#include <Unvoxeller/Math/VoxVector.h>
 #include <Rendering/PipelineRenderType.h>
 #include <Rendering/MeshRenderType.h>
-
+#include <glm/mat4x4.hpp>
+#include <glm/vec4.hpp>
 
 struct Vertex
 {
-    Unvoxeller::vox_vec3 Position;
-    Unvoxeller::vox_vec3 Normal;
-    Unvoxeller::vox_vec2 UV;
+    glm::vec3 Position;
+    glm::vec3 Normal;
+    glm::vec2 UV;
 };
 
 struct MeshDescriptor

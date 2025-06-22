@@ -49,6 +49,11 @@ add_subdirectory(
   ${CMAKE_BINARY_DIR}/third_party/meshoptimizer
 )
 
+add_subdirectory(
+  ${ROOT_DIR}/third/shared/glm
+  ${CMAKE_BINARY_DIR}/third_party/glm
+)
+
 
 set_target_properties(OpenMeshCore PROPERTIES DEBUG_POSTFIX "" )
 set_target_properties(OpenMeshTools PROPERTIES DEBUG_POSTFIX "" )
@@ -111,6 +116,7 @@ install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/includes/Unvoxeller
 target_include_directories(Unvoxeller PUBLIC
   ${CMAKE_CURRENT_SOURCE_DIR}/includes
   ${ROOT_DIR}/third/shared          # so we pick up both assimp/, spdlog/ and OpenMesh includes
+  ${ROOT_DIR}/third/shared/glm          # so we pick up both assimp/, spdlog/ and OpenMesh includes
 )
 
 # -----------------------------------------------------------------------------
@@ -120,6 +126,7 @@ target_link_libraries(Unvoxeller PRIVATE
   assimp
   spdlog
   meshoptimizer
+  glm
 )
 
 #TODO: Disable exceptions and RTTI in release 

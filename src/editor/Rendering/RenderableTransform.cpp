@@ -1,18 +1,18 @@
 #include "RenderableTransform.h"
 
-void RenderableTransform::SetPosition(const Unvoxeller::vox_vec3 &position)
+void RenderableTransform::SetPosition(const glm::vec3 &position)
 {
 }
 
-void RenderableTransform::SetRotation(const Unvoxeller::vox_vec3 &eulerAngles)
+void RenderableTransform::SetRotation(const glm::vec3 &eulerAngles)
 {
 }
 
-void RenderableTransform::SetScale(const Unvoxeller::vox_vec3 &scale)
+void RenderableTransform::SetScale(const glm::vec3 &scale)
 {
 }
 
-const Unvoxeller::vox_mat4& RenderableTransform::GetModelM() const
+const glm::mat4& RenderableTransform::GetModelM() const
 {
     return _model;
 }

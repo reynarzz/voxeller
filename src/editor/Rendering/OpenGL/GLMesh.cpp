@@ -7,8 +7,8 @@ GLMesh::GLMesh(const MeshDescriptor *desc)
     GL_CALL(glGenVertexArrays(1, &_vao));
     GL_CALL(glBindVertexArray(_vao));
 
-    GL_CALL(GL_CALL(glGenBuffers(1, &_vbo));
-    glBindBuffer(GL_ARRAY_BUFFER, _vbo));
+    GL_CALL(glGenBuffers(1, &_vbo);
+    GL_CALL(glBindBuffer(GL_ARRAY_BUFFER, _vbo)));
 
     GL_CALL(glBufferData(GL_ARRAY_BUFFER, desc->Vertices.size() * sizeof(Vertex), desc->Vertices.data(), GL_STATIC_DRAW));
 

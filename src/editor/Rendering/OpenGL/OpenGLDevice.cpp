@@ -56,8 +56,8 @@ void OpenGLDevice::SetPipelineData(const PipelineData* data, const RendererState
 		auto shader = static_cast<GLShader*>(data->Shader.get());
 		shader->Bind();
 
-    	Unvoxeller::vox_mat4 mvp = uniforms.ProjectionViewMatrix * renderable->GetTransform().GetModelM();
-		glUniformMatrix4fv(shader->GetUniformLocations().MVPLoc, 1, false, mvp.data());
+    	glm::mat4 mvp = uniforms.ProjectionViewMatrix * renderable->GetTransform().GetModelM();
+		glUniformMatrix4fv(shader->GetUniformLocations().MVPLoc, 1, false, &mvp[0][0]);
 		
 		GfxDevice::SetPipelineData(data, uniforms, renderable);
 
