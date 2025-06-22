@@ -12,6 +12,7 @@
 #include <iostream>
 
 #include <Rendering/RenderingSystem.h>
+#include <GUI/Utils/TextureLoader.h>
 
 // TODO:
 // - Fix small offset happening.
@@ -106,8 +107,12 @@ static std::shared_ptr<RenderableObject> GetTestRenderableObject()
 		20, 21, 22,  22, 23, 20
 	};
 
+	std::string texPath = Unvoxeller::File::GetExecutableDir() + "/testvox/nda/export/Output_atlas.png";
+
+	auto textureTest= TextureLoader::LoadTexture(texPath);
 	
 	renderable->SetMesh(Mesh::CreateMesh(&mDesc));
+	renderable->SetTexture(textureTest);
 	renderable->SetRenderType(PipelineRenderType::Opaque);
 
 	return renderable;

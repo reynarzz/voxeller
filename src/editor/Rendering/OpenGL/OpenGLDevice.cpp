@@ -40,6 +40,11 @@ void OpenGLDevice::DrawRenderable(const RenderableObject *renderable)
 	{
 		texture->Bind(0);
 	}
+	else
+	{
+		glActiveTexture(GL_TEXTURE0 + 0);
+		glBindTexture(GL_TEXTURE_2D, 0);
+	}
 	
 	// Draw
 	glDrawElements(GL_TRIANGLES, glMesh->GetIndexCount(), GL_UNSIGNED_INT, nullptr);

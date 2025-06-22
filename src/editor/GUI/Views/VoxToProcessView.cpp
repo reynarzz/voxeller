@@ -454,7 +454,7 @@ void ToolBar()
 	ImGui::SetCursorPosY((toolBarHeight - elementsHeight) / 2.0f);
 	ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 15);
 
-	
+
 	ImGui::End();
 	ImGui::PopStyleVar(4);
 	ImGui::PopStyleColor(2);

@@ -14,7 +14,7 @@ public:
     void SetMesh(std::shared_ptr<Mesh> mesh);
     std::weak_ptr<Mesh> GetMesh() const;
     
-    void SetTexture(std::weak_ptr<Texture> texture);
+    void SetTexture(std::shared_ptr<Texture> texture);
     const std::weak_ptr<Texture> GetTexture() const;
     
     void Destroy();
@@ -28,6 +28,6 @@ private:
 
     RenderableTransform _transform={};
     std::shared_ptr<Mesh> _mesh = nullptr;
-    std::weak_ptr<Texture> _texture = {};
+    std::shared_ptr<Texture> _texture = {};
     PipelineRenderType _renderType = PipelineRenderType::Opaque;
 };

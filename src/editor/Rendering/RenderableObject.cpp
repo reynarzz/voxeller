@@ -15,7 +15,7 @@ std::weak_ptr<Mesh> RenderableObject::GetMesh() const
     return _mesh;
 }
 
-void RenderableObject::SetTexture(std::weak_ptr<Texture> texture)
+void RenderableObject::SetTexture(std::shared_ptr<Texture> texture)
 {
     _texture = texture;
 }
