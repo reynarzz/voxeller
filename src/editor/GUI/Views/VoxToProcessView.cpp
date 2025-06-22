@@ -383,6 +383,136 @@ static bool SearchBar(std::string& text)
 	return active;
 }
 
+// Call exactly like ImGui::Checkbox, but draws the “check” as a white square.
+// Usage: static bool myFlag = false;
+//        if (CheckboxWhiteInner("my_id", &myFlag)) { /* toggled */ }
+bool Checkbox(const char* id, bool* v)
+{
+    ImGuiWindow* window = ImGui::GetCurrentWindow();
+    if (window->SkipItems)
+        return false;
+
+    ImGuiContext& g     = *GImGui;
+    ImGuiStyle&  style = g.Style;
+
+    // Size & bounding box
+    float square_sz = ImGui::GetFrameHeight();
+    ImVec2 pos      = window->DC.CursorPos;
+    ImVec2 bb_min   = pos;
+    ImVec2 bb_max   = ImVec2(pos.x + square_sz, pos.y + square_sz);
+    ImRect total_bb(bb_min, bb_max);
+
+    // Reserve & ID
+    ImGui::ItemSize(total_bb, style.FramePadding.y);
+    ImGuiID widget_id = window->GetID(id);
+    if (!ImGui::ItemAdd(total_bb, widget_id))
+        return false;
+
+    // Interaction
+    bool hovered, held;
+    bool pressed = ImGui::ButtonBehavior(total_bb, widget_id, &hovered, &held);
+    if (hovered)
+        ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
+
+    // Animation storage keys
+    ImGuiStorage* store = window->DC.StateStorage;
+    const ImGuiID key_on  = widget_id ^ 0xCAFEBABE;
+    const ImGuiID key_off = widget_id ^ 0xDEADBEEF;
+    float t_now = ImGui::GetTime();
+    float t_on  = store->GetFloat(key_on,  -1.0f);
+    float t_off = store->GetFloat(key_off, -1.0f);
+
+    // Toggle and kickoff animation
+    if (pressed)
+    {
+        bool newv = !*v;
+        *v = newv;
+        if (newv)
+        {
+            store->SetFloat(key_on,  t_now);
+            store->SetFloat(key_off, -1.0f);
+        }
+        else
+        {
+            store->SetFloat(key_off, t_now);
+            store->SetFloat(key_on,  -1.0f);
+        }
+    }
+
+    // Draw background
+    ImU32 custom_bg = IM_COL32(45, 45, 45, 255);
+    window->DrawList->AddRectFilled(bb_min, bb_max, custom_bg, 10.0f);
+
+    // Shared center & base radius
+    ImVec2 center{
+        (bb_min.x + bb_max.x) * 0.5f,
+        (bb_min.y + bb_max.y) * 0.5f
+    };
+    float base_radius = square_sz * 0.3f;
+
+    // ON animation: grow + fade-in
+    if (*v && t_on > 0.0f)
+    {
+        float anim = ImSaturate((t_now - t_on) / 0.3f);
+        float r = base_radius * anim;
+        int   a = (int)(200 * anim);
+        window->DrawList->AddCircleFilled(center, r, IM_COL32(255,255,255,a), 16);
+
+        if (anim > 0.5f)
+        {
+            float c = (anim - 0.5f)*2.0f;
+            float thickness = 2.5f * c;
+            ImU32 col_check = IM_COL32(50,50,50,(int)(255 * c));
+            ImVec2 p1{ center.x - square_sz * 0.15f, center.y + square_sz * 0.02f };
+            ImVec2 p2{ center.x - square_sz * 0.02f, center.y + square_sz * 0.15f };
+            ImVec2 p3{ center.x + square_sz * 0.20f, center.y - square_sz * 0.15f };
+            ImVec2 pts[3] = { p1, p2, p3 };
+            window->DrawList->AddPolyline(pts, 3, col_check, false, thickness);
+        }
+    }
+    // OFF animation: shrink + fade-out
+    else if (!*v && t_off > 0.0f)
+    {
+        float anim = ImSaturate((t_now - t_off) / 0.3f);
+        float inv  = 1.0f - anim;
+        float r    = base_radius * inv;
+        int   a    = (int)(200 * inv);
+        // draw shrinking circle
+        if (r > 0.0f && a > 0)
+            window->DrawList->AddCircleFilled(center, r, IM_COL32(255,255,255,a), 16);
+
+        // draw fading check until halfway
+        if (anim < 0.5f)
+        {
+            float c = (0.5f - anim)*2.0f; // 1→0 over first half
+            float thickness = 2.5f * c;
+            ImU32 col_check = IM_COL32(50,50,50,(int)(255 * c));
+            ImVec2 p1{ center.x - square_sz * 0.15f, center.y + square_sz * 0.02f };
+            ImVec2 p2{ center.x - square_sz * 0.02f, center.y + square_sz * 0.15f };
+            ImVec2 p3{ center.x + square_sz * 0.20f, center.y - square_sz * 0.15f };
+            ImVec2 pts[3] = { p1, p2, p3 };
+            window->DrawList->AddPolyline(pts, 3, col_check, false, thickness);
+        }
+
+        // reset storage once done
+        if (anim >= 1.0f)
+            store->SetFloat(key_off, -1.0f);
+    }
+    // Static checked state (no animation keys) — draw final circle + check
+    else if (*v && t_on < 0.0f)
+    {
+        window->DrawList->AddCircleFilled(center, base_radius, IM_COL32(255,255,255,200), 16);
+        ImVec2 p1{ center.x - square_sz * 0.15f, center.y + square_sz * 0.02f };
+        ImVec2 p2{ center.x - square_sz * 0.02f, center.y + square_sz * 0.15f };
+        ImVec2 p3{ center.x + square_sz * 0.20f, center.y - square_sz * 0.15f };
+        ImVec2 pts[3] = { p1, p2, p3 };
+        window->DrawList->AddPolyline(pts, 3, IM_COL32(50,50,50,255), false, 2.5f);
+    }
+
+    return pressed;
+}
+
+
 static void DonutProgressBar(const char* label,
 	float fraction,        // 0.0 → 0% , 1.0 → 100%
 	float radius,          // outer radius in pixels
@@ -753,6 +883,8 @@ void ExportWin()
 f32 donuFill = 0;
 
 std::string searchBar = "";
+				bool presset = false;
+
 void VoxToProcessView::UpdateGUI()
 {
 	ImGuiStyle& style = ImGui::GetStyle();
@@ -815,14 +947,20 @@ void VoxToProcessView::UpdateGUI()
 	RoundedChild("##ScrollingList", []()
 		{
 			// Scroll only this list
+			f32 defCursor = ImGui::GetCursorPosX();
+
 			for (int i = 0; i < 30; ++i)
 			{
 				bool isSelected = (i == currentSelection);
 
-
 				//RoundedProgressButton(std::string("Button " + std::to_string(i)).c_str(), {ImGui::GetContentRegionAvail().x, 30}, 0.2f, IM_COL32(65,105,255,255), IM_COL32(255, 2, 255, 255), IM_COL32(255, 255, 255, 255) );
 				ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(1, 1));
 				ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(1, 0));
+
+				ImGui::SetCursorPosX(defCursor + 10);
+
+				Checkbox(std::string("##Checkbox " + std::to_string(i)).c_str(), &presset);
+				ImGui::SameLine();
 
 				Label(std::string("Vox " + std::to_string(i)).c_str());
 				ImGui::SameLine();
