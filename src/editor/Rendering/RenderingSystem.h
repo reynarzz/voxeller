@@ -26,7 +26,8 @@ public:
 private:
     static std::shared_ptr<GfxDevice> _device;
     static std::vector<const RenderableObject*> _renderables;
-
+    static std::shared_ptr<RenderTarget> _renderTarget;
+    
     std::unique_ptr<PipelineConfigurations> _pipelinesConfigs = nullptr;
     std::vector<std::pair<s32, const RenderableObject*>> _meshesToDestroy = {};
 };

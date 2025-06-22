@@ -5,6 +5,7 @@
 
 std::shared_ptr<GfxDevice> RenderingSystem::_device = nullptr;
 std::vector<const RenderableObject*> RenderingSystem::_renderables = {};
+std::shared_ptr<RenderTarget> RenderingSystem::_renderTarget = nullptr;
 
 RenderingSystem::RenderingSystem()
 {
@@ -15,13 +16,24 @@ RenderingSystem::RenderingSystem()
 void RenderingSystem::Initialize()
 {
     _device->Initialize();
+
+    RenderTargetDescriptor rDesc{};
+    rDesc.texDescriptor.width = 1;
+    rDesc.texDescriptor.height = 1;
+
+    _renderTarget = _device->CreateRenderTarget(&rDesc);
 }
 
 void RenderingSystem::Update(const RendererState& state)
 {
+    if(_renderTarget->GetWidth() != state.ScrWidth || _renderTarget->GetHeight() != state.ScrHeight) 
+    {
+        _renderTarget->Resize(state.ScrWidth, state.ScrHeight);
+    }
+
     _meshesToDestroy.clear();
     _meshesToDestroy.reserve(_renderables.size());
-
+    
     for (size_t i = 0; i < _renderables.size(); i++)
     {
         const auto renderable = _renderables[i];
@@ -40,19 +52,21 @@ void RenderingSystem::Update(const RendererState& state)
         _renderables.pop_back();
     }
 
- 
     _device->Begin(state);
-
+    _device->SetCurrentRenderTarget(_renderTarget.get());
+    
     for (size_t i = 0; i < _renderables.size(); i++)
     {
        const RenderableObject* renderable = _renderables[i];
        const PipelineData* data = _pipelinesConfigs->GetPipelineData(renderable->GetRenderType());
        
        _device->SetPipelineData(data, state, renderable);
-
+       
        // Draw
        _device->DrawRenderable(renderable);
     }
+
+    _device->SetCurrentRenderTarget(nullptr);
 
     _device->End();
 }
@@ -64,7 +78,7 @@ void RenderingSystem::PushRenderable(const RenderableObject *renderable)
 
 const std::weak_ptr<RenderTarget> RenderingSystem::GetRenderTarget()
 {
-    return _device->GetRenderTarget();
+    return _renderTarget;
 }
 
 std::weak_ptr<GfxDevice> RenderingSystem::GetDevice()

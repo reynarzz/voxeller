@@ -22,8 +22,7 @@
 // - Implement frame buffer for OpenGL
 // - Fix app UX
 
-
-std::unique_ptr<ImGuiApp> imgui = nullptr;
+std::unique_ptr<ImGuiApp> _imgui = nullptr;
 std::unique_ptr<RenderingSystem> _renderingSystem = nullptr;
 std::unique_ptr<Camera> _camera = nullptr;
 
@@ -31,17 +30,11 @@ void Render(GLFWwindow* window)
 {
 	glfwPollEvents();
 
-	constexpr f32 colorTest = 0.05f;
-    RendererState state{};
-    state.Color = { colorTest, colorTest, colorTest, 1.0f};
-    state.ViewMatrix = {};
-    state.ProjectionViewMatrix = {};
-
-	_camera->Update(imgui->TargetSize.x,imgui->TargetSize.y);
+	_camera->Update();
 	
-	_renderingSystem->Update(state);
+	_renderingSystem->Update(_camera->GetState());
 
-	imgui->Update();
+	_imgui->Update();
 
 	glfwSwapBuffers(window);
 }
@@ -127,9 +120,10 @@ int Init()
 	LOG_INFO("Dir: {0}", Unvoxeller::File::GetExecutableDir());
 
 	//Unvoxer
-	imgui = std::make_unique<ImGuiApp>();
-
-	imgui->Init(win);
+	_camera = std::make_unique<Camera>();
+	_imgui = std::make_unique<ImGuiApp>();
+ 
+	_imgui->Init(win);
 
 	Unvoxeller::ExportOptions exportOptions{};
 	exportOptions.OutputFormat = Unvoxeller::ModelFormat::FBX;

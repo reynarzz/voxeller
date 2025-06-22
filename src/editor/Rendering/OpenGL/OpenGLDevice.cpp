@@ -3,10 +3,10 @@
 #include "GLTexture.h"
 #include "GLMesh.h"
 #include "GLShader.h"
+#include "GLFrameBuffer.h"
 
 void OpenGLDevice::Initialize()
 {
-	// Create screen framebuffer
 }
 
 const DeviceInfo& OpenGLDevice::GetInfo() const
@@ -95,7 +95,20 @@ void OpenGLDevice::End()
 	// unbind frame buffer
 }
 
-std::weak_ptr<RenderTarget> OpenGLDevice::GetRenderTarget() const 
+std::shared_ptr<RenderTarget> OpenGLDevice::CreateRenderTarget(const RenderTargetDescriptor * desc)
 {
-    return _renderTarget;
+	return std::make_shared<GLFrameBuffer>(desc);
+}
+
+void OpenGLDevice::SetCurrentRenderTarget(const RenderTarget* target)
+{
+	if(target != nullptr)
+	{
+		static_cast<const GLFrameBuffer*>(target)->Bind();
+	}
+	else
+	{
+   		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		//glViewport();
+	}
 }
