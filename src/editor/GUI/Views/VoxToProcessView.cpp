@@ -566,9 +566,12 @@ static void DonutProgressBar(const char* label,
 	}
 }
 
+f32 _windowsRound = 7.0f;
+
+
 void ToolBar()
 {
-	ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 10.0f);
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, _windowsRound);
 	bool open = true;
 	ImGui::SetNextWindowSize({ ImGui::GetIO().DisplaySize.x - 10, toolBarHeight }, ImGuiCond_Always);
 	ImGui::SetNextWindowPos({ 5, 6 }, ImGuiCond_Always);
@@ -592,7 +595,7 @@ void ToolBar()
 
 void VoxToProcessView::ViewportWindow()
 {
-	ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 10.0f);
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, _windowsRound);
 	bool open = true;
 	ImGui::SetNextWindowSize({ ImGui::GetIO().DisplaySize.x - 270.0f, ImGui::GetIO().DisplaySize.y - toolBarHeight - windowsSpacingY - 13 }, ImGuiCond_Always);
 	ImGui::SetNextWindowPos({ 5, toolBarHeight + windowsSpacingY * 2 }, ImGuiCond_Always);
@@ -619,7 +622,7 @@ void VoxToProcessView::ViewportWindow()
 	}
 	
 	//ImageRounded(TEXTURE_TO_IMGUI(tex), ImGui::GetWindowSize(), 10);
-	ImageRounded(RENDER_TARGET_TO_IMGUI(RenderingSystem::GetRenderTarget().lock().get()), ImGui::GetWindowSize(), 10);
+	ImageRounded(RENDER_TARGET_TO_IMGUI(RenderingSystem::GetRenderTarget().lock().get()), ImGui::GetWindowSize(), _windowsRound);
 	
 
 	//ImGui::Image(nullptr, ImGui::GetWindowSize());
@@ -834,7 +837,7 @@ bool Dropdown(const char* label, int* currentIndex, const std::vector<std::strin
 int selectedIndex = 0;
 void ExportWin()
 {
-	ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 10.0f);
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, _windowsRound);
 	bool open = true;
 	f32 posX = std::clamp(ImGui::GetIO().DisplaySize.x - 260.0f, 10.0f, ImGui::GetIO().DisplaySize.x);
 
@@ -907,7 +910,7 @@ void VoxToProcessView::UpdateGUI()
 	ToolBar();
 	ViewportWindow();
 	// Sidebar region (no frame)
-	ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 10.0f);
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, _windowsRound);
 	bool open = true;
 	f32 posX = std::clamp(ImGui::GetIO().DisplaySize.x - 260.0f, 10.0f, ImGui::GetIO().DisplaySize.x);
 
@@ -940,7 +943,7 @@ void VoxToProcessView::UpdateGUI()
 	ImVec2 winSize = ImGui::GetWindowSize();
 	ImVec2 winPos = ImGui::GetCursorScreenPos();
 	ImVec2 childSize = ImVec2(ImGui::GetContentRegionAvail().x, winSize.y - footerHeight);
-	float rounding = 10.0f;
+	
 	ImU32 bgColor = IM_COL32(30, 30, 30, 255);
 
 
@@ -980,7 +983,7 @@ void VoxToProcessView::UpdateGUI()
 					// your on‐select logic…
 				}
 			}
-		}, childSize, rounding, IM_COL32(25, 25, 25, 255));
+		}, childSize, _windowsRound, IM_COL32(25, 25, 25, 255));
 
 
 	// Botton buttons THese should not scroll
