@@ -9,7 +9,7 @@ struct RendererState
     Unvoxeller::vox_vec4 Color{};
 
     f32 NearPlane = 0.1f;
-    f32 FarPlane = 300.0f;
+    f32 FarPlane = 500.0f;
     f32 ScrWidth = 1;
     f32 ScrHeight = 1;
 };

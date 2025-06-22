@@ -191,9 +191,9 @@ int Init()
 	//Unvoxer
 	_camera = std::make_unique<Camera>();
 	_imgui = std::make_unique<ImGuiApp>();
- 
+	
 	_imgui->Init(win);
-
+	
 	Unvoxeller::ExportOptions exportOptions{};
 	exportOptions.OutputFormat = Unvoxeller::ModelFormat::FBX;
 	exportOptions.Converting.Meshing.RemoveTJunctions = false;
@@ -220,7 +220,7 @@ int Init()
 	// V2
 	exportOptions.Converting.Lods = { 0.8f, 0.4f };
 
-
+	
 	Unvoxeller::vox_quat s{};
 	Unvoxeller::vox_vec3 as;
 	Unvoxeller::vox_vec3 a2s = -as;
@@ -232,15 +232,13 @@ int Init()
 	//std::string output = "testvox/nda/export/Output.fbx";
 	std::string output = Unvoxeller::File::GetExecutableDir() + "/testvox/nda/export/Output.fbx";
 	
-	
 	Unvoxeller::GreedyMesher::ExportVoxToModel(path, output, exportOptions);
 	
 	std::string texPath = Unvoxeller::File::GetExecutableDir() + "/testvox/nda/export/Output_atlas.png";
 	
 	auto objTtest = GetTestRenderableObject();
-
-	//RenderingSystem::PushRenderable(objTtest.get());
-
+	
+	RenderingSystem::PushRenderable(objTtest.get());
 	
 	while (!glfwWindowShouldClose(win))
 	{

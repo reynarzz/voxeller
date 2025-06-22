@@ -59,38 +59,46 @@ namespace Unvoxeller
 		vox_mat3& operator*=(f32 s);
 	};
 
-	//–– 4×4 f32 matrix
-	struct UNVOXELLER_API vox_mat4
-	{
-		f32 m00, m01, m02, m03;
-		f32 m10, m11, m12, m13;
-		f32 m20, m21, m22, m23;
-		f32 m30, m31, m32, m33;
 
-		// Constructors
-		vox_mat4();
-		vox_mat4(f32 a00, f32 a01, f32 a02, f32 a03,
-			f32 a10, f32 a11, f32 a12, f32 a13,
-			f32 a20, f32 a21, f32 a22, f32 a23,
-			f32 a30, f32 a31, f32 a32, f32 a33);
+struct UNVOXELLER_API vox_mat4
+{
+    f32 m00, m10, m20, m30;
+    f32 m01, m11, m21, m31;
+    f32 m02, m12, m22, m32;
+    f32 m03, m13, m23, m33;
 
-		// Static identity
-		static const vox_mat4 identity;
+    // Constructors
+    vox_mat4();
+    vox_mat4(
+        f32 c00, f32 c10, f32 c20, f32 c30,
+        f32 c01, f32 c11, f32 c21, f32 c31,
+        f32 c02, f32 c12, f32 c22, f32 c32,
+        f32 c03, f32 c13, f32 c23, f32 c33
+    )
+      : m00(c00), m10(c10), m20(c20), m30(c30),
+        m01(c01), m11(c11), m21(c21), m31(c31),
+        m02(c02), m12(c12), m22(c22), m32(c32),
+        m03(c03), m13(c13), m23(c23), m33(c33)
+    {}
 
-		// Member operators
-		vox_mat4 operator+(const vox_mat4& o) const;
-		vox_mat4 operator*(const vox_mat4& o) const;
-		vox_mat4 operator*(f32 s) const;
-		vox_vec4 operator*(const vox_vec4& v) const;
+    // Static identity (column-major)
+    static const vox_mat4 identity;
 
-		// Compound assigns
-		vox_mat4& operator+=(const vox_mat4& o);
-		vox_mat4& operator*=(const vox_mat4& o);
-		vox_mat4& operator*=(f32 s);
+    // Member operators...
+    vox_mat4 operator+(const vox_mat4& o) const;
+    vox_mat4 operator*(const vox_mat4& o) const;
+    vox_mat4 operator*(f32 s) const;
+    vox_vec4 operator*(const vox_vec4& v) const;
 
-		f32* data()             { return &m00; }
-    	const f32* data() const { return &m00; }
-	};
+    // Compound assigns...
+    vox_mat4& operator+=(const vox_mat4& o);
+    vox_mat4& operator*=(const vox_mat4& o);
+    vox_mat4& operator*=(f32 s);
+
+    f32*        data()       { return &m00; }
+    const f32*  data() const { return &m00; }
+};
+
 
 	//–– 2×2 integer matrix
 	struct UNVOXELLER_API vox_imat2

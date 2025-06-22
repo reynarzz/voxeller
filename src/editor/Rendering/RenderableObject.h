@@ -25,9 +25,9 @@ public:
 
 private:
     bool _pendingForDestroy = false;
-    
+
     RenderableTransform _transform={};
-    std::shared_ptr<Mesh> _mesh = {};
+    std::shared_ptr<Mesh> _mesh = nullptr;
     std::weak_ptr<Texture> _texture = {};
     PipelineRenderType _renderType = PipelineRenderType::Opaque;
 };

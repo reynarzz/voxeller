@@ -1,6 +1,8 @@
 #include "Camera.h"
 #include <Unvoxeller/Math/VoxMath.h>
 #include <GUI/Screen.h>
+#include <Unvoxeller/Log/Log.h>
+
 
 void Camera::Update()
 {
@@ -8,8 +10,16 @@ void Camera::Update()
     {
         _state.ScrWidth = Screen::GetTargetWidth();
         _state.ScrHeight = Screen::GetTargetHeight();
+        LOG_INFO("Camera size: ({0}, {1})", _state.ScrWidth, _state.ScrHeight);
 
         _state.ProjectionMatrix = Unvoxeller::perspective(Unvoxeller::radians(65), _state.ScrWidth / _state.ScrHeight, _state.NearPlane, _state.FarPlane);
+
+        _state.ViewMatrix = { 1, 0, 0, 0,
+                              0, 1, 0, 0,
+                              0, 0, 1, -10,
+                              0, 0, 0, 1};
+
+        _state.ProjectionViewMatrix = _state.ProjectionMatrix * _state.ViewMatrix;
     }
 
     _state.Color = {0.05f,0.05f,0.05f,1.0f};

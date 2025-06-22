@@ -36,10 +36,15 @@ void OpenGLDevice::DrawRenderable(const RenderableObject *renderable)
 	
 	// Bind textures
 	const GLTexture* texture = static_cast<GLTexture*>(renderable->GetTexture().lock().get());
-	texture->Bind(0);
-
+	if(texture != nullptr)
+	{
+		texture->Bind(0);
+	}
+	
 	// Draw
 	glDrawElements(GL_TRIANGLES, glMesh->GetIndexCount(), GL_UNSIGNED_INT, nullptr);
+
+	glMesh->Unbind();
 }
 
 // Mimics modern graphics apis behaviour
@@ -81,8 +86,6 @@ void OpenGLDevice::SetPipelineData(const PipelineData* data, const RendererState
 
 void OpenGLDevice::Begin(const RendererState &uniforms)
 {
-	// bind frame buffer
-
 	// Clear
 	glClearColor(uniforms.Color.x, uniforms.Color.y, uniforms.Color.z, uniforms.Color.w);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -91,7 +94,6 @@ void OpenGLDevice::Begin(const RendererState &uniforms)
 
 void OpenGLDevice::End()
 {
-	
 	// unbind frame buffer
 }
 

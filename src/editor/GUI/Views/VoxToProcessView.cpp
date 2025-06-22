@@ -14,7 +14,7 @@
 #include <GUI/Utils/GUIUtils.h>
 #include <GUI/Utils/FileDialog.h>
 #include <Rendering/RenderingSystem.h>
-
+#include <GUI/Screen.h>
 
 std::shared_ptr<Texture> textureTest = nullptr;
 std::shared_ptr<Texture> blackImage = nullptr;
@@ -454,14 +454,13 @@ void ToolBar()
 	ImGui::SetCursorPosY((toolBarHeight - elementsHeight) / 2.0f);
 	ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 15);
 
-
-
+	
 	ImGui::End();
 	ImGui::PopStyleVar(4);
 	ImGui::PopStyleColor(2);
 }
 
-void ViewportWindow()
+void VoxToProcessView::ViewportWindow()
 {
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 10.0f);
 	bool open = true;
@@ -476,6 +475,8 @@ void ViewportWindow()
 
 	ImGui::Begin("Viewport", &open, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize);
 
+	Screen::_width = ImGui::GetWindowWidth();
+	Screen::_height = ImGui::GetWindowHeight();
 
 // Cast it through intptr_t so the full 64-bit range is preserved,
 // then to ImTextureID (which on most backends is just void*)
@@ -490,7 +491,7 @@ void ViewportWindow()
 	//ImageRounded(TEXTURE_TO_IMGUI(tex), ImGui::GetWindowSize(), 10);
 	ImageRounded(RENDER_TARGET_TO_IMGUI(RenderingSystem::GetRenderTarget().lock().get()), ImGui::GetWindowSize(), 10);
 	
-	
+
 	//ImGui::Image(nullptr, ImGui::GetWindowSize());
 
 	f32 spacing = 1;
