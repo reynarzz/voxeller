@@ -1,10 +1,13 @@
 #pragma once
-#include <Unvoxeller/Math/VoxMatrix.h>
+#include <Rendering/RendererState.h>
+
 
 class Camera
 {
     public:
-        const Unvoxeller::vox_mat4* GetViewMatrix() const;
-        void Update();
+        void Update(f32 width, f32 height);
+        const RendererState& GetState() const;
     private:
+
+    RendererState _state = {};
 };

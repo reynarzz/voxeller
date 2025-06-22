@@ -17,7 +17,7 @@ void RenderingSystem::Initialize()
     _device->Initialize();
 }
 
-void RenderingSystem::Update()
+void RenderingSystem::Update(const RendererState& state)
 {
     _meshesToDestroy.clear();
     _meshesToDestroy.reserve(_renderables.size());
@@ -40,13 +40,7 @@ void RenderingSystem::Update()
         _renderables.pop_back();
     }
 
-       // Move
-	constexpr f32 colorTest = 0.05f;
-    RendererState state{};
-    state.Color = { colorTest, colorTest, colorTest, 1.0f};
-    state.ViewMatrix= {};
-    state.ProjectionViewMatrix = {};
-    
+ 
     _device->Begin(state);
 
     for (size_t i = 0; i < _renderables.size(); i++)

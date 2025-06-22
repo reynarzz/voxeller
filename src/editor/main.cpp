@@ -7,7 +7,7 @@
 #include <Unvoxeller/Math/VoxMath.h>
 #include <Unvoxeller/Log/Log.h>
 #include <GUI/Utils/DropHoverEvents.h>
-
+#include <Rendering/Camera.h>
 #include <Unvoxeller/File.h>
 #include <iostream>
 
@@ -25,12 +25,21 @@
 
 std::unique_ptr<ImGuiApp> imgui = nullptr;
 std::unique_ptr<RenderingSystem> _renderingSystem = nullptr;
+std::unique_ptr<Camera> _camera = nullptr;
 
 void Render(GLFWwindow* window)
 {
 	glfwPollEvents();
 
-	_renderingSystem->Update();
+	constexpr f32 colorTest = 0.05f;
+    RendererState state{};
+    state.Color = { colorTest, colorTest, colorTest, 1.0f};
+    state.ViewMatrix = {};
+    state.ProjectionViewMatrix = {};
+
+	_camera->Update(imgui->TargetSize.x,imgui->TargetSize.y);
+	
+	_renderingSystem->Update(state);
 
 	imgui->Update();
 

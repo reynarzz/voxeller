@@ -14,7 +14,7 @@ public:
     ~RenderingSystem();
 
     void Initialize();
-    void Update();
+    void Update(const RendererState& state);
 
     static void PushRenderable(const RenderableObject* renderable);
     
