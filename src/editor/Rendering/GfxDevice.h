@@ -30,13 +30,12 @@ public:
 	virtual std::shared_ptr<Shader> CreateShader(const ShaderDescriptor* desc) = 0;
 	virtual std::shared_ptr<Mesh> CreateMesh(const MeshDescriptor* desc) = 0;
 
-	virtual void SetPipelineData(const PipelineData* data);
+	virtual void SetPipelineData(const PipelineData* data, const RendererState &uniforms, const RenderableObject *renderable);
 	virtual void DrawRenderable(const RenderableObject* renderable) = 0;
-	virtual void Begin() = 0;
+	virtual void Begin(const RendererState &uniforms) = 0;
 	virtual void End() = 0;
 	
 	virtual std::weak_ptr<RenderTarget> GetRenderTarget() const = 0;
-	virtual void SetRendererGlobalState(const RendererState& uniforms) = 0;
 
 protected:
 	bool NeedChangePipeline(const PipelineData*  data);

@@ -38,15 +38,12 @@ void OpenGLDevice::DrawRenderable(const RenderableObject *renderable)
 	const GLTexture* texture = static_cast<GLTexture*>(renderable->GetTexture().lock().get());
 	texture->Bind(0);
 
-	// Set model matrix
-	glUniformMatrix4fv(0, 1, false, renderable->GetTransform().GetModelM().data());
-
 	// Draw
 	glDrawElements(GL_TRIANGLES, glMesh->GetIndexCount(), GL_UNSIGNED_INT, nullptr);
 }
 
 // Mimics modern graphics apis behaviour
-void OpenGLDevice::SetPipelineData(const PipelineData* data)
+void OpenGLDevice::SetPipelineData(const PipelineData* data, const RendererState &uniforms, const RenderableObject *renderable)
 {
 	if(NeedChangePipeline(data))
 	{
@@ -54,7 +51,10 @@ void OpenGLDevice::SetPipelineData(const PipelineData* data)
 		auto shader = static_cast<GLShader*>(data->Shader.get());
 		shader->Bind();
 
-		GfxDevice::SetPipelineData(data);
+    	Unvoxeller::vox_mat4 mvp = uniforms.ProjectionViewMatrix * renderable->GetTransform().GetModelM();
+		glUniformMatrix4fv(shader->GetUniformLocations().MVPLoc, 1, false, mvp.data());
+		
+		GfxDevice::SetPipelineData(data, uniforms, renderable);
 
 		if(data->ZWrite)
 		{
@@ -79,24 +79,23 @@ void OpenGLDevice::SetPipelineData(const PipelineData* data)
 	}
 }
 
-void OpenGLDevice::Begin()
+void OpenGLDevice::Begin(const RendererState &uniforms)
 {
+	// bind frame buffer
+
+	// Clear
+	glClearColor(uniforms.Color.x, uniforms.Color.y, uniforms.Color.z, uniforms.Color.w);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
 }
 
 void OpenGLDevice::End()
 {
-	// OpenGL doesn't need this, this is mostly for compatibility. Other API's such as Vulkan could need it.
+	
+	// unbind frame buffer
 }
 
 std::weak_ptr<RenderTarget> OpenGLDevice::GetRenderTarget() const 
 {
     return _renderTarget;
-}
-
-void OpenGLDevice::SetRendererGlobalState(const RendererState &uniforms)
-{	
-	glClearColor(uniforms.Color.x, uniforms.Color.y, uniforms.Color.z, uniforms.Color.w);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	
-	glUniformMatrix4fv(0, 1, false, uniforms.ViewMatrix.data());
 }

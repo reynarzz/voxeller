@@ -1,6 +1,6 @@
 #include "GfxDevice.h"
 
-void GfxDevice::SetPipelineData(const PipelineData* data)
+void GfxDevice::SetPipelineData(const PipelineData* data, const RendererState& state, const RenderableObject* obj)
 {
    // _currentPipelineData = data;
 }

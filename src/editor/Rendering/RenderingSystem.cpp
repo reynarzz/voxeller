@@ -40,23 +40,22 @@ void RenderingSystem::Update()
         _renderables.pop_back();
     }
 
-    _device->Begin();
-
-    // Move
+       // Move
 	constexpr f32 colorTest = 0.05f;
     RendererState state{};
     state.Color = { colorTest, colorTest, colorTest, 1.0f};
+    state.ViewMatrix= {};
+    state.ProjectionViewMatrix = {};
     
-    _device->SetRendererGlobalState(state);
+    _device->Begin(state);
 
     for (size_t i = 0; i < _renderables.size(); i++)
     {
        const RenderableObject* renderable = _renderables[i];
        const PipelineData* data = _pipelinesConfigs->GetPipelineData(renderable->GetRenderType());
        
-       _device->SetPipelineData(data);
-       // Set uniforms (camera view, etc..)
-       
+       _device->SetPipelineData(data, state, renderable);
+
        // Draw
        _device->DrawRenderable(renderable);
     }

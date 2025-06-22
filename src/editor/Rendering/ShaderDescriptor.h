@@ -5,5 +5,5 @@
 struct ShaderDescriptor
 {
 	std::vector<u8> Vertex;
-	std::vector<const u8> Fragment;
+	std::vector<u8> Fragment;
 };

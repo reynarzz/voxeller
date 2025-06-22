@@ -36,6 +36,14 @@ GLShader::GLShader(const ShaderDescriptor* desc)
     glDetachShader(_id, fragId);
     glDeleteShader(vertId);
     glDeleteShader(fragId);
+
+    // uniforms locations will enforce these names.
+    _locations.MVPLoc = glGetUniformLocation(_id, "_MVP_");
+}
+
+const GLShader::ShaderUniformLocations &GLShader::GetUniformLocations() const
+{
+    return _locations;
 }
 
 u32 GLShader::GetID() const

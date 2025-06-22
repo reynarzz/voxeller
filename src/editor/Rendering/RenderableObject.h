@@ -16,7 +16,7 @@ public:
     
     void SetTexture(std::weak_ptr<Texture> texture);
     const std::weak_ptr<Texture> GetTexture() const;
-
+    
     void Destroy();
     bool ShouldDestroy() const;
 

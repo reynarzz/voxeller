@@ -2,6 +2,8 @@
 
 PipelineConfigurations::PipelineConfigurations(GfxDevice* device)
 {
+    _shaderLibrary = std::make_unique<ShaderLibrary>();
+
     _pipelinesData = 
     {
         { PipelineRenderType::Opaque, CreateOpaquePipeline(device) },
@@ -26,12 +28,9 @@ std::shared_ptr<PipelineData> PipelineConfigurations::CreateOpaquePipeline(GfxDe
     auto pipelineData = std::make_shared<PipelineData>();
 
     // TODO: Create the opaque shader
-
     ShaderDescriptor desc{};
-    //desc.Vertex.resize();
-
-    u32 CameraViewMatrixLocation=0;
-	u32 ModelMatrixLocation=0;
+    desc.Vertex = _shaderLibrary->GetShaderBuffer(ShaderType::VERTEX_UNLIT);
+    desc.Fragment = _shaderLibrary->GetShaderBuffer(ShaderType::FRAGMENT_UNLIT);
 
     pipelineData->ZWrite = true;
     pipelineData->Blending = false;
