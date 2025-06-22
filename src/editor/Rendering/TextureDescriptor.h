@@ -8,4 +8,6 @@ struct TextureDescriptor
     s32 height;
     s32 channels;
     u8* image;
+    
+    bool GenMipMaps = false;
 };

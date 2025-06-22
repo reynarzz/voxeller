@@ -14,10 +14,11 @@ std::shared_ptr<TextureLoadData> TextureLoader::LoadRawTexture(const std::string
     return data;
 }
 
-std::shared_ptr<Texture> TextureLoader::LoadTexture(const std::string &path)
+std::shared_ptr<Texture> TextureLoader::LoadTexture(const std::string &path, bool genMipMaps)
 {
     auto tex = LoadRawTexture(path);
-
+    tex->desc.GenMipMaps = genMipMaps;
+    
     return Texture::Create(&tex->desc);
 }
 
