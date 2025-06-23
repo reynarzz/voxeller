@@ -18,7 +18,7 @@ void Camera::Update()
         _state.ProjectionViewMatrix = _state.ProjectionMatrix * _state.ViewMatrix;
     }
 
-    _state.Color = { 0.05f, 0.05f, 0.05f, 1.0f };
+    _state.Color = { 0.1f, 0.1f, 0.1f, 1.0f };
 }
 
 void Camera::SetBackgroundColor(f32 r, f32 g, f32 b, f32 a)
