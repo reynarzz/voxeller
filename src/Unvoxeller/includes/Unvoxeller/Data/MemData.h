@@ -5,10 +5,8 @@
 
 namespace Unvoxeller 
 {
-	
-struct UNVOXELLER_API MemData
-{
-	ConvertResult Convert;
-};
-
+	struct UNVOXELLER_API MemData
+	{
+		ConvertResult Convert;
+	};
 }

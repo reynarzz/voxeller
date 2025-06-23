@@ -4,6 +4,8 @@
 #include <Unvoxeller/Types.h>
 #include <vector>
 #include <glm/vec3.hpp>
+#include "TextureType.h"
+#include <Unvoxeller/Data/MeshType.h>
 
 namespace Unvoxeller 
 {
@@ -11,21 +13,6 @@ namespace Unvoxeller
 	enum class ModelFormat
 	{
 		FBX, OBJ,
-	};
-
-	enum class TextureType
-	{
-		// Will generate performant meshes, but texture will be more complex and bigger in size. 
-		// Perfect for complex meshes. Bake supported.
-		Atlas,
-
-		//// Will generate a not so performant meshes, and a no so performant texture, but final mesh fidelity will be higher. 
-		//// Great for non interactive media (videos/images). Bake supported.
-		//AtlasHighFidelity,
-
-		// Will generate meshes with more complex topology but simpler and smaller texture made of individual colors per pixel. 
-		// Perfect for simple meshes. Baking is not possible/harder to do.
-		Palette
 	};
 
 	struct UNVOXELLER_API PaletteTextureConfig
@@ -100,6 +87,8 @@ namespace Unvoxeller
 		// Tip: use it alongside "RemoveOcludedFaces" for cleaner and performat results.
 		bool MergeMeshes = false;
 
+		MeshType MeshType = MeshType::Greedy;
+		
 		VisibleSides Sides;
 	};
 

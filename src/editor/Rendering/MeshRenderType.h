@@ -4,5 +4,5 @@
 enum class MeshRenderType
 {
     TRIANGLES,
-    LINE
+    LINES
 };
