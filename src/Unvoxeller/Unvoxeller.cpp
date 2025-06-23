@@ -530,8 +530,6 @@ static std::vector<aiScene*> GetModels(const vox_file* voxData, const s32 frameI
 			}
 
 
-			aiMesh* mesh = new aiMesh();
-
 			int shapeNodeId = shape.nodeID;
 			const vox_nTRN* trnNode = nullptr;
 			for (const auto& trnKV : voxData->transforms)
@@ -550,7 +548,7 @@ static std::vector<aiScene*> GetModels(const vox_file* voxData, const s32 frameI
 			vox_transform wxf = AccumulateWorldTransform(shape.nodeID, frameIndex, *voxData);
 
 			// Build mesh and apply MagicaVoxel rotation+translation directly into vertices:
-			MeshBuilder::BuildMeshFromFaces(
+			auto mesh = MeshBuilder::BuildMeshFromFaces(
 				faces,
 				textureData->Width, textureData->Height,
 				options.Meshing.FlatShading,
@@ -568,11 +566,11 @@ static std::vector<aiScene*> GetModels(const vox_file* voxData, const s32 frameI
 
 			if (options.Meshing.GenerateMaterials)
 			{
-				mesh->mMaterialIndex = options.Meshing.MaterialPerMesh && !options.ExportMeshesSeparatelly ? materialIndex++ : 0;
+				mesh->MaterialIndex = options.Meshing.MaterialPerMesh && !options.ExportMeshesSeparatelly ? materialIndex++ : 0;
 			}
 			else
 			{
-				mesh->mMaterialIndex = 0;
+				mesh->MaterialIndex = 0;
 			}
 			// Record mesh index and create node with identity transform:
 			unsigned int meshIndex = static_cast<unsigned int>(meshes.size());
@@ -607,14 +605,14 @@ static std::vector<aiScene*> GetModels(const vox_file* voxData, const s32 frameI
 			{
 				for (unsigned int i = 0; i < mesh->mNumVertices; ++i)
 				{
-					mesh->mVertices[i] -= cent;
+					mesh->Vertices[i] -= cent;
 				}
 			}
 			else
 			{
 				for (unsigned int i = 0; i < mesh->mNumVertices; ++i)
 				{
-					mesh->mVertices[i] -= cent;
+					mesh->Vertices[i] -= cent;
 				}
 
 				aiMatrix4x4 C;
@@ -776,7 +774,7 @@ const std::vector<aiScene*> Run(const vox_file* voxData, const std::string& outp
 		std::cerr << "Failed to read voxel file or file is invalid.\n";
 		return {};
 	}
-
+	
 	// Determine if we have multiple frames (multiple models or transform frames)
 	s32 frameCount = 0;
 
@@ -914,15 +912,17 @@ const std::vector<aiScene*> Run(const vox_file* voxData, const std::string& outp
 				std::vector<FaceRect> facesForMesh;
 				facesForMesh.insert(facesForMesh.end(), allFaces.begin() + faceOffset, allFaces.begin() + faceOffset + frameFaces.size());
 				faceOffset += frameFaces.size();
+				
 				// Create mesh
-				aiMesh* mesh = new aiMesh();
-				scene->mMeshes[i] = mesh;
+				//aiMesh* mesh = new aiMesh();
+
+				//scene->mMeshes[i] = mesh;
 
 				auto& sz = voxData->sizes[modelIndex];
 				auto& mdl = voxData->voxModels[modelIndex];
 				auto  box = mdl.boundingBox;
 
-				MeshBuilder::BuildMeshFromFaces(facesForMesh, texData->Width, texData->Height, options.Meshing.FlatShading, voxData->palette, mesh, box);
+				auto mesh = MeshBuilder::BuildMeshFromFaces(facesForMesh, texData->Width, texData->Height, options.Meshing.FlatShading, voxData->palette, box);
 				LOG_INFO("Build meshes from faces, mesh: {0}", i);
 
 				// TODO: position origin issue, take into account the position of the objects, this should be used, reynardo
@@ -931,7 +931,7 @@ const std::vector<aiScene*> Run(const vox_file* voxData, const std::string& outp
 				//-----
 
 
-				mesh->mMaterialIndex = options.Texturing.SeparateTexturesPerMesh ? (int)i : 0;
+				mesh->MaterialIndex = options.Texturing.SeparateTexturesPerMesh ? (int)i : 0;
 				// Create node for this mesh
 				aiNode* node = new aiNode();
 				node->mName = aiString("Frame" + std::to_string(i));
@@ -945,7 +945,6 @@ const std::vector<aiScene*> Run(const vox_file* voxData, const std::string& outp
 				scene->mRootNode->mChildren[i] = node;
 
 				LOG_INFO("Completed mesh: {0}", i);
-
 			}
 		}
 		else

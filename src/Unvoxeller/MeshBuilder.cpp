@@ -3,17 +3,18 @@
 namespace Unvoxeller
 {
     // Build the actual geometry (vertices and indices) for a mesh from the FaceRect list and a given texture atlas configuration.
- void MeshBuilder::BuildMeshFromFaces(
+ std::shared_ptr<UnvoxMesh> MeshBuilder::BuildMeshFromFaces(
         const std::vector<FaceRect>& faces,
         int texWidth, int texHeight,
         bool flatShading,
         const std::vector<color>& palette,
-        aiMesh* mesh,
         const bbox& box,
         const vox_mat3& rotation,
         const vox_vec3& translation
-) 
+)
 {
+	std::shared_ptr<UnvoxMesh> mesh = std::make_shared<UnvoxMesh>();
+
 	// 1) Build raw voxel-space verts & indices
 	struct Vertex 
 	{
@@ -22,26 +23,32 @@ namespace Unvoxeller
 		float u, v;
 		uint32_t colorIndex;
 	};
+
 	std::vector<Vertex>       verts;
 	std::vector<unsigned int> indices;
 	verts.reserve(faces.size() * 4);
 	indices.reserve(faces.size() * 6);
 
 	// New key that includes pos, normal, uv, and colorIndex
-	struct VertKey {
+	struct VertKey 
+	{
 		int px_i, py_i, pz_i;
 		int nx_i, ny_i, nz_i;
 		int u_i, v_i;
 		uint32_t colorIndex;
-		bool operator==(VertKey const& o) const {
+		bool operator==(VertKey const& o) const 
+		{
 			return px_i == o.px_i && py_i == o.py_i && pz_i == o.pz_i
 				&& nx_i == o.nx_i && ny_i == o.ny_i && nz_i == o.nz_i
 				&& u_i == o.u_i && v_i == o.v_i
 				&& colorIndex == o.colorIndex;
 		}
 	};
-	struct VertKeyHash {
-		size_t operator()(VertKey const& k) const noexcept {
+
+	struct VertKeyHash 
+	{
+		size_t operator()(VertKey const& k) const noexcept 
+		{
 			// combine all 8 ints + colorIndex
 			size_t h = 146527; // random seed
 			auto mix = [&](size_t v) { h ^= v + 0x9e3779b97f4a7c15ULL + (h << 6) + (h >> 2); };
@@ -82,10 +89,12 @@ namespace Unvoxeller
 			key.colorIndex = colorIndex;
 
 			// lookup/insert
-			if (auto it = vertMap.find(key); it != vertMap.end()) {
+			if (auto it = vertMap.find(key); it != vertMap.end()) 
+			{
 				return it->second;
 			}
-			else {
+			else 
+			{
 				unsigned int idx = (unsigned int)verts.size();
 				verts.push_back(Vertex{ vx,vy,vz, nx,ny,nz, u,v, colorIndex });
 				vertMap[key] = idx;
@@ -105,7 +114,8 @@ namespace Unvoxeller
 	const bool shouldInvert = (det < 0.0f);
 
 	// 2) Emit all faces
-	for (auto& face : faces) {
+	for (auto& face : faces) 
+	{
 		// atlas UVs
 		float u0 = (face.atlasX + border) * pixelW;
 		float v0 = 1.0f - (face.atlasY + border) * pixelH;
@@ -115,7 +125,8 @@ namespace Unvoxeller
 		// face normal + 4 corners
 		float nx = 0, ny = 0, nz = 0;
 		float x0, y0, z0, x1, y1, z1, x2, y2, z2, x3, y3, z3;
-		switch (face.orientation) {
+		switch (face.orientation) 
+		{
 		case 'X':
 			nx = +1;
 			x0 = face.constantCoord; y0 = face.vMin; z0 = face.uMin;
@@ -186,38 +197,48 @@ namespace Unvoxeller
 		bool baseIsCCW = (dot(triN, vox_vec3{ nx,ny,nz }) > 0.0f);
 		bool finalIsCCW = shouldInvert ? !baseIsCCW : baseIsCCW;
 
-		if (finalIsCCW) {
+		if (finalIsCCW)
+		{
 			indices.insert(indices.end(), { i0,i1,i2,  i0,i2,i3 });
 		}
-		else {
+		else 
+		{
 			indices.insert(indices.end(), { i0,i2,i1,  i0,i3,i2 });
 		}
 	}
 
 	// 3) If smooth shading, normalize summed normals
-	if (!flatShading) {
-		for (auto& v : verts) {
+	if (!flatShading) 
+	{
+		for (auto& v : verts) 
+		{
 			float L = std::sqrt(v.nx * v.nx + v.ny * v.ny + v.nz * v.nz);
 			if (L > 0) { v.nx /= L; v.ny /= L; v.nz /= L; }
 		}
 	}
 
 	// 4) Upload into aiMesh (unchanged)
-	mesh->mPrimitiveTypes = aiPrimitiveType_TRIANGLE;
-	mesh->mNumVertices = (unsigned int)verts.size();
-	mesh->mVertices = new aiVector3D[verts.size()];
-	mesh->mNormals = new aiVector3D[verts.size()];
-	mesh->mTextureCoords[0] = new aiVector3D[verts.size()];
-	mesh->mNumUVComponents[0] = 2;
+	// mesh->mPrimitiveTypes = aiPrimitiveType_TRIANGLE;
+	// mesh->mNumVertices = (unsigned int)verts.size();
+	// mesh->mVertices = new aiVector3D[verts.size()];
+	// mesh->mNormals = new aiVector3D[verts.size()];
+	// mesh->mTextureCoords[0] = new aiVector3D[verts.size()];
+	// mesh->mNumUVComponents[0] = 2;
+
+	mesh->Vertices.resize(verts.size());
+	mesh->Normals.resize(verts.size());
+	mesh->UVs.resize(verts.size());
 
 	// compute pivot...
-	vox_vec3 pivot = {
+	vox_vec3 pivot =
+	{
 		(box.minX + box.maxX) * 0.5f,
 		(box.minY + box.maxY) * 0.5f,
 		(box.minZ + box.maxZ) * 0.5f
 	};
 
-	for (unsigned int i = 0; i < verts.size(); ++i) {
+	for (unsigned int i = 0; i < verts.size(); ++i) 
+	{
 		// recenter → rotate → swizzle → translate → mirror (exactly as before)
 		float x = verts[i].px - pivot.x,
 			y = verts[i].py - pivot.y,
@@ -237,31 +258,48 @@ namespace Unvoxeller
 		nx = tx; ny = ty; nz = tz;
 
 		// swizzle into Assimp
-		aiVector3D pos{ x, z, y };
-		aiVector3D norm{ nx, nz, ny };
+		vox_vec3 pos{ x, z, y };
+		vox_vec3 norm{ nx, nz, ny };
 
 		// translation w/ Y⇄Z swap, then un-mirror X
 		pos.x += translation.x; pos.y += translation.z; pos.z += translation.y;
 		pos.x = -pos.x;  norm.x = -norm.x;
 
-		mesh->mVertices[i] = pos;
-		mesh->mNormals[i] = norm;
-		mesh->mTextureCoords[0][i] = aiVector3D(verts[i].u, verts[i].v, 0.f);
+		// mesh->mVertices[i] = pos;
+		// mesh->mNormals[i] = norm;
+		// mesh->mTextureCoords[0][i] = aiVector3D(verts[i].u, verts[i].v, 0.f);
+
+		mesh->Vertices[i] = pos;
+		mesh->Normals[i] = norm;
+		mesh->UVs[i] = { verts[i].u, verts[i].v };
 	}
 
 	// 5) Build faces
-	mesh->mNumFaces = (unsigned int)(indices.size() / 3);
-	mesh->mFaces = new aiFace[mesh->mNumFaces];
-	for (unsigned int f = 0; f < mesh->mNumFaces; ++f) 
+	// mesh->mNumFaces = (unsigned int)(indices.size() / 3);
+	// mesh->mFaces = new aiFace[mesh->mNumFaces];
+
+	mesh->Faces.resize(static_cast<u32>((indices.size() / 3)));
+
+	for (unsigned int f = 0; f < mesh->Faces.size(); ++f) 
 	{
-		aiFace& faceOut = mesh->mFaces[f];
-		faceOut.mNumIndices = 3;
-		faceOut.mIndices = new unsigned int[3] {
+		auto& faceOut = mesh->Faces[f];
+		
+		// faceOut.mNumIndices = 3;
+		// faceOut.mIndices = new unsigned int[3] {
+		// 	indices[3 * f + 0],
+		// 		indices[3 * f + 1],
+		// 		indices[3 * f + 2]
+		// };
+
+		faceOut.Indices =
+		{
 			indices[3 * f + 0],
-				indices[3 * f + 1],
-				indices[3 * f + 2]
-			};
+			indices[3 * f + 1],
+			indices[3 * f + 2]
+		};
 	}
+
+	return mesh;
 }
 
 }

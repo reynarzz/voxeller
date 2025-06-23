@@ -7,17 +7,18 @@
 
 namespace Unvoxeller
 {
-    struct VoxFace
+    struct UnvoxFace
     {
         std::vector<u32> Indices;
     };
 
-    struct VoxMesh 
+    struct UnvoxMesh 
     {
         // optional human‐readable name
         std::string Name;
 
         s32 TextureIndex = 0;
+        s32 MaterialIndex = 0;
         
         std::vector<vox_vec3> Vertices;
         std::vector<vox_vec3> Normals;
@@ -26,7 +27,7 @@ namespace Unvoxeller
         // std::vector<color> colors;
 
         // Triangulated faces.
-        std::vector<VoxFace> Faces;
+        std::vector<UnvoxFace> Faces;
 
         // convenience accessors
         u32 NumVertices() const { return u32(Vertices.size()); }

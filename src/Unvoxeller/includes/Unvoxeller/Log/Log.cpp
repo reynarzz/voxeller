@@ -3,7 +3,6 @@
 
 namespace VoxellerApp
 {
-
     std::shared_ptr<spdlog::logger> core;
     std::shared_ptr<spdlog::logger> app;
     
