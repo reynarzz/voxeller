@@ -517,10 +517,16 @@ static std::vector<aiScene*> GetModels(const vox_file* voxData, const s32 frameI
 
 			if (options.Texturing.SeparateTexturesPerMesh)
 			{
-				faces = GreedyMesh_Atlas(voxData->voxModels[modelId], voxData->sizes[modelId], modelId);
+				faces = _mesherFactory->Get(options.Meshing.MeshType)->CreateFaces(voxData->voxModels[modelId], voxData->sizes[modelId], modelId);
 
-				textureData = BuildImage(options.Texturing.GenerateTextures, options.Texturing.TexturesPOT, faces, voxData->palette, voxData->voxModels);
-
+				if(options.Texturing.GenerateTextures)
+				{
+					textureData = _textureGeneratorFactory->Get(options.Texturing.TextureType)->GetTexture(faces, voxData->palette, voxData->voxModels, options.Texturing.TexturesPOT);
+				}
+				else
+				{
+					textureData = nullptr;
+				}
 				// Remove this from here
 				if (options.Texturing.GenerateTextures)
 				{
@@ -874,9 +880,7 @@ const std::vector<aiScene*> Run(const vox_file* voxData, const std::string& outp
 		// Root node children for each mesh
 		scene->mRootNode->mNumChildren = (unsigned int)meshCount;
 		scene->mRootNode->mChildren = new aiNode * [meshCount];
-		// Iterate through frames
-		int globalAtlasSize = 0;
-		std::vector<unsigned char> globalImage;
+		
 		if (!options.Texturing.SeparateTexturesPerMesh)
 		{
 			// If one atlas for all, gather all faces first
@@ -884,48 +888,21 @@ const std::vector<aiScene*> Run(const vox_file* voxData, const std::string& outp
 			std::unordered_set<uint8_t> usedColors;
 			for (size_t i = 0; i < meshCount; ++i) 
 			{
-				size_t modelIndex = (i < voxData->voxModels.size() ? i : voxData->voxModels.size() - 1);
-				std::vector<FaceRect> faces = GreedyMesh_Atlas(voxData->voxModels[modelIndex], voxData->sizes[modelIndex], modelIndex);
+				size_t modelIndex = (i < voxData->voxModels.size() ? i : voxData->voxModels.size() - 1); // This is bad
+
+				std::vector<FaceRect> faces = _mesherFactory->Get(options.Meshing.MeshType)->CreateFaces(voxData->voxModels[modelIndex], voxData->sizes[modelIndex], modelIndex);
 				// Tag faces with an offset or id if needed (not needed for atlas, we just combine)
 				allFaces.insert(allFaces.end(), faces.begin(), faces.end());
 			}
-			// Pack combined faces
-			int dim = 16;
-			if (options.Texturing.TexturesPOT) 
-			{
-				while (true) 
-				{
-					if (PackFacesIntoAtlas(dim, allFaces)) break;
-					dim *= 2;
-					if (dim > 8192) break;
-				}
-			}
-			else 
-			{
-				while (true) 
-				{
-					if (PackFacesIntoAtlas(dim, allFaces)) break;
-					dim += 16;
-					if (dim > 8192) break;
-				}
-				// Shrink to used extents
-				int usedW = 0, usedH = 0;
-				for (auto& fr : allFaces) 
-				{
-					usedW = std::max(usedW, fr.atlasX + fr.w + 2);
-					usedH = std::max(usedH, fr.atlasY + fr.h + 2);
-				}
-				dim = std::max(usedW, usedH);
-			}
-			globalAtlasSize = dim;
-			//GenerateAtlasImage(dim, dim, allFaces, voxData->palette, globalImage);
-			GenerateAtlasImage(dim, dim, allFaces, voxData->voxModels, voxData->palette, globalImage);
+
+			const auto texData = _textureGeneratorFactory->Get(options.Texturing.TextureType)->GetTexture(allFaces, voxData->palette, voxData->voxModels, options.Texturing.TexturesPOT);
+
 
 			// Save atlas image
 			std::string baseName = outputPath;
 			if (dot != std::string::npos) baseName = outputPath.substr(0, outputPath.find_last_of('.'));
 			std::string atlasName = baseName + "_atlas.png";
-			SaveAtlasImage(atlasName, dim, dim, globalImage);
+			SaveAtlasImage(atlasName, texData->Width, texData->Height, texData->Buffer);
 
 			LOG_INFO("Atlas saved");
 
@@ -936,12 +913,15 @@ const std::vector<aiScene*> Run(const vox_file* voxData, const std::string& outp
 			// We should separate faces by frame segment: because allFaces is combined list.
 			// We can reconstruct segmentation because we processed each frame sequentially and appended.
 			// So we can do another loop now generating geometry for each frame from allFaces:
+
 			size_t faceOffset = 0;
 			for (size_t i = 0; i < meshCount; ++i) 
 			{
 				size_t modelIndex = (i < voxData->voxModels.size() ? i : voxData->voxModels.size() - 1);
+
 				// Remesh the frame to get number of faces:            
-				std::vector<FaceRect> frameFaces = GreedyMesh_Atlas(voxData->voxModels[modelIndex], voxData->sizes[modelIndex], modelIndex);
+				std::vector<FaceRect> frameFaces = _mesherFactory->Get(options.Meshing.MeshType)->CreateFaces(voxData->voxModels[modelIndex], voxData->sizes[modelIndex], modelIndex);
+
 				// Now copy that many faces from allFaces (they should correspond in order to this frame).
 				std::vector<FaceRect> facesForMesh;
 				facesForMesh.insert(facesForMesh.end(), allFaces.begin() + faceOffset, allFaces.begin() + faceOffset + frameFaces.size());
@@ -954,7 +934,7 @@ const std::vector<aiScene*> Run(const vox_file* voxData, const std::string& outp
 				auto& mdl = voxData->voxModels[modelIndex];
 				auto  box = mdl.boundingBox;
 
-				MeshBuilder::BuildMeshFromFaces(facesForMesh, globalAtlasSize, globalAtlasSize, options.Meshing.FlatShading, voxData->palette, mesh, box);
+				MeshBuilder::BuildMeshFromFaces(facesForMesh, texData->Width, texData->Height, options.Meshing.FlatShading, voxData->palette, mesh, box);
 				LOG_INFO("Build meshes from faces, mesh: {0}", i);
 
 				// TODO: position origin issue, take into account the position of the objects, this should be used, reynardo
@@ -987,42 +967,14 @@ const std::vector<aiScene*> Run(const vox_file* voxData, const std::string& outp
 			{
 				size_t modelIndex = (i < voxData->voxModels.size() ? i : voxData->voxModels.size() - 1);
 
-				std::vector<FaceRect> faces = GreedyMesh_Atlas(voxData->voxModels[modelIndex], voxData->sizes[modelIndex], modelIndex);
-				int dim = 16;
-				if (options.Texturing.TexturesPOT)
-				{
-					while (true)
-					{
-						if (PackFacesIntoAtlas(dim, faces)) break;
-						dim *= 2;
-						if (dim > 4096) break;
-					}
-				}
-				else
-				{
-					while (true)
-					{
-						if (PackFacesIntoAtlas(dim, faces)) break;
-						dim += 16;
-						if (dim > 4096) break;
-					}
-					// shrink
-					int usedW = 0, usedH = 0;
-					for (auto& fr : faces) {
-						usedW = std::max(usedW, fr.atlasX + fr.w + 2);
-						usedH = std::max(usedH, fr.atlasY + fr.h + 2);
-					}
-					dim = std::max(usedW, usedH);
-				}
-				// Create atlas for this mesh
-				std::vector<unsigned char> img;
-				//GenerateAtlasImage(dim, dim, faces, voxData->palette, img);
-				GenerateAtlasImage(dim, dim, faces, voxData->voxModels, voxData->palette, img);
+				std::vector<FaceRect> faces = _mesherFactory->Get(options.Meshing.MeshType)->CreateFaces(voxData->voxModels[modelIndex], voxData->sizes[modelIndex], modelIndex);
 
+				const auto texData = _textureGeneratorFactory->Get(options.Texturing.TextureType)->GetTexture(faces, voxData->palette, voxData->voxModels, options.Texturing.TexturesPOT);
+				
 				std::string baseName = outputPath;
 				if (dot != std::string::npos) baseName = outputPath.substr(0, outputPath.find_last_of('.'));
 				std::string imageName = baseName + "_mesh" + std::to_string(i) + ".png";
-				SaveAtlasImage(imageName, dim, dim, img);
+				SaveAtlasImage(imageName,texData->Width, texData->Height, texData->Buffer);
 
 				aiString texPath(imageName);
 				scene->mMaterials[i]->AddProperty(&texPath, AI_MATKEY_TEXTURE(aiTextureType_DIFFUSE, 0));
@@ -1034,7 +986,7 @@ const std::vector<aiScene*> Run(const vox_file* voxData, const std::string& outp
 				auto& mdl = voxData->voxModels[modelIndex];
 				auto  box = mdl.boundingBox;
 
-				MeshBuilder::BuildMeshFromFaces(faces, dim, dim, options.Meshing.FlatShading, voxData->palette, mesh, box);
+				MeshBuilder::BuildMeshFromFaces(faces, texData->Width, texData->Height, options.Meshing.FlatShading, voxData->palette, mesh, box);
 
 				mesh->mMaterialIndex = (int)i;
 				// Node

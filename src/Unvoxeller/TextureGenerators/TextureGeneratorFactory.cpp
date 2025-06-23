@@ -1,4 +1,4 @@
-#include "TextureGeneratorFactory.h"
+#include <Unvoxeller/TextureGenerators/TextureGeneratorFactory.h>
 #include <Unvoxeller/TextureGenerators/AtlasTextureGen.h>
 
 namespace Unvoxeller
