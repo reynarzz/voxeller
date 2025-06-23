@@ -1773,7 +1773,7 @@ static std::vector<aiScene*> GetModels(const vox_file* voxData, const s32 frameI
 
 	s32 materialIndex = 0;
 
-	const std::vector<vox_vec3>& pivots = options.Pivots;// Rotate(wxf.rot, options.Pivot);
+	const std::vector<glm::vec3>& pivots = options.Pivots;// Rotate(wxf.rot, options.Pivot);
 
 	struct ModelData 
 	{
@@ -1870,7 +1870,7 @@ if (!options.Texturing.SeparateTexturesPerMesh)
 		s32 shapeIndex{};
 		for (auto& shpKV : voxData->shapes)
 		{
-			vox_vec3 currentPivot{ 0.5f, 0.5f, 0.5f };
+			glm::vec3 currentPivot{ 0.5f, 0.5f, 0.5f };
 
 			if (canIteratePivots)
 			{

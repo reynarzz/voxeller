@@ -1,0 +1,16 @@
+#pragma once
+#include <vector>
+#include <Unvoxeller/api.h>
+#include <Unvoxeller/Types.h>
+#include "TextureFormat.h"
+
+namespace Unvoxeller 
+{
+    struct UNVOXELLER_API TextureData
+    {
+        std::vector<unsigned char> Buffer;
+        TextureFormat Format;
+        f32 Width;
+        f32 Height;
+    };
+}

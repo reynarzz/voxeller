@@ -15,9 +15,12 @@
 #include <GUI/Utils/FileDialog.h>
 #include <Rendering/RenderingSystem.h>
 #include <GUI/Screen.h>
+#include <Data/VoxFileToProcessData.h>
+
 
 std::shared_ptr<Texture> textureTest = nullptr;
 std::shared_ptr<Texture> blackImage = nullptr;
+static std::vector<VOXFileToProcessData> _testVoxFiles{};
 
 VoxToProcessView::VoxToProcessView()
 {
@@ -40,6 +43,8 @@ VoxToProcessView::VoxToProcessView()
 		blackImage = Texture::Create(&tex);
 
 	textureTest= TextureLoader::LoadTexture(texPath);
+
+	_testVoxFiles.resize(30);
 }
 
 void VoxToProcessView::OnShowView()
@@ -886,7 +891,6 @@ void ExportWin()
 f32 donuFill = 0;
 
 std::string searchBar = "";
-				bool presset = false;
 
 void VoxToProcessView::UpdateGUI()
 {
@@ -952,8 +956,10 @@ void VoxToProcessView::UpdateGUI()
 			// Scroll only this list
 			f32 defCursor = ImGui::GetCursorPosX();
 
-			for (int i = 0; i < 30; ++i)
+			for (int i = 0; i < _testVoxFiles.size(); ++i)
 			{
+				auto& voxFile = _testVoxFiles[i];
+
 				bool isSelected = (i == currentSelection);
 
 				//RoundedProgressButton(std::string("Button " + std::to_string(i)).c_str(), {ImGui::GetContentRegionAvail().x, 30}, 0.2f, IM_COL32(65,105,255,255), IM_COL32(255, 2, 255, 255), IM_COL32(255, 255, 255, 255) );
@@ -962,12 +968,15 @@ void VoxToProcessView::UpdateGUI()
 
 				ImGui::SetCursorPosX(defCursor + 7);
 
-				Checkbox(std::string("##Checkbox " + std::to_string(i)).c_str(), &presset);
+				Checkbox(std::string("##Checkbox " + std::to_string(i)).c_str(), &voxFile.Enabled);
+
 				ImGui::SameLine(0);
 				ImGui::SetCursorPosX(ImGui::GetCursorPosX() - 5);
 
-				Label(std::string("Vox " + std::to_string(i)).c_str());
-
+				ImGui::PushID((std::string("#VOX_FILE_") + std::to_string(i)).c_str());
+				Label(voxFile.FileName.c_str());
+				ImGui::PopID();
+				
 				ImGui::SameLine();
 				ImGui::SetCursorPosX(ImGui::GetWindowSize().x - 30);
 				
