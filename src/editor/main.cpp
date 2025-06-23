@@ -114,7 +114,7 @@ static std::shared_ptr<RenderableObject> GetTestRenderableObject()
 
 	std::string texPath = Unvoxeller::File::GetExecutableDir() + "/testvox/nda/export/Output_atlas.png";
 
-	auto textureTest= TextureLoader::LoadTexture(texPath, true);
+	auto textureTest= TextureLoader::LoadTexture(texPath, false);
 	
 	renderable->SetMesh(Mesh::CreateMesh(&mDesc));
 	renderable->SetTexture(textureTest);
