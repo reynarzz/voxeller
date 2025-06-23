@@ -19,7 +19,7 @@
 #include <Unvoxeller/Log/Log.h>
 #include <Unvoxeller/VertexMerger.h>
 #include <Unvoxeller/Unvoxeller.h>
-//#include <Unvoxeller/ScenePostprocessing.h>
+#include <Unvoxeller/ScenePostprocessing.h>
 #include <Unvoxeller/MeshBuilder.h>
 
 // Include stb_image_write for saving texture atlas as PNG
@@ -29,6 +29,7 @@
 
 #include <Unvoxeller/Mesher/MesherFactory.h>
 #include <Unvoxeller/TextureGenerators/TextureGeneratorFactory.h>
+
 
 // Assume the Unvoxeller namespace and structures from the provided data structure are available:
 namespace Unvoxeller
@@ -340,18 +341,6 @@ inline vox_vec3 Rotate(const vox_mat3& m, const vox_vec3& v)
 }
 
 
-
-static std::shared_ptr<TextureData> BuildImage(bool generateTextures, bool texturesPOT, std::vector<FaceRect>& faces, 
-											   const std::vector<color>& palette, const std::vector<vox_model>& models)
-{
-
-	if (generateTextures)
-	{
-		return ;
-	}
-
-	return nullptr;
-}
 
 // TODO: start simple, from the begining, the whole code base has a problem of code duplication.
 static std::vector<aiScene*> GetModels(const vox_file* voxData, const s32 frameIndex, const std::string& outputPath, const ConvertOptions& options)

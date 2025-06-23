@@ -3,7 +3,6 @@
 #include <GLFW/glfw3.h>
 #include <GUI/ImGuiInit.h>
 
-#include <Unvoxeller/GreedyMesher.h>
 #include <Unvoxeller/Log/Log.h>
 #include <GUI/Utils/DropHoverEvents.h>
 #include <Rendering/Camera.h>
@@ -125,7 +124,7 @@ static std::shared_ptr<RenderableObject> GetTestRenderableObject()
 
 int Init()
 {
-	VoxellerInit();
+	VoxellerApp::init();
 
 	if (glfwInit() == GLFW_TRUE)
 	{
@@ -238,7 +237,9 @@ int Init()
 	//std::string output = "testvox/nda/export/Output.fbx";
 	std::string output = Unvoxeller::File::GetExecutableDir() + "/testvox/nda/export/Output.fbx";
 	
-	Unvoxeller::GreedyMesher::ExportVoxToModel(path, output, exportOptions);
+	Unvoxeller::Unvoxeller unvox{};
+
+	unvox.ExportVoxToModel(path, output, exportOptions);
 	
 	std::string texPath = Unvoxeller::File::GetExecutableDir() + "/testvox/nda/export/Output_atlas.png";
 	

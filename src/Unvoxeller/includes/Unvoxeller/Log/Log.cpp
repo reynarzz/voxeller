@@ -10,6 +10,9 @@ namespace VoxellerApp
     void init()
     {
 #ifndef NDEBUG
+
+    if(core == nullptr || app == nullptr)
+    {
         spdlog::set_pattern("[%T] [%n] %v");
 
         core = spdlog::stdout_color_mt("Core");
@@ -17,6 +20,8 @@ namespace VoxellerApp
 
         core->set_level(spdlog::level::trace);
         app->set_level(spdlog::level::trace);
+    }
+       
 #endif
     }
 }

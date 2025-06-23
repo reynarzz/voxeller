@@ -1,14 +1,13 @@
 #pragma once
-
 #include <OpenMesh/Core/IO/MeshIO.hh>
 #include <OpenMesh/Core/Mesh/TriMesh_ArrayKernelT.hh>
-#include <stack>
 #include <assimp/scene.h>
 #include <assimp/Exporter.hpp>
 #include <assimp/DefaultLogger.hpp>
 #include <assimp/material.h>
-#include <Unvoxeller/Log/Log.h>
 #include <meshoptimizer/src/meshoptimizer.h>
+#include <stack>
+#include <Unvoxeller/Log/Log.h>
 
 struct MyTraits : public OpenMesh::DefaultTraits 
 {
@@ -97,7 +96,8 @@ static void convertOpenMeshToAiMesh(TriMesh& om, aiMesh* aimesh)
 	// Map from OpenMesh vertex index → aiMesh index
 	std::vector<unsigned int> idxMap(nv);
 	unsigned int idx = 0;
-	for (auto vh : om.vertices()) {
+	for (auto vh : om.vertices()) 
+	{
 		// Position
 		auto  p = om.point(vh);
 		aimesh->mVertices[idx] = aiVector3D(p[0], p[1], p[2]);
