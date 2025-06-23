@@ -667,3 +667,41 @@ bool VoxGUI::SearchBar(std::string& text)
 
 	return active;
 }
+
+bool VoxGUI::ImageButton(
+    const char*   id,
+    ImTextureID   texture,
+    const ImVec2& size,
+    const ImVec4& tintNormal,
+    const ImVec4& tintHover,
+    const ImVec4& tintActive,
+    ImGuiButtonFlags flags,
+    const ImVec2& uv0,
+    const ImVec2& uv1
+)
+{
+    // 1) Reserve the interaction area
+    bool pressed = ImGui::InvisibleButton(id, size, flags);
+	if (ImGui::IsItemHovered())
+	{
+		ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
+	}
+    // 2) Get state
+    bool hovered = ImGui::IsItemHovered();
+    bool held    = ImGui::IsItemActive();
+
+    // 3) Choose the tint
+    ImVec4 tint = tintNormal;
+    if      (held)    tint = tintActive;
+    else if (hovered) tint = tintHover;
+
+    // 4) Draw the image into that same slot
+    ImVec2 p0 = ImGui::GetItemRectMin();
+    ImVec2 p1 = ImGui::GetItemRectMax();
+    ImGui::GetWindowDrawList()->AddImage(
+        texture, p0, p1, uv0, uv1,
+        ImGui::ColorConvertFloat4ToU32(tint)
+    );
+
+    return pressed;
+}

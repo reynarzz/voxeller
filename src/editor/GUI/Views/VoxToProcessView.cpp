@@ -21,6 +21,11 @@ std::shared_ptr<Texture> textureTest = nullptr;
 std::shared_ptr<Texture> blackImage = nullptr;
 static std::vector<VOXFileToProcessData> _testVoxFiles{};
 
+// Icons
+std::shared_ptr<Texture> _trashIcon = nullptr;
+std::shared_ptr<Texture> _addFileIcon = nullptr;
+std::shared_ptr<Texture> _addFolderIcon = nullptr;
+std::shared_ptr<Texture> _configIcon = nullptr;
 
 std::vector<std::string> voxTest{ "Vox1", "vox animated", "another vox" };
 s32 currentSelection = 0;
@@ -57,15 +62,19 @@ VoxToProcessView::VoxToProcessView()
 
 		blackImage = Texture::Create(&tex);
 
-	textureTest= TextureLoader::LoadTexture(texPath);
+		const std::string imagesRootFolder = Unvoxeller::File::GetExecutableDir() + "/assets/Images";
 
+	textureTest= TextureLoader::LoadTexture(texPath);
+	_trashIcon = TextureLoader::LoadTexture(imagesRootFolder+"/icons8-cancel-30.png");
+	_addFileIcon = TextureLoader::LoadTexture(imagesRootFolder+"/icons8-plus-64.png");
+	_addFolderIcon = TextureLoader::LoadTexture(imagesRootFolder+"/icons8-open-file-64.png");
+	_configIcon = TextureLoader::LoadTexture(imagesRootFolder+"/icons8-config-48.png");
 	_testVoxFiles.resize(30);
 }
 
 void VoxToProcessView::OnShowView()
 {
 }
-
 
 void TitleLabel(const char* title)
 {
@@ -218,6 +227,8 @@ void ExportWin()
 	ImGui::PopStyleColor(2);
 }
 
+
+
 void VoxToProcessView::UpdateGUI()
 {
 	ImGuiStyle& style = ImGui::GetStyle();
@@ -255,9 +266,8 @@ void VoxToProcessView::UpdateGUI()
 
 	ImGui::Begin("Sidebar", &open, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize);
 
-
-
 	TitleLabel("Voxels Bag");
+
 	if (VoxGUI::SearchBar(searchBar))
 	{
 
@@ -304,9 +314,16 @@ void VoxToProcessView::UpdateGUI()
 				ImGui::PopID();
 
 				ImGui::SameLine();
+				ImGui::SetCursorPosX(ImGui::GetWindowSize().x - 50);
+				VoxGUI::ImageButton((std::string("_CONFIG_") + std::to_string(i)).c_str(), TEXTURE_TO_IMGUI2(_configIcon), { 20, 20 }, {1,1,1,1}, {1,1,1,1}, {1,1,1,0.5f});
+
+				ImGui::SameLine();
 				ImGui::SetCursorPosX(ImGui::GetWindowSize().x - 30);
-				
-				VoxGUI::Button(std::string("T##D" + std::to_string(i)).c_str(), TextAlign::Center, {20, 20}, IM_COL32(255, 05, 55, 255), IM_COL32(255, 255, 255, 255), 10, ImDrawFlags_RoundCornersAll);
+
+				VoxGUI::ImageButton(std::string("##_Delete_Vox_" + std::to_string(i)).c_str(), TEXTURE_TO_IMGUI2(_trashIcon), {19, 19}, {1,1,1,1},{1,1,1,1},{1,1,1,0.5f});
+
+				//ImGui::Image(TEXTURE_TO_IMGUI(_trashIcon), {20, 20});
+				//VoxGUI::Button(std::string("T##D" + std::to_string(i)).c_str(), TextAlign::Center, {20, 20}, IM_COL32(255, 05, 55, 255), IM_COL32(255, 255, 255, 255), 10, ImDrawFlags_RoundCornersAll);
 
 				ImGui::PopStyleVar(2);
 
@@ -340,7 +357,9 @@ void VoxToProcessView::UpdateGUI()
 	f32 buttonDownWidth = 25;
 	f32 buttonDOwnHeight = 25;
 	ImGui::SetCursorPosX(ImGui::GetWindowSize().x / 2.0 - buttonDownWidth);
-	bool pressed = VoxGUI::Button("+", TextAlign::Center, { buttonUpWidth, buttonUpHeight }, IM_COL32(65, 105, 255, 255), IM_COL32(255, 255, 255, 255), 20, ImDrawFlags_RoundCornersAll);
+	//bool pressed = VoxGUI::Button("+", TextAlign::Center, { buttonUpWidth, buttonUpHeight }, IM_COL32(65, 105, 255, 255), IM_COL32(255, 255, 255, 255), 20, ImDrawFlags_RoundCornersAll);
+	bool pressed = VoxGUI::ImageButton("_OPEN_VOX_FILE", TEXTURE_TO_IMGUI2(_addFileIcon), { 22, 22 }, {1,1,1,1}, {1,1,1,1}, {1,1,1,0.5f});
+	
 	if(pressed)
 	{
 		auto selectedFiles = FileDialog::OpenFiles("", { { "Voxels", "vox"}} );
@@ -353,9 +372,12 @@ void VoxToProcessView::UpdateGUI()
 	}
 	
 	ImGui::SameLine();
-	VoxGUI::Button("++", TextAlign::Center, { buttonUpWidth, buttonUpHeight }, IM_COL32(65, 105, 255, 255), IM_COL32(255, 255, 255, 255), 30, ImDrawFlags_RoundCornersAll);
+	VoxGUI::ImageButton("++", TEXTURE_TO_IMGUI2(_addFolderIcon), { 22, 22 }, {1,1,1,1}, {1,1,1,1}, {1,1,1,0.5f});
+	//VoxGUI::Button("++", TextAlign::Center, { buttonUpWidth, buttonUpHeight }, IM_COL32(65, 105, 255, 255), IM_COL32(255, 255, 255, 255), 30, ImDrawFlags_RoundCornersAll);
 	ImGui::SameLine();
 	VoxGUI::Button("-", TextAlign::Center, { buttonUpWidth, buttonUpHeight }, IM_COL32(65, 105, 255, 255), IM_COL32(255, 255, 255, 255), 30, ImDrawFlags_RoundCornersAll);
+	ImGui::SameLine();
+	VoxGUI::ImageButton("_config_", TEXTURE_TO_IMGUI2(_configIcon), { 20, 20 }, {1,1,1,1}, {1,1,1,1}, {1,1,1,0.5f});
 	ImGui::SameLine();
 
 	VoxGUI::DonutProgressBar("radial", donuFill, 10, 2, ImColor(20, 20, 20, 255), ImColor(240, 240, 240, 255), false);

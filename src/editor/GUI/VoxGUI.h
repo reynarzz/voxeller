@@ -81,4 +81,16 @@ public:
                           ImU32 borderColor = 0, float borderThickness = 1.0f);
 
     static bool SearchBar(std::string& text);
+
+    static bool ImageButton(
+        const char*   id,
+        ImTextureID   texture,
+        const ImVec2& size,
+        const ImVec4& tintNormal,
+        const ImVec4& tintHover,
+        const ImVec4& tintActive,
+        ImGuiButtonFlags flags = 0,
+        const ImVec2& uv0 = ImVec2(0,1),
+        const ImVec2& uv1 = ImVec2(1,0)
+    );
 };

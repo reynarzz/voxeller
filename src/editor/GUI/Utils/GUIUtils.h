@@ -8,5 +8,9 @@
 #define TEXTURE_TO_IMGUI(x) \
         (long*)std::static_pointer_cast<GLTexture>(x)->GetID()
 
+#define TEXTURE_TO_IMGUI2(x) \
+        (unsigned long long)std::static_pointer_cast<GLTexture>(x)->GetID()
+
+
 #define RENDER_TARGET_TO_IMGUI(x) \
         (long*)static_cast<const GLFrameBuffer*>(x)->GetColorTexture()
