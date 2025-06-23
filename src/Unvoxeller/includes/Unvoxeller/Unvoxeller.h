@@ -1,16 +1,15 @@
 #pragma once
 
 #include <Unvoxeller/api.h>
-#include <string>
-#include <vector>
-#include <functional>
 #include <Unvoxeller/Data/ExportResults.h>
 #include <Unvoxeller/Data/MemData.h>
 #include <Unvoxeller/Data/ConvertResults.h>
 #include <Unvoxeller/Data/ConvertOptions.h>
 #include <Unvoxeller/Data/ExportOptions.h>
 
-UNVOXELLER_API void VoxellerInit();
+#include <string>
+#include <vector>
+#include <functional>
 
 namespace Unvoxeller
 {
@@ -21,8 +20,8 @@ namespace Unvoxeller
 		~Unvoxeller();
 
 		Unvoxeller(const Unvoxeller&) = delete;
-		Unvoxeller operator=(const Unvoxeller&) = delete;
-
+		Unvoxeller& operator=(const Unvoxeller&) = delete;
+		
 		ExportResults ExportVoxToModel(const std::string& inVoxPath, const std::string& outExportPath, const ExportOptions& options);
 		ExportResults ExportVoxToModel(const char* buffer, int size, const ExportOptions& options);
 

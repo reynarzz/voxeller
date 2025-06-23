@@ -17,7 +17,6 @@ namespace Unvoxeller
 	{
 		ConvertMSG Msg;
 		std::vector<MeshInfo> meshes;
-
 		std::vector<TextureData> Textures;
 	};
 };

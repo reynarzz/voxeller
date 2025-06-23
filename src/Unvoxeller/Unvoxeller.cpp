@@ -156,7 +156,6 @@ static bool SaveAtlasImage(const std::string& filename, int width, int height, c
 	return true;
 }
 
-
 static bool WriteSceneToFile(const std::vector<aiScene*> scenes, const std::string& outPath, const ExportOptions& options)
 {
 	// Determine export format from extension
@@ -357,7 +356,7 @@ static std::vector<aiScene*> GetModels(const vox_file* voxData, const s32 frameI
 
 	s32 materialIndex = 0;
 
-	const std::vector<glm::vec3>& pivots = options.Pivots;// Rotate(wxf.rot, options.Pivot);
+	const std::vector<vox_vec3>& pivots = options.Pivots;// Rotate(wxf.rot, options.Pivot);
 
 	struct ModelData 
 	{
@@ -440,7 +439,7 @@ static std::vector<aiScene*> GetModels(const vox_file* voxData, const s32 frameI
 
 			if(options.Texturing.GenerateTextures)
 			{
-				textureData = _textureGeneratorFactory->Get(options.Texturing.TextureType)->GetTexture(faces, voxData->palette, voxData->voxModels, options.Texturing.TexturesPOT);
+				textureData = _textureGeneratorFactory->Get(options.Texturing.TextureType)->GetTexture(mergedFaces, voxData->palette, voxData->voxModels, options.Texturing.TexturesPOT);
 			}
 			else
 			{
@@ -462,7 +461,7 @@ static std::vector<aiScene*> GetModels(const vox_file* voxData, const s32 frameI
 		s32 shapeIndex{};
 		for (auto& shpKV : voxData->shapes)
 		{
-			glm::vec3 currentPivot{ 0.5f, 0.5f, 0.5f };
+			vox_vec3 currentPivot{ 0.5f, 0.5f, 0.5f };
 
 			if (canIteratePivots)
 			{

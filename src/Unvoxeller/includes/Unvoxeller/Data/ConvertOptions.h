@@ -2,10 +2,11 @@
 
 #include <Unvoxeller/api.h>
 #include <Unvoxeller/Types.h>
-#include <vector>
-#include <glm/vec3.hpp>
-#include "TextureType.h"
+#include <Unvoxeller/Data/TextureType.h>
 #include <Unvoxeller/Data/MeshType.h>
+#include <Unvoxeller/Math/VoxVector.h>
+
+#include <vector>
 
 namespace Unvoxeller 
 {
@@ -88,7 +89,7 @@ namespace Unvoxeller
 		bool MergeMeshes = false;
 
 		MeshType MeshType = MeshType::Greedy;
-		
+
 		VisibleSides Sides;
 	};
 
@@ -115,9 +116,9 @@ namespace Unvoxeller
 		std::array<f32, 10> Lods = { 0,0,0,0,0,0,0,0,0,0 };
 
 		// Scale, Ex, if 1.0, every single voxel will take up 1 unit.
-		glm::vec3 Scale = { 1.0f, 1.0f, 1.0f };
-
+		vox_vec3 Scale = { 1.0f, 1.0f, 1.0f };
+		
 		// Set pivots for every mesh indexwise, if only one is added, it will be shared across meshes.
-		std::vector<glm::vec3> Pivots = {};
+		std::vector<vox_vec3> Pivots = {};
 	};
 }

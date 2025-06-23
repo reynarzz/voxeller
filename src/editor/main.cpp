@@ -209,6 +209,7 @@ int Init()
 	exportOptions.Converting.Meshing.WeldVertices = false;
 	exportOptions.Converting.Meshing.FlatShading = false;
 	exportOptions.Converting.Meshing.MaterialPerMesh = true;
+	exportOptions.Converting.Meshing.MeshType = MeshType::Greedy;
 	exportOptions.Converting.Scale = { 1.3f, 1.3f, 1.3f };
 	exportOptions.Converting.Pivots = { { 0.5f, 0.0f, 0.5f } };
 	exportOptions.Converting.ExportFramesSeparatelly = true;
@@ -231,14 +232,13 @@ int Init()
 
 	
 	//Chicken_van_2.vox
-	//std::string path = Unvoxeller::File::GetExecutableDir() + "/testvox/nda/Ambulance_1.vox"; // Test this!
-	std::string path = Unvoxeller::File::GetExecutableDir() + "/testvox/monu2.vox"; // Test this!
+	std::string path = Unvoxeller::File::GetExecutableDir() + "/testvox/nda/Ambulance_1.vox"; // Test this!
+	//std::string path = Unvoxeller::File::GetExecutableDir() + "/testvox/monu2.vox"; // Test this!
 	//std::string path = Unvoxeller::File::GetExecutableDir() + "/testvox/room.vox";
 	//std::string output = "testvox/nda/export/Output.fbx";
 	std::string output = Unvoxeller::File::GetExecutableDir() + "/testvox/nda/export/Output.fbx";
 	
 	Unvoxeller::Unvoxeller unvox{};
-
 	unvox.ExportVoxToModel(path, output, exportOptions);
 	
 	std::string texPath = Unvoxeller::File::GetExecutableDir() + "/testvox/nda/export/Output_atlas.png";
