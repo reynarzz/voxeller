@@ -5,4 +5,5 @@
 struct RenderTargetDescriptor
 {
     TextureDescriptor texDescriptor;
+    int samples = 1;
 };

@@ -5,13 +5,20 @@
 #include "GLShader.h"
 #include "GLFrameBuffer.h"
 
-void OpenGLDevice::Initialize()
+void OpenGLDevice::Initialize() 
 {
+	_deviceInfo = {};
+	
+	glGetIntegerv(GL_MAX_SAMPLES, &_deviceInfo.MaxSamples);
+	_deviceInfo.Vendor = reinterpret_cast<const char*>(glGetString(GL_VENDOR));              // e.g. “NVIDIA Corporation”
+	_deviceInfo.Renderer = reinterpret_cast<const char*>(glGetString(GL_RENDERER));            // e.g. “GeForce RTX 3080/PCIe/SSE2”
+	_deviceInfo.Version  = reinterpret_cast<const char*>(glGetString(GL_VERSION));             // e.g. “4.6.0 NVIDIA 525.60.13”
+	_deviceInfo.ShaderVersion  = reinterpret_cast<const char*>(glGetString(GL_SHADING_LANGUAGE_VERSION)); // e.g. “4.60 NVIDIA”
 }
 
 const DeviceInfo& OpenGLDevice::GetInfo() const
 {
-	return {};
+	return _deviceInfo;
 }
 
 std::shared_ptr<Texture> OpenGLDevice::CreateTexture(const TextureDescriptor* desc)
@@ -118,4 +125,20 @@ void OpenGLDevice::SetCurrentRenderTarget(const RenderTarget* target)
    		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		//glViewport();
 	}
+}
+
+void OpenGLDevice::CopyRenderTargetTo(const RenderTarget* from, RenderTarget* to) 
+{
+	auto glFrom = static_cast<const GLFrameBuffer*>(from);
+	auto glTo = static_cast<const GLFrameBuffer*>(to);
+
+	glBindFramebuffer(GL_READ_FRAMEBUFFER, glFrom->GetFrameBufferID());
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, glTo->GetFrameBufferID());
+	glBlitFramebuffer(
+		0, 0, glFrom->GetWidth(), glFrom->GetHeight(),
+		0, 0, glTo->GetWidth(), glTo->GetHeight(),
+		GL_COLOR_BUFFER_BIT, GL_NEAREST
+	);
+
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }

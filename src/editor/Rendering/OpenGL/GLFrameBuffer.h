@@ -19,10 +19,12 @@ public:
 
     // Get the color texture ID for sampling
     u32 GetColorTexture() const;
-
+    u32 GetFrameBufferID() const;
+    
 private:
     void Init();
     u32 _fbo;
     u32 _colorTex;
     u32 _depthRbo;
+    s32 _samples = 1;
 };

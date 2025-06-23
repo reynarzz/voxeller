@@ -2,10 +2,12 @@
 
 // For now force openGL
 #include <Rendering/OpenGL/OpenGLDevice.h>
+#include <Unvoxeller/Log/Log.h>
 
 std::shared_ptr<GfxDevice> RenderingSystem::_device = nullptr;
 std::vector<const RenderableObject*> RenderingSystem::_renderables = {};
 std::shared_ptr<RenderTarget> RenderingSystem::_renderTarget = nullptr;
+std::shared_ptr<RenderTarget> RenderingSystem::_AArenderTarget = nullptr;
 
 RenderingSystem::RenderingSystem()
 {
@@ -20,8 +22,21 @@ void RenderingSystem::Initialize()
     RenderTargetDescriptor rDesc{};
     rDesc.texDescriptor.width = 1;
     rDesc.texDescriptor.height = 1;
+    rDesc.samples = 1;
 
     _renderTarget = _device->CreateRenderTarget(&rDesc);
+
+    RenderTargetDescriptor rDescAA{};
+    rDescAA.texDescriptor.width = 1;
+    rDescAA.texDescriptor.height = 1;
+    rDescAA.samples = glm::min(6, _device->GetInfo().MaxSamples);
+    
+    LOG_INFO("Max Samples: {0}", rDescAA.samples);
+    LOG_INFO("Vendor: {0}", _device->GetInfo().Vendor);
+    LOG_INFO("Renderer: {0}", _device->GetInfo().Renderer);
+    LOG_INFO("Shader ver: {0}", _device->GetInfo().ShaderVersion);
+
+    _AArenderTarget = _device->CreateRenderTarget(&rDescAA);
 }
 
 void RenderingSystem::Update(const RendererState& state)
@@ -29,6 +44,7 @@ void RenderingSystem::Update(const RendererState& state)
     if(_renderTarget->GetWidth() != state.ScrWidth || _renderTarget->GetHeight() != state.ScrHeight) 
     {
         _renderTarget->Resize(state.ScrWidth, state.ScrHeight);
+        _AArenderTarget->Resize(state.ScrWidth, state.ScrHeight);
     }
 
     _meshesToDestroy.clear();
@@ -52,7 +68,7 @@ void RenderingSystem::Update(const RendererState& state)
         _renderables.pop_back();
     }
 
-    _device->SetCurrentRenderTarget(_renderTarget.get());
+    _device->SetCurrentRenderTarget(_AArenderTarget.get());
     _device->Begin(state);
     
     for (size_t i = 0; i < _renderables.size(); i++)
@@ -68,6 +84,9 @@ void RenderingSystem::Update(const RendererState& state)
 
     _device->End();
     _device->SetCurrentRenderTarget(nullptr);
+
+    // Copies AA render target to non AA target
+    _device->CopyRenderTargetTo(_AArenderTarget.get(), _renderTarget.get());
 }
 
 void RenderingSystem::PushRenderable(const RenderableObject *renderable)

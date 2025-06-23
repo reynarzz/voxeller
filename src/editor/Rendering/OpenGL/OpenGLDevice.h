@@ -9,6 +9,7 @@ class OpenGLDevice : public GfxDevice
 	std::shared_ptr<Shader> CreateShader(const ShaderDescriptor* desc) override;
 	std::shared_ptr<Mesh> CreateMesh(const MeshDescriptor* desc) override;
 	std::shared_ptr<RenderTarget> CreateRenderTarget(const RenderTargetDescriptor* desc) override;
+	void CopyRenderTargetTo(const RenderTarget* from, RenderTarget* to) override;
 
 	void SetPipelineData(const PipelineData* data, const RendererState &uniforms, const RenderableObject *renderable) override;
 	void DrawRenderable(const RenderableObject* renderable) override;
@@ -18,5 +19,5 @@ class OpenGLDevice : public GfxDevice
 	void End() override;
 
 private:
-	
+	DeviceInfo _deviceInfo = {};
 };

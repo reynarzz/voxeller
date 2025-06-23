@@ -17,8 +17,11 @@
 
 struct DeviceInfo
 {
-	std::string Name;
-
+	std::string Vendor;
+	std::string Renderer;
+	std::string Version;
+	std::string ShaderVersion;
+	s32 MaxSamples = 0;
 };
 
 // Base class for devices
@@ -31,6 +34,7 @@ public:
 	virtual std::shared_ptr<Shader> CreateShader(const ShaderDescriptor* desc) = 0;
 	virtual std::shared_ptr<Mesh> CreateMesh(const MeshDescriptor* desc) = 0;
 	virtual std::shared_ptr<RenderTarget> CreateRenderTarget(const RenderTargetDescriptor* desc) = 0;
+	virtual void CopyRenderTargetTo(const RenderTarget* from, RenderTarget* to) = 0;
 
 	virtual void SetPipelineData(const PipelineData* data, const RendererState &uniforms, const RenderableObject *renderable);
 	virtual void DrawRenderable(const RenderableObject* renderable) = 0;
