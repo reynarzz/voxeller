@@ -239,6 +239,7 @@ int Init()
 	
 	Unvoxeller::Unvoxeller unvox{};
 	unvox.ExportVoxToModel(path, exportOptions);
+	auto scene = unvox.VoxToMem(path, exportOptions.Converting);
 	
 	std::string texPath = Unvoxeller::File::GetExecutableDir() + "/testvox/nda/export/Output_atlas.png";
 	

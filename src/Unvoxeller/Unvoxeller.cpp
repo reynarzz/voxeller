@@ -258,16 +258,17 @@ inline vox_vec3 Rotate(const vox_mat3& m, const vox_vec3& v)
 
 
 // TODO: start simple, from the begining, the whole code base has a problem of code duplication.
-static std::shared_ptr<UnvoxScene> GetModels(const vox_file* voxData, const s32 frameIndex, const std::string& outputPath, const ConvertOptions& options)
+static std::shared_ptr<UnvoxScene> GetModels(const vox_file* voxData, const s32 frameIndex, const ConvertOptions& options)
 {
 	struct MeshWrapData
 	{
 		std::shared_ptr<UnvoxMesh> Mesh;
-		std::string imageName;
+		s32 textureIndex;
 	};
 
 	std::vector<MeshWrapData> meshes;
 	std::vector<std::shared_ptr<UnvoxNode>> shapeNodes = {};
+	std::shared_ptr<UnvoxScene> scene = std::make_shared<UnvoxScene>();
 
 	s32 materialIndex = 0;
 
@@ -301,20 +302,16 @@ static std::shared_ptr<UnvoxScene> GetModels(const vox_file* voxData, const s32 
 
 		std::vector<color> pallete = voxData->palette;
 		std::shared_ptr<TextureData> textureData = nullptr;
-		std::string imageName = "";
-		std::string baseName = outputPath;
-		const size_t dot = outputPath.find_last_of('.');
+
+
+
 		std::vector<FaceRect> faces;
 
 		std::vector<FaceRect> mergedFaces = {};
 		
 		std::unordered_map<s32, std::vector<FaceRect>> modelsData = {};
 
-		if (dot != std::string::npos)
-		{
-			baseName = outputPath.substr(0, outputPath.find_last_of('.'));
-		}
-
+		
 	if (!options.Texturing.SeparateTexturesPerMesh)
 			{
 		for (auto& shpKV : voxData->shapes)
@@ -355,16 +352,13 @@ static std::shared_ptr<UnvoxScene> GetModels(const vox_file* voxData, const s32 
 			if(options.Texturing.GenerateTextures)
 			{
 				textureData = _textureGeneratorFactory->Get(options.Texturing.TextureType)->GetTexture(mergedFaces, voxData->palette, voxData->voxModels, options.Texturing.TexturesPOT);
+				scene->Textures.push_back(textureData);
+				
 			}
 			else
 			{
 				textureData = nullptr;
 			}
-
-			LOG_INFO("Atlas export: {0}", baseName + "_atlas.png");
-
-			imageName = baseName + "_atlas.png";
-			SaveAtlasImage(imageName, textureData->Width, textureData->Height, textureData->Buffer);
 
 			// Very slow
 			for (size_t i = 0; i < mergedFaces.size(); i++)
@@ -431,13 +425,14 @@ static std::shared_ptr<UnvoxScene> GetModels(const vox_file* voxData, const s32 
 					textureData = nullptr;
 				}
 				// Remove this from here
-				if (options.Texturing.GenerateTextures)
-				{
+				// if (options.Texturing.GenerateTextures)
+				// {
+				// 	imageName = baseName + "_frame" + std::to_string(shapeIndex++) + ".png";
+				// 	SaveAtlasImage(imageName, textureData->Width, textureData->Height, textureData->Buffer);
+				// }
 
+				scene->Textures.push_back(textureData);
 
-					imageName = baseName + "_frame" + std::to_string(shapeIndex++) + ".png";
-					SaveAtlasImage(imageName, textureData->Width, textureData->Height, textureData->Buffer);
-				}
 			}
 			else 
 			{
@@ -462,6 +457,7 @@ static std::shared_ptr<UnvoxScene> GetModels(const vox_file* voxData, const s32 
 			// If you want to support groups (nGRP), you may have to walk up to the root and find the chain.
 			vox_transform wxf = AccumulateWorldTransform(shape.nodeID, frameIndex, *voxData);
 
+
 			// Build mesh and apply MagicaVoxel rotation+translation directly into vertices:
 			auto mesh = MeshBuilder::BuildMeshFromFaces(
 				faces,
@@ -472,6 +468,7 @@ static std::shared_ptr<UnvoxScene> GetModels(const vox_file* voxData, const s32 
 				wxf.rot,     // MagicaVoxel 3×3 rotation
 				wxf.trans    // MagicaVoxel translation
 			);
+
 
 			// 3) Recenter every vertex so that the mesh’s center is at the origin
 
@@ -533,7 +530,7 @@ static std::shared_ptr<UnvoxScene> GetModels(const vox_file* voxData, const s32 
 
 			// ----------------------------------------------------------------------------------------------------------------------------------------------------------
 
-			meshes.push_back({ mesh, imageName });
+			meshes.push_back({ mesh, shapeIndex });
 			shapeNodes.push_back(node);
 		}
 	}
@@ -589,10 +586,7 @@ static std::shared_ptr<UnvoxScene> GetModels(const vox_file* voxData, const s32 
 	// }
 	// else
 
-	std::shared_ptr<UnvoxScene> scene{};
 
-	{
-		scene = std::make_shared<UnvoxScene>();
 		scene->RootNode = std::make_shared<UnvoxNode>();
 		scene->Meshes.resize(meshes.size());
 
@@ -629,24 +623,23 @@ static std::shared_ptr<UnvoxScene> GetModels(const vox_file* voxData, const s32 
 
 			if (options.Meshing.GenerateMaterials)
 			{
-				aiString texPath(meshes[i].imageName);
+				//aiString texPath(meshes[i].imageName);
 				//aiMaterial* mat = new aiMaterial();
 				//mat->AddProperty(&texPath, AI_MATKEY_TEXTURE(aiTextureType_DIFFUSE, 0));
 
 				auto mat = std::make_shared<UnvoxMaterial>();
-				mat->Name =  meshes[i].imageName;
+				//mat->Name =  meshes[i].textureIndex;
 				mat->TextureIndex =  i;
 
 				scene->Materials[matIndex] =  mat;
 			}
 		}
-
+		
 		// Set all the nodes to the root.
 		for (size_t i = 0; i < scene->RootNode->Children.size(); ++i)
 		{
 			scene->RootNode->Children[i] = shapeNodes[i];
 		}
-	}
 
 	//for (auto sceneitem : scenes)
 	{
@@ -673,7 +666,7 @@ static std::shared_ptr<UnvoxScene> GetModels(const vox_file* voxData, const s32 
 
 
 
-const std::vector<std::shared_ptr<UnvoxScene>> Run(const vox_file* voxData, const std::string& outputPath, const ConvertOptions& options)
+const std::vector<std::shared_ptr<UnvoxScene>> Run(const vox_file* voxData, const ConvertOptions& options)
 {
 	if (!voxData || !voxData->isValid)
 	{
@@ -711,8 +704,6 @@ const std::vector<std::shared_ptr<UnvoxScene>> Run(const vox_file* voxData, cons
 	// But we can reuse this code by simply generating one scene at a time inside the loop if separate.
 	// For combined output, we build scene once.
 
-	size_t dot = outputPath.find_last_of('.');
-
 	if (options.ExportFramesSeparatelly && frameCount >= 1 && voxData->shapes.size() > 0)
 	{
 		std::vector<std::shared_ptr<UnvoxScene>> scenesOut{};
@@ -721,21 +712,7 @@ const std::vector<std::shared_ptr<UnvoxScene>> Run(const vox_file* voxData, cons
 		{
 			// Prepare a new minimal scene for this frame
 			LOG_INFO("Frame processing: {0}", fi);
-			auto scene = GetModels(voxData, fi, outputPath, options);
-
-			// Export this scene
-			std::string frameOut = outputPath;
-			// Insert frame number before extension
-			if (dot != std::string::npos)
-			{
-				frameOut = outputPath.substr(0, outputPath.find_last_of('.')) + "_frame" + std::to_string(fi) + outputPath.substr(outputPath.find_last_of('.'));
-			}
-			else
-			{
-				frameOut = outputPath + "_frame" + std::to_string(fi);
-			}
-
-			scene->Name = frameOut;
+			auto scene = GetModels(voxData, fi, options);
 
 			scenesOut.push_back(scene);
 		}
@@ -792,17 +769,18 @@ const std::vector<std::shared_ptr<UnvoxScene>> Run(const vox_file* voxData, cons
 
 
 			// Save atlas image
-			std::string baseName = outputPath;
-			if (dot != std::string::npos) baseName = outputPath.substr(0, outputPath.find_last_of('.'));
-			std::string atlasName = baseName + "_atlas.png";
-			SaveAtlasImage(atlasName, texData->Width, texData->Height, texData->Buffer);
+			// std::string baseName = outputPath;
+			// if (dot != std::string::npos) baseName = outputPath.substr(0, outputPath.find_last_of('.'));
+			// std::string atlasName = baseName + "_atlas.png";
+			// SaveAtlasImage(atlasName, texData->Width, texData->Height, texData->Buffer);
 
-			LOG_INFO("Atlas saved");
+			// TODO: 
+			LOG_INFO("TODO: Atlas saved");
 
 			// Assign this texture to the single material
-			aiString texPath(atlasName);
+			//aiString texPath(atlasName);
 			auto oMat = std::make_shared<UnvoxMaterial>();
-			oMat->Name = atlasName;
+			//oMat->Name = atlasName;
 			oMat->TextureIndex = 0;
 			scene->Materials[0] = oMat;
 			
@@ -951,9 +929,47 @@ const std::vector<std::shared_ptr<UnvoxScene>> Run(const vox_file* voxData, cons
     ExportResults Unvoxeller::ExportVoxToModel(const std::string& inVoxPath, const ExportOptions& options)
     {
         std::shared_ptr<vox_file> voxData = VoxParser::read_vox_file(inVoxPath.c_str());
-        const auto scenes = Run(voxData.get(), outExportPath, options.Converting);
+        const auto scenes = Run(voxData.get(), options.Converting);
 
         ExportResults results{};
+		std::string imageName = "";
+		std::string baseName = options.OutputPath;
+		const size_t dot = options.OutputPath.find_last_of('.');
+		if (dot != std::string::npos)
+		{
+			baseName = options.OutputPath.substr(0, options.OutputPath.find_last_of('.'));
+		}
+
+		LOG_INFO("About to save texture: {0}", baseName);
+
+		
+		for (const auto& scene : scenes)
+		{
+			const bool isMultiTexture = scene->Textures.size() > 1;
+
+			for (size_t i = 0; i < scene->Textures.size(); i++)
+			{
+				const auto& textureData =  scene->Textures[i];
+				imageName = baseName + (isMultiTexture? "_" + std::to_string(i): "") + "_atlas.png";
+				SaveAtlasImage(imageName, textureData->Width, textureData->Height, textureData->Buffer);
+			}
+		}
+
+		LOG_INFO("Textures saved");
+
+			// Export this scene
+			// std::string frameOut = outputPath;
+			// // Insert frame number before extension
+			// if (dot != std::string::npos)
+			// {
+			// 	frameOut = outputPath.substr(0, outputPath.find_last_of('.')) + "_frame" + std::to_string(fi) + outputPath.substr(outputPath.find_last_of('.'));
+			// }
+			// else
+			// {
+			// 	frameOut = outputPath + "_frame" + std::to_string(fi);
+			// }
+
+			// scene->Name = frameOut;
 
         if (scenes.size() > 0)
         {
@@ -1002,10 +1018,13 @@ const std::vector<std::shared_ptr<UnvoxScene>> Run(const vox_file* voxData, cons
 
     ConvertResult Unvoxeller::VoxToMem(const std::string& inVoxPath, const ConvertOptions& options)
     {
-        LOG_ERROR("Not implemented");
-        throw;
+		std::shared_ptr<vox_file> voxData = VoxParser::read_vox_file(inVoxPath.c_str());
+        const auto scenes = Run(voxData.get(), options);
+		ConvertResult result{};
+		result.Scenes = scenes;
+		result.Msg = ConvertMSG::SUCESS;
 
-        return {};
+        return result;
     }
 
     ConvertResult Unvoxeller::VoxToMem(const char* buffer, int size, const ConvertOptions& options)
@@ -1020,7 +1039,7 @@ const std::vector<std::shared_ptr<UnvoxScene>> Run(const vox_file* voxData, cons
         LOG_ERROR("Not implemented");
         throw;
     }
-	
+
     void Unvoxeller::GetModelFromVOXMeshAsync(const char* buffer, int size, const ConvertOptions& options, std::function<void(ConvertResult)> callback)
     {
         LOG_ERROR("Not implemented");
