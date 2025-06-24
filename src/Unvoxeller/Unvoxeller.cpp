@@ -1,27 +1,19 @@
-#include <iostream>
 #include <vector>
 #include <unordered_map>
 #include <string>
 #include <memory>
-#ifndef _USE_MATH_DEFINES
-#define _USE_MATH_DEFINES
-#endif
-#include <algorithm>
 #include <cassert>
+#include <Unvoxeller/Unvoxeller.h>
 #include <Unvoxeller/FaceRect.h>
 #include <Unvoxeller/VoxParser.h>
 #include <Unvoxeller/Log/Log.h>
 #include <Unvoxeller/VertexMerger.h>
-#include <Unvoxeller/Unvoxeller.h>
 #include <Unvoxeller/ScenePostprocessing.h>
-#include <Unvoxeller/MeshBuilder.h>
-
-#include <stb/stb_image_write.h>
 #include <Unvoxeller/AssimpSceneWritter.h>
-
 #include <Unvoxeller/Mesher/MesherFactory.h>
 #include <Unvoxeller/TextureGenerators/TextureGeneratorFactory.h>
-
+#include <Unvoxeller/MeshBuilder.h>
+#include <stb/stb_image_write.h>
 
 // Assume the Unvoxeller namespace and structures from the provided data structure are available:
 namespace Unvoxeller
@@ -1008,7 +1000,7 @@ const std::vector<std::shared_ptr<UnvoxScene>> Run(const vox_file* voxData, cons
         return {};
     }
 
-    MemData Unvoxeller::VoxToMem(const std::string& inVoxPath, const ConvertOptions& options)
+    ConvertResult Unvoxeller::VoxToMem(const std::string& inVoxPath, const ConvertOptions& options)
     {
         LOG_ERROR("Not implemented");
         throw;
@@ -1016,7 +1008,7 @@ const std::vector<std::shared_ptr<UnvoxScene>> Run(const vox_file* voxData, cons
         return {};
     }
 
-    MemData Unvoxeller::VoxToMem(const char* buffer, int size, const ConvertOptions& options)
+    ConvertResult Unvoxeller::VoxToMem(const char* buffer, int size, const ConvertOptions& options)
     {
         LOG_ERROR("Not implemented");
         throw;
@@ -1029,7 +1021,7 @@ const std::vector<std::shared_ptr<UnvoxScene>> Run(const vox_file* voxData, cons
         throw;
     }
 
-    void Unvoxeller::GetModelFromVOXMeshAsync(const char* buffer, int size, const ConvertOptions& options, std::function<void(MemData)> callback)
+    void Unvoxeller::GetModelFromVOXMeshAsync(const char* buffer, int size, const ConvertOptions& options, std::function<void(ConvertResult)> callback)
     {
         LOG_ERROR("Not implemented");
         throw;
