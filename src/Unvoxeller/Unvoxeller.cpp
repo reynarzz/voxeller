@@ -539,7 +539,6 @@ static std::shared_ptr<UnvoxScene> GetModels(const vox_file* voxData, const s32 
 				//--node->Transform = vox_vec4(cent.x, cent.y,cent.z, 1.0f) * node->Transform;
 			}
 
-
 			// ----------------------------------------------------------------------------------------------------------------------------------------------------------
 
 			meshes.push_back({ mesh, imageName });
