@@ -9,23 +9,15 @@
 #include <algorithm>
 #include <cassert>
 #include <Unvoxeller/FaceRect.h>
-#include <assimp/postprocess.h>
-// Include Assimp headers for creating and exporting 3D assets
-#include <assimp/scene.h>
-#include <assimp/Exporter.hpp>
-#include <assimp/DefaultLogger.hpp>
-#include <assimp/material.h>
 #include <Unvoxeller/VoxParser.h>
 #include <Unvoxeller/Log/Log.h>
 #include <Unvoxeller/VertexMerger.h>
 #include <Unvoxeller/Unvoxeller.h>
-//#include <Unvoxeller/ScenePostprocessing.h>
+#include <Unvoxeller/ScenePostprocessing.h>
 #include <Unvoxeller/MeshBuilder.h>
 
-// Include stb_image_write for saving texture atlas as PNG
-//#define STB_IMAGE_WRITE_IMPLEMENTATION
 #include <stb/stb_image_write.h>
-
+#include <Unvoxeller/AssimpSceneWritter.h>
 
 #include <Unvoxeller/Mesher/MesherFactory.h>
 #include <Unvoxeller/TextureGenerators/TextureGeneratorFactory.h>
@@ -36,11 +28,14 @@ namespace Unvoxeller
 {
 	std::unique_ptr<MesherFactory> _mesherFactory = nullptr;
 	std::unique_ptr<TextureGeneratorFactory> _textureGeneratorFactory = nullptr;
+	std::unique_ptr<AssimpSceneWritter> _assimpWriter = nullptr;
+
 
 	Unvoxeller::Unvoxeller()
 	{
 		_mesherFactory = std::make_unique<MesherFactory>();
 		_textureGeneratorFactory = std::make_unique<TextureGeneratorFactory>();
+		_assimpWriter = std::make_unique<AssimpSceneWritter>();
 	}
 
 	Unvoxeller::~Unvoxeller()
@@ -154,80 +149,6 @@ static bool SaveAtlasImage(const std::string& filename, int width, int height, c
 		return false;
 	}
 	return true;
-}
-
-static bool WriteSceneToFile(const std::vector<aiScene*> scenes, const std::string& outPath, const ExportOptions& options)
-{
-	// Determine export format from extension
-	std::string ext = "";
-
-	switch (options.OutputFormat)
-	{
-	case ModelFormat::FBX:
-		ext = "fbx";
-		break;
-
-	case ModelFormat::OBJ:
-		ext = "obj";
-		break;
-	default:
-		LOG_ERROR("Format not implemented in writeToFile switch.");
-		break;
-	}
-
-
-	Assimp::Exporter exporter;
-	std::string formatId;
-	const aiExportFormatDesc* selectedFormat = nullptr;
-	for (size_t i = 0; i < exporter.GetExportFormatCount(); ++i) {
-		const aiExportFormatDesc* fmt = exporter.GetExportFormatDescription(i);
-		if (fmt && fmt->fileExtension == ext) {
-			selectedFormat = fmt;
-			break;
-		}
-	}
-	if (!selectedFormat)
-	{
-		LOG_ERROR("Unsupported export format: {0}", ext);
-		return false;
-	}
-	formatId = selectedFormat->id;
-
-	u32 preprocess = 0;
-
-	aiMatrix4x4 scaleMat;
-	aiMatrix4x4::Scaling(aiVector3D(options.Converting.Scale.x, options.Converting.Scale.y, options.Converting.Scale.z), scaleMat);
-
-	size_t dot = outPath.find_last_of('.');
-
-	for (size_t i = 0; i < scenes.size(); i++)
-	{
-		auto scene = scenes[i];
-
-		OptimizeAssimpScene(scene);
-
-		if (options.Converting.Meshing.WeldVertices)
-		{
-			preprocess = aiProcess_JoinIdenticalVertices;
-			// for (size_t i = 0; i < scene->mNumMeshes; i++)
-			// {
-			// 	MergeIdenticalVertices(scene->mMeshes[i]);
-			// }
-		}
-
-		const std::string convertedOutName = outPath.substr(0, dot) + (scenes.size() > 1 ? "_" + std::to_string(i) : "");
-		scene->mRootNode->mTransformation = scaleMat * scene->mRootNode->mTransformation;
-		aiReturn ret = exporter.Export(scene, formatId.c_str(), convertedOutName + "." + ext, preprocess);
-		if (ret != aiReturn_SUCCESS)
-		{
-			std::cerr << "Export failed: " << exporter.GetErrorString() << "\n";
-			return false;
-		}
-
-	}
-
-	return true;
-
 }
 
 bbox ComputeMeshBoundingBox(const UnvoxMesh* mesh) 
@@ -614,10 +535,8 @@ static std::shared_ptr<UnvoxScene> GetModels(const vox_file* voxData, const s32 
 					mesh->Vertices[i] -= cent;
 				}
 
-				// aiMatrix4x4 C;
-				// aiMatrix4x4::Translation(cent, C);
-
-				node->Transform = vox_vec4(cent.x, cent.y,cent.z, 1.0f) * node->Transform;
+				// TODO:
+				//--node->Transform = vox_vec4(cent.x, cent.y,cent.z, 1.0f) * node->Transform;
 			}
 
 
@@ -754,7 +673,7 @@ static std::shared_ptr<UnvoxScene> GetModels(const vox_file* voxData, const s32 
 			// 	CleanUpMesh(sceneitem->mMeshes[i]);
 			// }
 
-			LOG_INFO("Done cleaning up meshes count: {0}", sceneitem->Meshes.size());
+			//LOG_INFO("Done cleaning up meshes count: {0}", sceneitem->Meshes.size());
 		}
 	}
 
@@ -792,12 +711,10 @@ const std::vector<std::shared_ptr<UnvoxScene>> Run(const vox_file* voxData, cons
 		return {};
 	}
 
-	// Set up Assimp scene
-	aiScene* scene = new aiScene();
-	scene->mRootNode = new aiNode();
+	
+
 	std::vector<std::vector<unsigned char>> images; // store image data for possibly multiple textures
 	std::vector<std::string> imageFilenames;
-	std::vector<aiMaterial*> materials;
 
 	// If exporting frames separately, we'll loop and export one scene per frame instead of building one scene with multiple.
 	// But we can reuse this code by simply generating one scene at a time inside the loop if separate.
@@ -820,7 +737,7 @@ const std::vector<std::shared_ptr<UnvoxScene>> Run(const vox_file* voxData, cons
 			// Insert frame number before extension
 			if (dot != std::string::npos)
 			{
-				frameOut = outputPath.substr(0, outputPath.find_last_of('.')) + "_frame" + std::to_string(j) + outputPath.substr(outputPath.find_last_of('.'));
+				frameOut = outputPath.substr(0, outputPath.find_last_of('.')) + "_frame" + std::to_string(fi) + outputPath.substr(outputPath.find_last_of('.'));
 			}
 			else
 			{
@@ -836,29 +753,35 @@ const std::vector<std::shared_ptr<UnvoxScene>> Run(const vox_file* voxData, cons
 	}
 	else
 	{
+		auto scene = std::make_shared<UnvoxScene>();
+		scene->RootNode = std::make_shared<UnvoxNode>();
+	
 		frameCount = voxData->voxModels.size();
 		// Combined scene (either single frame or multiple frames in one file)
 		size_t meshCount = frameCount;
-		scene->mMeshes = new aiMesh * [meshCount];
-		scene->mMaterials = new aiMaterial * [meshCount];
-		scene->mNumMeshes = (unsigned int)meshCount;
-		scene->mNumMaterials = (unsigned int)(options.Texturing.SeparateTexturesPerMesh ? meshCount : 1);
-		if (options.Texturing.SeparateTexturesPerMesh) {
+		scene->Meshes.resize(meshCount);
+		scene->Materials.resize((unsigned int)(options.Texturing.SeparateTexturesPerMesh ? meshCount : 1));
+
+		if (options.Texturing.SeparateTexturesPerMesh) 
+		{
 			// each mesh gets its own material
-			for (size_t i = 0; i < meshCount; ++i) {
-				scene->mMaterials[i] = new aiMaterial();
-			}
+			// for (size_t i = 0; i < meshCount; ++i) 
+			// {
+			// 	scene->Materials[i] = new aiMaterial();
+			// }
 		}
-		else {
+		else 
+		{
 			// one material for all meshes
-			scene->mMaterials[0] = new aiMaterial();
-			for (size_t i = 1; i < meshCount; ++i) {
-				scene->mMaterials[i] = scene->mMaterials[0];
-			}
+			// scene->mMaterials[0] = new aiMaterial();
+			// for (size_t i = 1; i < meshCount; ++i) 
+			// {
+			// 	scene->mMaterials[i] = scene->mMaterials[0];
+			// }
 		}
+
 		// Root node children for each mesh
-		scene->mRootNode->mNumChildren = (unsigned int)meshCount;
-		scene->mRootNode->mChildren = new aiNode * [meshCount];
+		scene->RootNode->Children.resize(meshCount);
 		
 		if (!options.Texturing.SeparateTexturesPerMesh)
 		{
@@ -887,12 +810,11 @@ const std::vector<std::shared_ptr<UnvoxScene>> Run(const vox_file* voxData, cons
 
 			// Assign this texture to the single material
 			aiString texPath(atlasName);
-			scene->mMaterials[0]->AddProperty(&texPath, AI_MATKEY_TEXTURE(aiTextureType_DIFFUSE, 0));
-			// Now need to build each mesh's geometry from the portion of faces belonging to that mesh
-			// We should separate faces by frame segment: because allFaces is combined list.
-			// We can reconstruct segmentation because we processed each frame sequentially and appended.
-			// So we can do another loop now generating geometry for each frame from allFaces:
-
+			auto oMat = std::make_shared<UnvoxMaterial>();
+			oMat->Name = atlasName;
+			oMat->TextureIndex = 0;
+			scene->Materials[0] = oMat;
+			
 			size_t faceOffset = 0;
 			for (size_t i = 0; i < meshCount; ++i) 
 			{
@@ -926,19 +848,16 @@ const std::vector<std::shared_ptr<UnvoxScene>> Run(const vox_file* voxData, cons
 
 				mesh->MaterialIndex = options.Texturing.SeparateTexturesPerMesh ? (int)i : 0;
 				// Create node for this mesh
-				aiNode* node = new aiNode();
-				node->mName = aiString("Frame" + std::to_string(i));
-				node->mNumMeshes = 1;
-				node->mMeshes = new unsigned int[1];
-				node->mMeshes[0] = i;
-				aiMatrix4x4 rot;
-				aiMatrix4x4::RotationX(-static_cast<float>(AI_MATH_PI / 2.0f), rot);
-				//node->mTransformation = rot;
+				auto node = std::make_shared<UnvoxNode>();
+				node->Name = "Frame" + std::to_string(i);
+				node->MeshesIndexes = { static_cast<s32>(i) };
 
-				scene->mRootNode->mChildren[i] = node;
+				scene->RootNode->Children[i] = node;
 
 				LOG_INFO("Completed mesh: {0}", i);
 			}
+
+			return { scene };
 		}
 		else
 		{
@@ -983,21 +902,10 @@ const std::vector<std::shared_ptr<UnvoxScene>> Run(const vox_file* voxData, cons
 
 			// 	scene->mRootNode->mChildren[i] = node;
 			// }
+
+			//return scene;
 		}
 		// If there was only one mesh in scene (no children used above), attach it directly to root node
-
-		LOG_INFO("TJuntctions: {0}", options.Meshing.RemoveTJunctions);
-
-		// TODO: This makes the algorithm freeze when a vox has multiple frames, and is exported as no separated
-		if (options.Meshing.RemoveTJunctions)
-		{
-			for (unsigned int m = 0; m < scene->mNumMeshes; ++m)
-			{
-				CleanUpMesh(scene->mMeshes[m]);
-			}
-
-			LOG_INFO("Done cleaning up meshes count: {0}", scene->mNumMeshes);
-		}
 
 		// Export combined scene
 		// if(!exportScene(outputPath)) {
@@ -1007,24 +915,24 @@ const std::vector<std::shared_ptr<UnvoxScene>> Run(const vox_file* voxData, cons
 		//     std::cout << "Exported " << outputPath << " successfully.\n";
 		// }
 
-		return { scene };
+		return {};
 	}
 
 	// Clean up dynamically allocated scene data for combined case
 	if (!options.ExportFramesSeparatelly) 
 	{
 		// Clean materials (if unique)
-		std::unordered_set<aiMaterial*> uniqueMats;
+		// std::unordered_set<aiMaterial*> uniqueMats;
 
-		for (unsigned int i = 0; i < scene->mNumMaterials; ++i) 
-		{
-			uniqueMats.insert(scene->mMaterials[i]);
-		}
+		// for (unsigned int i = 0; i < scene->mNumMaterials; ++i) 
+		// {
+		// 	uniqueMats.insert(scene->mMaterials[i]);
+		// }
 
-		for (aiMaterial* mat : uniqueMats) 
-		{
-			delete mat;
-		}
+		// for (aiMaterial* mat : uniqueMats) 
+		// {
+		// 	delete mat;
+		// }
 		// Clean meshes
 		// for(unsigned int i = 0; i < scene->mNumMeshes; ++i) {
 		//     delete scene->mMeshes[i];
@@ -1058,12 +966,28 @@ const std::vector<std::shared_ptr<UnvoxScene>> Run(const vox_file* voxData, cons
 
         if (scenes.size() > 0)
         {
-            WriteSceneToFile(scenes, outExportPath, options);
+			LOG_INFO("TJuntctions: {0}", options.Converting.Meshing.RemoveTJunctions);
 
-            for (size_t i = 0; i < scenes.size(); i++)
-            {
-                delete scenes[i];
-            }
+			// TODO: This makes the algorithm freeze when a vox has multiple frames, and is exported as no separated
+			if (options.Converting.Meshing.RemoveTJunctions)
+			{
+				for (unsigned int m = 0; m < scenes.size(); ++m)
+				{
+					for (auto& mesh : scenes[m]->Meshes)
+					{
+						CleanUpMesh(mesh.get());
+					}
+
+					LOG_INFO("Done cleaning up meshes count: {0}", scenes[m]->Meshes.size());
+				}
+			}
+
+            _assimpWriter->ExportScenes(options, scenes);
+
+            // for (size_t i = 0; i < scenes.size(); i++)
+            // {
+            //     delete scenes[i];
+            // }
 
             results.Convert.Msg = ConvertMSG::SUCESS;
         }

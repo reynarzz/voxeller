@@ -8,7 +8,7 @@ namespace Unvoxeller
     class AssimpSceneWritter
     {
     public:
-        void ExportScenes(const ExportOptions& options, const std::vector<std::shared_ptr<UnvoxScene>> scenes);
+        bool ExportScenes(const ExportOptions& options, const std::vector<std::shared_ptr<UnvoxScene>> scenes);
     private:
     };
 }

@@ -1,13 +1,14 @@
 #pragma once
 #include <OpenMesh/Core/IO/MeshIO.hh>
 #include <OpenMesh/Core/Mesh/TriMesh_ArrayKernelT.hh>
-#include <assimp/scene.h>
-#include <assimp/Exporter.hpp>
-#include <assimp/DefaultLogger.hpp>
-#include <assimp/material.h>
 #include <meshoptimizer/src/meshoptimizer.h>
 #include <stack>
 #include <Unvoxeller/Log/Log.h>
+#include <Unvoxeller/Data/UnvoxMesh.h>
+#include <Unvoxeller/Data/UnvoxScene.h>
+
+
+using namespace Unvoxeller;
 
 struct MyTraits : public OpenMesh::DefaultTraits 
 {
@@ -20,7 +21,8 @@ using TriMesh = OpenMesh::TriMesh_ArrayKernelT<MyTraits>;
 
 
 // Import an aiMesh into OpenMesh
-static void convertAiMeshToOpenMesh(aiMesh* aimesh, TriMesh& om) {
+static void convertAiMeshToOpenMesh(UnvoxMesh* aimesh, TriMesh& om) 
+{
 	om.clear();
 
 	// Enable per‐vertex normals and UVs in OpenMesh
@@ -28,34 +30,39 @@ static void convertAiMeshToOpenMesh(aiMesh* aimesh, TriMesh& om) {
 	om.request_vertex_texcoords2D();
 
 	// Keep a handle list for adding faces
-	std::vector<TriMesh::VertexHandle> vhandle(aimesh->mNumVertices);
+	std::vector<TriMesh::VertexHandle> vhandle(aimesh->Vertices.size());
 
 	// Import vertices, normals and UVs
-	for (unsigned int i = 0; i < aimesh->mNumVertices; ++i) {
+	for (unsigned int i = 0; i < aimesh->Vertices.size(); ++i) 
+	{
 		// Position
-		const aiVector3D& p = aimesh->mVertices[i];
+		const auto& p = aimesh->Vertices[i];
 		vhandle[i] = om.add_vertex({ p.x, p.y, p.z });
 
 		// Normal (if present)
-		if (aimesh->HasNormals()) {
-			const aiVector3D& n = aimesh->mNormals[i];
+		if (aimesh->Normals.size() > 0) 
+		{
+			const auto& n = aimesh->Normals[i];
 			om.set_normal(vhandle[i], { n.x, n.y, n.z });
 		}
 
 		// UV (if present)
-		if (aimesh->HasTextureCoords(0)) {
-			const aiVector3D& uv = aimesh->mTextureCoords[0][i];
+		if (aimesh->UVs.size() > 0)
+		{
+			const auto& uv = aimesh->UVs[i];
 			om.set_texcoord2D(vhandle[i], { uv.x, uv.y });
 		}
 	}
 
 	// Import faces (triangles)
-	for (unsigned int f = 0; f < aimesh->mNumFaces; ++f) {
-		const aiFace& face = aimesh->mFaces[f];
+	for (unsigned int f = 0; f < aimesh->Faces.size(); ++f) 
+	{
+		const auto& face = aimesh->Faces[f];
 		std::vector<TriMesh::VertexHandle> fv;
-		fv.reserve(face.mNumIndices);
-		for (unsigned int j = 0; j < face.mNumIndices; ++j) {
-			fv.push_back(vhandle[face.mIndices[j]]);
+		fv.reserve(face.Indices.size());
+		for (unsigned int j = 0; j < face.Indices.size(); ++j)
+		{
+			fv.push_back(vhandle[face.Indices[j]]);
 		}
 		om.add_face(fv);
 	}
@@ -66,7 +73,7 @@ static void convertAiMeshToOpenMesh(aiMesh* aimesh, TriMesh& om) {
 
 // Export OpenMesh back into the existing aiMesh (overwriting its arrays)
 // Converts an OpenMesh TriMesh (with per‐vertex normals and 2D texcoords) back into an existing aiMesh
-static void convertOpenMeshToAiMesh(TriMesh& om, aiMesh* aimesh)
+static void convertOpenMeshToAiMesh(TriMesh& om, UnvoxMesh* aimesh)
 {
 	// Ensure the mesh has normals and texcoords available
 	if (!om.has_vertex_normals()) {
@@ -81,17 +88,9 @@ static void convertOpenMeshToAiMesh(TriMesh& om, aiMesh* aimesh)
 	// --- Vertices, normals, texcoords ---
 	const unsigned int nv = static_cast<unsigned int>(om.n_vertices());
 
-	// Delete any existing data to avoid leaks
-	delete[] aimesh->mVertices;
-	delete[] aimesh->mNormals;
-	delete[] aimesh->mTextureCoords[0];
-
-	// Allocate new arrays
-	aimesh->mNumVertices = nv;
-	aimesh->mVertices = new aiVector3D[nv];
-	aimesh->mNormals = new aiVector3D[nv];
-	aimesh->mTextureCoords[0] = new aiVector3D[nv];
-	aimesh->mNumUVComponents[0] = 2;  // 2D UVs
+	aimesh->Vertices.resize(nv);
+	aimesh->Normals.resize(nv);
+	aimesh->UVs.resize(nv);
 
 	// Map from OpenMesh vertex index → aiMesh index
 	std::vector<unsigned int> idxMap(nv);
@@ -100,40 +99,37 @@ static void convertOpenMeshToAiMesh(TriMesh& om, aiMesh* aimesh)
 	{
 		// Position
 		auto  p = om.point(vh);
-		aimesh->mVertices[idx] = aiVector3D(p[0], p[1], p[2]);
+		aimesh->Vertices[idx] = { p[0], p[1], p[2] };
 
 		// Normal
 		auto  n = om.normal(vh);
-		aimesh->mNormals[idx] = aiVector3D(n[0], n[1], n[2]);
+		aimesh->Normals[idx] = { n[0], n[1], n[2] };
 
 		// UV
 		auto  uv = om.texcoord2D(vh);
-		aimesh->mTextureCoords[0][idx] = aiVector3D(uv[0], uv[1], 0.0f);
+		aimesh->UVs[idx] = { uv[0], uv[1] };
 
 		idxMap[vh.idx()] = idx++;
 	}
 
 	// --- Faces (triangles) ---
 	const unsigned int nf = static_cast<unsigned int>(om.n_faces());
-	delete[] aimesh->mFaces;
-	aimesh->mNumFaces = nf;
-	aimesh->mFaces = new aiFace[nf];
+
+	aimesh->Faces.resize(nf);
 
 	idx = 0;
-	for (auto fh : om.faces()) {
-		aiFace& af = aimesh->mFaces[idx];
-		af.mNumIndices = 3;               // TriMesh_ArrayKernelT<> produces triangles
-		af.mIndices = new unsigned int[3];
+	for (auto fh : om.faces())
+	{
+		auto& af = aimesh->Faces[idx];
+		af.Indices.resize(3);
 
 		int vi = 0;
-		for (auto fv_it = om.cfv_iter(fh); fv_it.is_valid(); ++fv_it) {
-			af.mIndices[vi++] = idxMap[fv_it->idx()];
+		for (auto fv_it = om.cfv_iter(fh); fv_it.is_valid(); ++fv_it)
+		{
+			af.Indices[vi++] = idxMap[fv_it->idx()];
 		}
 		++idx;
 	}
-
-	// Copy over primitive type
-	aimesh->mPrimitiveTypes = aiPrimitiveType_TRIANGLE;
 }
 
 // Collapse any edge whose endpoints coincide (within eps):
@@ -217,7 +213,8 @@ static void splitTJunctions(TriMesh& mesh)
 		}
 	}
 }
-static void CleanUpMesh(aiMesh* mesh)
+
+static void CleanUpMesh(UnvoxMesh* mesh)
 {
 	TriMesh om;
 	convertAiMeshToOpenMesh(mesh, om);
@@ -240,9 +237,9 @@ static void CleanUpMesh(aiMesh* mesh)
 }
 
 
-inline aiVector3D crossProduct(const aiVector3D& a, const aiVector3D& b)
+inline vox_vec3 crossProduct(const vox_vec3& a, const vox_vec3& b)
 {
-	return aiVector3D(
+	return vox_vec3(
 		a.y * b.z - a.z * b.y,
 		a.z * b.x - a.x * b.z,
 		a.x * b.y - a.y * b.x
@@ -402,51 +399,59 @@ struct VertexOpt
 //}
 
 // New Optimizer
-void OptimizeAssimpScene(aiScene* scene) 
+void OptimizeAssimpScene(UnvoxScene* scene) 
 {
 	LOG_INFO("Optimizing mesh");
 
-	for (unsigned int mi = 0; mi < scene->mNumMeshes; ++mi)
+	for (unsigned int mi = 0; mi < scene->Meshes.size(); ++mi)
 	{
-		aiMesh* mesh = scene->mMeshes[mi];
+		UnvoxMesh* mesh = scene->Meshes[mi].get();
 
 		// 1) Build interleaved vertex buffer
-		std::vector<VertexOpt> vertices(mesh->mNumVertices);
+		std::vector<VertexOpt> vertices(mesh->Vertices.size());
 
-		for (unsigned int i = 0; i < mesh->mNumVertices; ++i) 
+		for (unsigned int i = 0; i < mesh->Vertices.size(); ++i) 
 		{
 			// Position
-			vertices[i].pos[0] = mesh->mVertices[i].x;
-			vertices[i].pos[1] = mesh->mVertices[i].y;
-			vertices[i].pos[2] = mesh->mVertices[i].z;
+			vertices[i].pos[0] = mesh->Vertices[i].x;
+			vertices[i].pos[1] = mesh->Vertices[i].y;
+			vertices[i].pos[2] = mesh->Vertices[i].z;
 			// Normal (if present)
-			if (mesh->HasNormals()) {
-				vertices[i].normal[0] = mesh->mNormals[i].x;
-				vertices[i].normal[1] = mesh->mNormals[i].y;
-				vertices[i].normal[2] = mesh->mNormals[i].z;
+			if (mesh->Normals.size() > 0) 
+			{
+				vertices[i].normal[0] = mesh->Normals[i].x;
+				vertices[i].normal[1] = mesh->Normals[i].y;
+				vertices[i].normal[2] = mesh->Normals[i].z;
 			}
-			else {
+			else 
+			{
 				vertices[i].normal[0] = vertices[i].normal[1] = vertices[i].normal[2] = 0.0f;
 			}
 			// UV0 (if present)
-			if (mesh->mTextureCoords[0]) {
-				vertices[i].uv[0] = mesh->mTextureCoords[0][i].x;
-				vertices[i].uv[1] = mesh->mTextureCoords[0][i].y;
+			if (mesh->UVs.size() > i) 
+			{
+				vertices[i].uv[0] = mesh->UVs[i].x;
+				vertices[i].uv[1] = mesh->UVs[i].y;
 			}
-			else {
+			else
+			{
 				vertices[i].uv[0] = vertices[i].uv[1] = 0.0f;
 			}
 		}
 
 		// 2) Build index buffer (assume triangles)
 		std::vector<uint32_t> indices;
-		indices.reserve(mesh->mNumFaces * 3);
-		for (unsigned int f = 0; f < mesh->mNumFaces; ++f) {
-			const aiFace& face = mesh->mFaces[f];
-			if (face.mNumIndices == 3) {
-				indices.push_back(face.mIndices[0]);
-				indices.push_back(face.mIndices[1]);
-				indices.push_back(face.mIndices[2]);
+		indices.reserve(mesh->Faces.size() * 3);
+
+		for (unsigned int f = 0; f < mesh->Faces.size(); ++f) 
+		{
+			const auto& face = mesh->Faces[f];
+
+			if (face.Indices.size() == 3) 
+			{
+				indices.push_back(face.Indices[0]);
+				indices.push_back(face.Indices[1]);
+				indices.push_back(face.Indices[2]);
 			}
 			// skip non-triangular faces
 		}
@@ -521,43 +526,33 @@ void OptimizeAssimpScene(aiScene* scene)
 		);
 
 		
-		// 5) Write back to aiMesh (replace vertex & face arrays)
-		// Free old data
-		delete[] mesh->mVertices;
-		delete[] mesh->mNormals;
-		delete[] mesh->mTextureCoords[0];
-
 		// Allocate new arrays
-		mesh->mNumVertices = static_cast<unsigned int>(finalVerts.size());
-		mesh->mVertices = new aiVector3D[mesh->mNumVertices];
-		mesh->mNormals = new aiVector3D[mesh->mNumVertices];
-		mesh->mTextureCoords[0] = new aiVector3D[mesh->mNumVertices];
+		mesh->Vertices.resize(finalVerts.size());
+		mesh->Normals.resize(mesh->Vertices.size());
+		mesh->UVs.resize(mesh->Vertices.size());
 
-		for (unsigned int i = 0; i < mesh->mNumVertices; ++i) {
-			mesh->mVertices[i] = aiVector3D(
-				finalVerts[i].pos[0], finalVerts[i].pos[1], finalVerts[i].pos[2]
-			);
-			mesh->mNormals[i] = aiVector3D(
-				finalVerts[i].normal[0], finalVerts[i].normal[1], finalVerts[i].normal[2]
-			);
-			mesh->mTextureCoords[0][i] = aiVector3D(
-				finalVerts[i].uv[0], finalVerts[i].uv[1], 0.0f
-			);
+		for (unsigned int i = 0; i < mesh->Vertices.size(); ++i) 
+		{
+			mesh->Vertices[i] = { finalVerts[i].pos[0], finalVerts[i].pos[1], finalVerts[i].pos[2] };
+
+			mesh->Normals[i] = { finalVerts[i].normal[0], finalVerts[i].normal[1], finalVerts[i].normal[2] };
+		
+			mesh->UVs[i] = { finalVerts[i].uv[0], finalVerts[i].uv[1] };
 		}
 
 		// Faces
 		size_t newFaceCount = weldedIdx.size() / 3;
-		delete[] mesh->mFaces;
-		mesh->mNumFaces = static_cast<unsigned int>(newFaceCount);
-		mesh->mFaces = new aiFace[mesh->mNumFaces];
 
-		for (unsigned int f = 0; f < mesh->mNumFaces; ++f) {
-			aiFace& face = mesh->mFaces[f];
-			face.mNumIndices = 3;
-			face.mIndices = new unsigned int[3];
-			face.mIndices[0] = weldedIdx[f * 3 + 0];
-			face.mIndices[1] = weldedIdx[f * 3 + 1];
-			face.mIndices[2] = weldedIdx[f * 3 + 2];
+		mesh->Faces.resize(newFaceCount);
+
+		for (unsigned int f = 0; f < mesh->Faces.size(); ++f) 
+		{
+			auto& face = mesh->Faces[f];
+
+			face.Indices.resize(3);
+			face.Indices[0] = weldedIdx[f * 3 + 0];
+			face.Indices[1] = weldedIdx[f * 3 + 1];
+			face.Indices[2] = weldedIdx[f * 3 + 2];
 		}
 	}
 }

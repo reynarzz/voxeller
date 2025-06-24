@@ -42,7 +42,7 @@ namespace Unvoxeller
 	vox_vec3::vox_vec3(f32 _x, f32 _y, f32 _z) : x(_x), y(_y), z(_z) {}
 
 	vox_vec3 vox_vec3::operator+(const vox_vec3& v) const { return { x + v.x, y + v.y, z + v.z }; }
-	vox_vec3 vox_vec3::operator-(const vox_vec3& v) const { return { x - v.x, y - v.y, z - v.z }; }
+	// vox_vec3 vox_vec3::operator-(const vox_vec3& v) const { return { x - v.x, y - v.y, z - v.z }; }
 	vox_vec3 vox_vec3::operator*(f32 s) const { return { x * s,   y * s,   z * s }; }
 	vox_vec3 vox_vec3::operator/(f32 s) const { return { x / s,   y / s,   z / s }; }
 	vox_vec3& vox_vec3::operator*=(f32 s) { x *= s; y *= s; z *= s; return *this; }
