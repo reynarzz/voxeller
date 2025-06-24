@@ -2,8 +2,8 @@
 #include <vector>
 #include <Unvoxeller/api.h>
 #include <Unvoxeller/Types.h>
-#include "MeshInfo.h"
 #include "TextureData.h"
+#include <Unvoxeller/Data/UnvoxScene.h>
 
 namespace Unvoxeller 
 {
@@ -16,8 +16,7 @@ namespace Unvoxeller
 	struct UNVOXELLER_API ConvertResult
 	{
 		ConvertMSG Msg;
-		std::vector<MeshInfo> meshes;
+		std::shared_ptr<UnvoxScene> Scene;
 		std::vector<TextureData> Textures;
 	};
 };
-

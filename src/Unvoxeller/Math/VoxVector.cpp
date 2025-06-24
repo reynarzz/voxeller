@@ -30,6 +30,9 @@ namespace Unvoxeller
 	{
 		return { a.x / b.x, a.y / b.y, a.z / b.z };
 	}
+
+	vox_vec3 vox_vec3::operator-(const vox_vec3& v) const { return { x - v.x, y - v.y, z - v.z }; }
+
 	vox_vec4 operator/(const vox_vec4& a, const vox_vec4& b)
 	{
 		return { a.x / b.x, a.y / b.y, a.z / b.z, a.w / b.w };

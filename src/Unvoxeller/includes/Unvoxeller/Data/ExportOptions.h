@@ -9,6 +9,7 @@ namespace Unvoxeller
 	{
 		ConvertOptions Converting;
 		ModelFormat OutputFormat = ModelFormat::FBX;
+		std::string OutputPath;
 	};
 
 }

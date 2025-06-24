@@ -19,7 +19,7 @@
 #include <Unvoxeller/Log/Log.h>
 #include <Unvoxeller/VertexMerger.h>
 #include <Unvoxeller/Unvoxeller.h>
-#include <Unvoxeller/ScenePostprocessing.h>
+//#include <Unvoxeller/ScenePostprocessing.h>
 #include <Unvoxeller/MeshBuilder.h>
 
 // Include stb_image_write for saving texture atlas as PNG
@@ -230,9 +230,10 @@ static bool WriteSceneToFile(const std::vector<aiScene*> scenes, const std::stri
 
 }
 
-bbox ComputeMeshBoundingBox(const aiMesh* mesh) 
+bbox ComputeMeshBoundingBox(const UnvoxMesh* mesh) 
 {
-	bbox boundingBox = {
+	bbox boundingBox = 
+	{
 		std::numeric_limits<float>::max(),
 		std::numeric_limits<float>::max(),
 		std::numeric_limits<float>::max(),
@@ -240,12 +241,13 @@ bbox ComputeMeshBoundingBox(const aiMesh* mesh)
 		std::numeric_limits<float>::lowest(),
 		std::numeric_limits<float>::lowest()
 	};
-	if (!mesh || mesh->mNumVertices == 0)
+	if (!mesh || mesh->Vertices.size() == 0)
 		return boundingBox;
 
-	for (unsigned i = 0; i < mesh->mNumVertices; ++i) {
-		const aiVector3D& v = mesh->mVertices[i];
-		const aiVector3D& n = mesh->mNormals[i];
+	for (unsigned i = 0; i < mesh->Vertices.size(); ++i) 
+	{
+		const vox_vec3& v = mesh->Vertices[i];
+		const vox_vec3& n = mesh->Normals[i];
 		boundingBox.minX = std::min(boundingBox.minX, v.x);
 		boundingBox.minY = std::min(boundingBox.minY, v.y);
 		boundingBox.minZ = std::min(boundingBox.minZ, v.z);
@@ -254,6 +256,7 @@ bbox ComputeMeshBoundingBox(const aiMesh* mesh)
 		boundingBox.maxY = std::max(boundingBox.maxY, v.y);
 		boundingBox.maxZ = std::max(boundingBox.maxZ, v.z);
 	}
+
 	return boundingBox;
 }
 
@@ -342,17 +345,16 @@ inline vox_vec3 Rotate(const vox_mat3& m, const vox_vec3& v)
 
 
 // TODO: start simple, from the begining, the whole code base has a problem of code duplication.
-static std::vector<aiScene*> GetModels(const vox_file* voxData, const s32 frameIndex, const std::string& outputPath, const ConvertOptions& options)
+static std::shared_ptr<UnvoxScene> GetModels(const vox_file* voxData, const s32 frameIndex, const std::string& outputPath, const ConvertOptions& options)
 {
 	struct MeshWrapData
 	{
-		aiMesh* Mesh;
+		std::shared_ptr<UnvoxMesh> Mesh;
 		std::string imageName;
 	};
 
-
 	std::vector<MeshWrapData> meshes;
-	std::vector<aiNode*> shapeNodes;
+	std::vector<std::shared_ptr<UnvoxNode>> shapeNodes = {};
 
 	s32 materialIndex = 0;
 
@@ -553,7 +555,6 @@ static std::vector<aiScene*> GetModels(const vox_file* voxData, const s32 frameI
 				textureData->Width, textureData->Height,
 				options.Meshing.FlatShading,
 				pallete,
-				mesh,
 				box,          // pivot centering
 				wxf.rot,     // MagicaVoxel 3×3 rotation
 				wxf.trans    // MagicaVoxel translation
@@ -575,49 +576,48 @@ static std::vector<aiScene*> GetModels(const vox_file* voxData, const s32 frameI
 			// Record mesh index and create node with identity transform:
 			unsigned int meshIndex = static_cast<unsigned int>(meshes.size());
 
-			aiNode* node = new aiNode();
-			node->mName = aiString(name);
-			node->mNumMeshes = 1;
-
+			auto node = std::make_shared<UnvoxNode>();
+			node->Name = name;
+			
 			if (options.ExportMeshesSeparatelly)
 			{
-				node->mMeshes = new unsigned int[1] { 0 };
+				node->MeshesIndexes.push_back(0);
 			}
 			else
 			{
-				node->mMeshes = new unsigned int[1] { meshIndex };
+				node->MeshesIndexes.push_back(meshIndex);
 			}
-
 
 			// box = TransformAABB(box, wxf.rot, wxf.trans);
 			//  float cxx = box.minX + (box.maxX - box.minX) * options.Pivot.x;
 			//  float cyy = box.minY + (box.maxY - box.minY) * options.Pivot.y;
 			//  float czz = box.minZ + (box.maxZ - box.minZ) * options.Pivot.z;
 
-			auto bbbox = ComputeMeshBoundingBox(mesh);
+			auto bbbox = ComputeMeshBoundingBox(mesh.get());
 			float cxx = bbbox.minX + (bbbox.maxX - bbbox.minX) * currentPivot.x;
 			float cyy = bbbox.minY + (bbbox.maxY - bbbox.minY) * currentPivot.y;
 			float czz = bbbox.minZ + (bbbox.maxZ - bbbox.minZ) * currentPivot.z;
 
-			aiVector3D cent(cxx, cyy, czz);
+			vox_vec3 cent(cxx, cyy, czz);
 
 			if (options.Meshing.MeshesToWorldCenter)
 			{
-				for (unsigned int i = 0; i < mesh->mNumVertices; ++i)
+				for (unsigned int i = 0; i < mesh->Vertices.size(); ++i)
 				{
 					mesh->Vertices[i] -= cent;
 				}
 			}
 			else
 			{
-				for (unsigned int i = 0; i < mesh->mNumVertices; ++i)
+				for (unsigned int i = 0; i < mesh->Vertices.size(); ++i)
 				{
 					mesh->Vertices[i] -= cent;
 				}
 
-				aiMatrix4x4 C;
-				aiMatrix4x4::Translation(cent, C);
-				node->mTransformation = C * node->mTransformation;
+				// aiMatrix4x4 C;
+				// aiMatrix4x4::Translation(cent, C);
+
+				node->Transform = vox_vec4(cent.x, cent.y,cent.z, 1.0f) * node->Transform;
 			}
 
 
@@ -636,62 +636,58 @@ static std::vector<aiScene*> GetModels(const vox_file* voxData, const s32 frameI
 		LOG_WARN(".Vox File has no meshes");
 	}
 
-	std::vector<aiScene*> scenes{};
 
-	if (options.ExportMeshesSeparatelly)
+	// if (options.ExportMeshesSeparatelly)
+	// {
+	// 	for (size_t i = 0; i < meshes.size(); i++)
+	// 	{
+	// 		auto sceneSplit = std::make_shared<UnvoxScene>();
+
+	// 		// — create & initialize the root node —
+	// 		sceneSplit->RootNode = std::make_shared<UnvoxNode>();
+	// 		sceneSplit->RootNode->Name = "RootNode";
+	// 		sceneSplit->RootNode->Transform = {};   // identity
+	// 		// ** zero out the root node’s mesh list **
+	// 		sceneSplit->RootNode->MeshesIndexes = {};
+
+	// 		// now attach exactly one child node:
+	// 		auto child = std::make_shared<UnvoxNode>();
+	// 		child->MeshesIndexes = { 0 };
+			
+	// 		sceneSplit->RootNode->Children.push_back(child); // Overwrite to set the index to 0
+
+	// 		// — populate the scene’s mesh and material arrays —
+	// 		sceneSplit->Meshes = { meshes[i].Mesh };
+
+	// 		if (options.Meshing.GenerateMaterials)
+	// 		{
+	// 			aiString texPath(meshes[i].imageName);
+	// 			aiMaterial* mat = new aiMaterial();
+	// 			mat->AddProperty(&texPath, AI_MATKEY_TEXTURE(aiTextureType_DIFFUSE, 0));
+
+	// 			// Since the meshes will be exported separatelly, always create a material per mesh
+	// 			//sceneSplit->mNumMaterials = 1;
+	// 			//sceneSplit->mMaterials = new aiMaterial * [1] { mat };
+	// 		}
+	// 		else
+	// 		{
+	// 			//sceneSplit->mNumMaterials = 0;
+	// 			//sceneSplit->mMaterials = nullptr;
+	// 		}
+	// 		scenes.push_back(sceneSplit);
+	// 	}
+	// }
+	// else
+
+	std::shared_ptr<UnvoxScene> scene{};
+
 	{
-		for (size_t i = 0; i < meshes.size(); i++)
-		{
-			aiScene* sceneSplit = new aiScene();
-
-			// — create & initialize the root node —
-			sceneSplit->mRootNode = new aiNode();
-			sceneSplit->mRootNode->mName = aiString("RootNode");
-			sceneSplit->mRootNode->mTransformation = aiMatrix4x4();   // identity
-			// ** zero out the root node’s mesh list **
-			sceneSplit->mRootNode->mNumMeshes = 0;
-			sceneSplit->mRootNode->mMeshes = nullptr;
-
-			// now attach exactly one child node:
-			sceneSplit->mRootNode->mNumChildren = 1;
-			sceneSplit->mRootNode->mChildren = new aiNode * [1] { shapeNodes[i] };
-			sceneSplit->mRootNode->mChildren[0]->mMeshes[0] = 0; // Overwrite to set the index to 0
-
-
-
-			// — populate the scene’s mesh and material arrays —
-			sceneSplit->mNumMeshes = 1;
-			sceneSplit->mMeshes = new aiMesh * [1] { meshes[i].Mesh };
-
-			if (options.Meshing.GenerateMaterials)
-			{
-				aiString texPath(meshes[i].imageName);
-				aiMaterial* mat = new aiMaterial();
-				mat->AddProperty(&texPath, AI_MATKEY_TEXTURE(aiTextureType_DIFFUSE, 0));
-
-				// Since the meshes will be exported separatelly, always create a material per mesh
-				sceneSplit->mNumMaterials = 1;
-				sceneSplit->mMaterials = new aiMaterial * [1] { mat };
-
-			}
-			else
-			{
-				sceneSplit->mNumMaterials = 0;
-				sceneSplit->mMaterials = nullptr;
-			}
-			scenes.push_back(sceneSplit);
-		}
-	}
-	else
-	{
-		aiScene* scene = new aiScene();
-		scene->mRootNode = new aiNode();
-		scene->mNumMeshes = meshes.size();
-		scene->mMeshes = new aiMesh * [meshes.size()];
+		scene = std::make_shared<UnvoxScene>();
+		scene->RootNode = std::make_shared<UnvoxNode>();
+		scene->Meshes.resize(meshes.size());
 
 		// Attach all shape nodes to root
-		scene->mRootNode->mNumChildren = shapeNodes.size();
-		scene->mRootNode->mChildren = new aiNode * [shapeNodes.size()];
+		scene->RootNode->Children.resize(shapeNodes.size());
 
 		// TODO: set one material per mesh, or share a material? for shared materials, the texture individial export option should be turned off, since the material needs the whole atlas.
 
@@ -699,82 +695,82 @@ static std::vector<aiScene*> GetModels(const vox_file* voxData, const s32 frameI
 		{
 			if (options.Meshing.MaterialPerMesh)
 			{
-				scene->mNumMaterials = meshes.size();
-				scene->mMaterials = new aiMaterial * [meshes.size()];
+				scene->Materials.resize(meshes.size());
 			}
 			else
 			{
 				LOG_ERROR("IMPLEMENT shared materials");
 				throw;
-				scene->mNumMaterials = 1;
-				scene->mMaterials = new aiMaterial * [1];
+				//scene->mNumMaterials = 1;
+				//scene->mMaterials = new aiMaterial * [1];
 
 			}
 		}
 		else
 		{
-			scene->mNumMaterials = 0;
-			scene->mMaterials = nullptr;
+			scene->Materials = {};
 		}
 
 		for (size_t i = 0; i < meshes.size(); ++i)
 		{
-			scene->mMeshes[i] = meshes[i].Mesh;
+			scene->Meshes[i] = meshes[i].Mesh;
 
-			s32 matIndex = meshes[i].Mesh->mMaterialIndex;
+			s32 matIndex = meshes[i].Mesh->MaterialIndex;
 
 			if (options.Meshing.GenerateMaterials)
 			{
 				aiString texPath(meshes[i].imageName);
-				aiMaterial* mat = new aiMaterial();
-				mat->AddProperty(&texPath, AI_MATKEY_TEXTURE(aiTextureType_DIFFUSE, 0));
-				scene->mMaterials[matIndex] = mat;
+				//aiMaterial* mat = new aiMaterial();
+				//mat->AddProperty(&texPath, AI_MATKEY_TEXTURE(aiTextureType_DIFFUSE, 0));
+
+				auto mat = std::make_shared<UnvoxMaterial>();
+				mat->Name =  meshes[i].imageName;
+				mat->TextureIndex =  i;
+
+				scene->Materials[matIndex] =  mat;
 			}
 		}
 
 		// Set all the nodes to the root.
-		for (size_t i = 0; i < scene->mRootNode->mNumChildren; ++i)
+		for (size_t i = 0; i < scene->RootNode->Children.size(); ++i)
 		{
-			scene->mRootNode->mChildren[i] = shapeNodes[i];
+			scene->RootNode->Children[i] = shapeNodes[i];
 		}
-
-		scenes = { scene };
 	}
 
-	for (auto sceneitem : scenes)
+	//for (auto sceneitem : scenes)
 	{
 		// Adds default material, some formats require at least one.
-		if (sceneitem->mNumMaterials == 0)
-		{
-			sceneitem->mNumMaterials = 1;
-			sceneitem->mMaterials = new aiMaterial * [1] {new aiMaterial};
-		}
+		// if (sceneitem->Materials.size() == 0)
+		// {
+		// 	sceneitem->mNumMaterials = 1;
+		// 	sceneitem->mMaterials = new aiMaterial * [1] {new aiMaterial};
+		// }
 
 		if (options.Meshing.RemoveTJunctions)
 		{
-			for (unsigned int i = 0; i < sceneitem->mNumMeshes; ++i)
-			{
-				CleanUpMesh(sceneitem->mMeshes[i]);
-			}
+			// for (unsigned int i = 0; i < sceneitem->mNumMeshes; ++i)
+			// {
+			// 	CleanUpMesh(sceneitem->mMeshes[i]);
+			// }
 
-			LOG_INFO("Done cleaning up meshes count: {0}", sceneitem->mNumMeshes);
+			LOG_INFO("Done cleaning up meshes count: {0}", sceneitem->Meshes.size());
 		}
 	}
 
-
-	return scenes;
+	return scene;
 }
 
 
 
-const std::vector<aiScene*> Run(const vox_file* voxData, const std::string& outputPath, const ConvertOptions& options)
+const std::vector<std::shared_ptr<UnvoxScene>> Run(const vox_file* voxData, const std::string& outputPath, const ConvertOptions& options)
 {
 	if (!voxData || !voxData->isValid)
 	{
 		std::cerr << "Failed to read voxel file or file is invalid.\n";
 		return {};
 	}
-	
+
 	// Determine if we have multiple frames (multiple models or transform frames)
 	s32 frameCount = 0;
 
@@ -811,32 +807,29 @@ const std::vector<aiScene*> Run(const vox_file* voxData, const std::string& outp
 
 	if (options.ExportFramesSeparatelly && frameCount >= 1 && voxData->shapes.size() > 0)
 	{
-		std::vector<aiScene*> scenesOut{};
+		std::vector<std::shared_ptr<UnvoxScene>> scenesOut{};
 
 		for (s32 fi = 0; fi < frameCount; ++fi)
 		{
 			// Prepare a new minimal scene for this frame
 			LOG_INFO("Frame processing: {0}", fi);
-			auto scenes = GetModels(voxData, fi, outputPath, options);
+			auto scene = GetModels(voxData, fi, outputPath, options);
 
-			for (size_t j = 0; j < scenes.size(); j++)
+			// Export this scene
+			std::string frameOut = outputPath;
+			// Insert frame number before extension
+			if (dot != std::string::npos)
 			{
-				// Export this scene
-				std::string frameOut = outputPath;
-				// Insert frame number before extension
-				if (dot != std::string::npos)
-				{
-					frameOut = outputPath.substr(0, outputPath.find_last_of('.')) + "_frame" + std::to_string(j) + outputPath.substr(outputPath.find_last_of('.'));
-				}
-				else
-				{
-					frameOut = outputPath + "_frame" + std::to_string(j);
-				}
-
-				scenes[j]->mName = frameOut;
+				frameOut = outputPath.substr(0, outputPath.find_last_of('.')) + "_frame" + std::to_string(j) + outputPath.substr(outputPath.find_last_of('.'));
+			}
+			else
+			{
+				frameOut = outputPath + "_frame" + std::to_string(fi);
 			}
 
-			scenesOut.insert(scenesOut.end(), std::make_move_iterator(scenes.begin()), std::make_move_iterator(scenes.end()));
+			scene->Name = frameOut;
+
+			scenesOut.push_back(scene);
 		}
 
 		return scenesOut;
@@ -949,45 +942,47 @@ const std::vector<aiScene*> Run(const vox_file* voxData, const std::string& outp
 		}
 		else
 		{
+			// TODO:
+
 			// separateTexturesPerMesh case:
-			for (size_t i = 0; i < meshCount; ++i)
-			{
-				size_t modelIndex = (i < voxData->voxModels.size() ? i : voxData->voxModels.size() - 1);
+			// for (size_t i = 0; i < meshCount; ++i)
+			// {
+			// 	size_t modelIndex = (i < voxData->voxModels.size() ? i : voxData->voxModels.size() - 1);
 
-				std::vector<FaceRect> faces = _mesherFactory->Get(options.Meshing.MeshType)->CreateFaces(voxData->voxModels[modelIndex], voxData->sizes[modelIndex], modelIndex);
+			// 	std::vector<FaceRect> faces = _mesherFactory->Get(options.Meshing.MeshType)->CreateFaces(voxData->voxModels[modelIndex], voxData->sizes[modelIndex], modelIndex);
 
-				const auto texData = _textureGeneratorFactory->Get(options.Texturing.TextureType)->GetTexture(faces, voxData->palette, voxData->voxModels, options.Texturing.TexturesPOT);
+			// 	const auto texData = _textureGeneratorFactory->Get(options.Texturing.TextureType)->GetTexture(faces, voxData->palette, voxData->voxModels, options.Texturing.TexturesPOT);
 				
-				std::string baseName = outputPath;
-				if (dot != std::string::npos) baseName = outputPath.substr(0, outputPath.find_last_of('.'));
-				std::string imageName = baseName + "_mesh" + std::to_string(i) + ".png";
-				SaveAtlasImage(imageName,texData->Width, texData->Height, texData->Buffer);
+			// 	std::string baseName = outputPath;
+			// 	if (dot != std::string::npos) baseName = outputPath.substr(0, outputPath.find_last_of('.'));
+			// 	std::string imageName = baseName + "_mesh" + std::to_string(i) + ".png";
+			// 	SaveAtlasImage(imageName,texData->Width, texData->Height, texData->Buffer);
 
-				aiString texPath(imageName);
-				scene->mMaterials[i]->AddProperty(&texPath, AI_MATKEY_TEXTURE(aiTextureType_DIFFUSE, 0));
-				// Create mesh geometry
-				aiMesh* mesh = new aiMesh();
-				scene->mMeshes[i] = mesh;
+			// 	aiString texPath(imageName);
+			// 	scene->mMaterials[i]->AddProperty(&texPath, AI_MATKEY_TEXTURE(aiTextureType_DIFFUSE, 0));
+			// 	// Create mesh geometry
+			// 	aiMesh* mesh = new aiMesh();
+			// 	scene->Meshes[i] = mesh;
 
-				auto& sz = voxData->sizes[modelIndex];
-				auto& mdl = voxData->voxModels[modelIndex];
-				auto  box = mdl.boundingBox;
+			// 	auto& sz = voxData->sizes[modelIndex];
+			// 	auto& mdl = voxData->voxModels[modelIndex];
+			// 	auto  box = mdl.boundingBox;
 
-				MeshBuilder::BuildMeshFromFaces(faces, texData->Width, texData->Height, options.Meshing.FlatShading, voxData->palette, mesh, box);
+			// 	auto mesh = MeshBuilder::BuildMeshFromFaces(faces, texData->Width, texData->Height, options.Meshing.FlatShading, voxData->palette, box);
 
-				mesh->mMaterialIndex = (int)i;
-				// Node
-				aiNode* node = new aiNode();
-				node->mName = aiString("Mesh" + std::to_string(i));
-				node->mNumMeshes = 1;
-				node->mMeshes = new unsigned int[1];
-				node->mMeshes[0] = i;
-				aiMatrix4x4 rot;
-				aiMatrix4x4::RotationX(-static_cast<float>(AI_MATH_PI / 2.0f), rot);
-				node->mTransformation = rot;
+			// 	mesh->mMaterialIndex = (int)i;
+			// 	// Node
+			// 	aiNode* node = new aiNode();
+			// 	node->mName = aiString("Mesh" + std::to_string(i));
+			// 	node->mNumMeshes = 1;
+			// 	node->mMeshes = new unsigned int[1];
+			// 	node->mMeshes[0] = i;
+			// 	aiMatrix4x4 rot;
+			// 	aiMatrix4x4::RotationX(-static_cast<float>(AI_MATH_PI / 2.0f), rot);
+			// 	node->mTransformation = rot;
 
-				scene->mRootNode->mChildren[i] = node;
-			}
+			// 	scene->mRootNode->mChildren[i] = node;
+			// }
 		}
 		// If there was only one mesh in scene (no children used above), attach it directly to root node
 

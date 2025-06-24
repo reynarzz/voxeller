@@ -53,6 +53,7 @@ namespace Unvoxeller
 	};
 
 	UNVOXELLER_API vox_vec3 operator/(const vox_vec3& a, const vox_vec3& b);
+	UNVOXELLER_API vox_vec3 operator-=(const vox_vec3& a, const vox_vec3& b);
 
 
 	//–– 4D vector (f32)

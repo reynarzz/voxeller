@@ -8,6 +8,7 @@ namespace Unvoxeller
 {
     struct UNVOXELLER_API TextureData
     {
+        std::string Name = "";
         std::vector<unsigned char> Buffer;
         TextureFormat Format;
         f32 Width;
