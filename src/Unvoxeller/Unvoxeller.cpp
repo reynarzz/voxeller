@@ -980,8 +980,9 @@ const std::vector<std::shared_ptr<UnvoxScene>> Run(const vox_file* voxData, cons
 					LOG_INFO("Done cleaning up meshes count: {0}", scenes[m]->Meshes.size());
 				}
 			}
-
-            _assimpWriter->ExportScenes(options, scenes);
+			
+			// TODO: fix assimp exporter
+            //--_assimpWriter->ExportScenes(options, scenes);
 
             // for (size_t i = 0; i < scenes.size(); i++)
             // {
