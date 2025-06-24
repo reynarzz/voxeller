@@ -16,7 +16,9 @@ namespace Unvoxeller
 	struct UNVOXELLER_API ConvertResult
 	{
 		ConvertMSG Msg;
-		std::shared_ptr<UnvoxScene> Scene;
+
+		// All the scenes, a frame will be saved in separated scenes.
+		std::vector<std::shared_ptr<UnvoxScene>> Scene;
 		std::vector<TextureData> Textures;
 	};
 };

@@ -229,17 +229,16 @@ int Init()
 
 	// V2
 	exportOptions.Converting.Lods = { 0.8f, 0.4f };
-
+	exportOptions.OutputPath = Unvoxeller::File::GetExecutableDir() + "/testvox/nda/export/Output.fbx";
 	
 	//Chicken_van_2.vox
 	std::string path = Unvoxeller::File::GetExecutableDir() + "/testvox/nda/Ambulance_1.vox"; // Test this!
 	//std::string path = Unvoxeller::File::GetExecutableDir() + "/testvox/monu2.vox"; // Test this!
 	//std::string path = Unvoxeller::File::GetExecutableDir() + "/testvox/room.vox";
 	//std::string output = "testvox/nda/export/Output.fbx";
-	std::string output = Unvoxeller::File::GetExecutableDir() + "/testvox/nda/export/Output.fbx";
 	
 	Unvoxeller::Unvoxeller unvox{};
-	unvox.ExportVoxToModel(path, output, exportOptions);
+	unvox.ExportVoxToModel(path, exportOptions);
 	
 	std::string texPath = Unvoxeller::File::GetExecutableDir() + "/testvox/nda/export/Output_atlas.png";
 	

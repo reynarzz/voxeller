@@ -948,7 +948,7 @@ const std::vector<std::shared_ptr<UnvoxScene>> Run(const vox_file* voxData, cons
         VoxellerApp::init();
     }
     
-    ExportResults Unvoxeller::ExportVoxToModel(const std::string& inVoxPath, const std::string& outExportPath, const ExportOptions& options)
+    ExportResults Unvoxeller::ExportVoxToModel(const std::string& inVoxPath, const ExportOptions& options)
     {
         std::shared_ptr<vox_file> voxData = VoxParser::read_vox_file(inVoxPath.c_str());
         const auto scenes = Run(voxData.get(), outExportPath, options.Converting);
@@ -1020,7 +1020,7 @@ const std::vector<std::shared_ptr<UnvoxScene>> Run(const vox_file* voxData, cons
         LOG_ERROR("Not implemented");
         throw;
     }
-
+	
     void Unvoxeller::GetModelFromVOXMeshAsync(const char* buffer, int size, const ConvertOptions& options, std::function<void(ConvertResult)> callback)
     {
         LOG_ERROR("Not implemented");
