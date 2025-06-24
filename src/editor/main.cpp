@@ -39,8 +39,13 @@ void Render(GLFWwindow* window)
 	{
 		renderable->GetTransform().SetRotation({0,_rotY,0});
 	}
+	LightState lightStateTest{};
+
+	RendererState state{};
+	state.ViewState = &_camera->GetState();
+	state.LightState = &lightStateTest;
 	
-	_renderingSystem->Update(_camera->GetState());
+	_renderingSystem->Update(state);
 
 	_imgui->Update();
 
@@ -101,7 +106,7 @@ static std::vector<std::shared_ptr<RenderableObject>> CreateFromGeometry(const s
 			//renderable->SetTexture(textureTest);
 
 			renderable->SetMesh(Mesh::CreateMesh(mDesc.get()));
-			renderable->SetRenderType(PipelineRenderType::Opaque);
+			renderable->SetRenderType(PipelineRenderType::Opaque_Lit);
 
 			renderables.push_back(renderable);
 		}
@@ -221,8 +226,8 @@ int Init()
 	
 	//Chicken_van_2.vox
 	//std::string path = Unvoxeller::File::GetExecutableDir() + "/testvox/nda/Ambulance_1.vox"; // Test this!
-	//std::string path = Unvoxeller::File::GetExecutableDir() + "/testvox/nda/Bus_Green.vox"; // Test this!
-	std::string path = Unvoxeller::File::GetExecutableDir() + "/testvox/nda/Chicken_van_3.vox"; // Test this!
+	std::string path = Unvoxeller::File::GetExecutableDir() + "/testvox/nda/Bus_Green.vox"; // Test this!
+	//std::string path = Unvoxeller::File::GetExecutableDir() + "/testvox/nda/Chicken_van_3.vox"; // Test this!
 
 	
 	//std::string path = Unvoxeller::File::GetExecutableDir() + "/testvox/monu2.vox"; // Test this!
@@ -230,7 +235,7 @@ int Init()
 	//std::string output = "testvox/nda/export/Output.fbx";
 	
 	Unvoxeller::Unvoxeller unvox{};
-	unvox.ExportVoxToModel(path, exportOptions);
+	//unvox.ExportVoxToModel(path, exportOptions);
 	auto scene = unvox.VoxToMem(path, exportOptions.Converting);
 	
 	_renderables = CreateFromGeometry(scene.Scenes);

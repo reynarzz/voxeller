@@ -41,10 +41,10 @@ void RenderingSystem::Initialize()
 
 void RenderingSystem::Update(const RendererState& state)
 {
-    if(_renderTarget->GetWidth() != state.ScrWidth || _renderTarget->GetHeight() != state.ScrHeight) 
+    if(_renderTarget->GetWidth() != state.ViewState->ScrWidth || _renderTarget->GetHeight() != state.ViewState->ScrHeight) 
     {
-        _renderTarget->Resize(state.ScrWidth, state.ScrHeight);
-        _AArenderTarget->Resize(state.ScrWidth, state.ScrHeight);
+        _renderTarget->Resize(state.ViewState->ScrWidth, state.ViewState->ScrHeight);
+        _AArenderTarget->Resize(state.ViewState->ScrWidth, state.ViewState->ScrHeight);
     }
 
     _meshesToDestroy.clear();

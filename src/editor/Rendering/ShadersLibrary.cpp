@@ -107,9 +107,9 @@ const std::string fragmentLit = R"(
 
 flat in vec3 vNormalWorld;
 
-uniform vec3 _LIGHT_DIR_;     // Direction _towards_ the light (should be normalized)
-uniform vec3 _LIGHT_COLOR_;   // e.g. vec3(1.0)
-uniform vec3 uAmbientColor; // e.g. vec3(0.1)
+uniform vec3 _LIGHT_DIR_;  
+uniform vec3 _LIGHT_COLOR_;
+uniform vec3 uAmbientColor;
 
 out vec4 FragColor;
 in vec2 vTexCoord;

@@ -54,7 +54,7 @@ void OpenGLDevice::DrawRenderable(const RenderableObject *renderable)
 	}
 	
 	// Draw
-	glDrawElements(GL_TRIANGLES, glMesh->GetIndexCount(), GL_UNSIGNED_INT, nullptr);
+	GL_CALL(glDrawElements(GL_TRIANGLES, glMesh->GetIndexCount(), GL_UNSIGNED_INT, nullptr));
 
 	glMesh->Unbind();
 }
@@ -68,12 +68,12 @@ void OpenGLDevice::SetPipelineData(const PipelineData* data, const RendererState
 		auto shader = static_cast<GLShader*>(data->Shader.get());
 		shader->Bind();
 
-    	glm::mat4 mvp = uniforms.ProjectionViewMatrix * renderable->GetTransform().GetModelM();
-		glUniformMatrix4fv(shader->GetUniformLocations().MVPLoc, 1, false, &mvp[0][0]);
-		glUniformMatrix4fv(shader->GetUniformLocations().MODELLoc, 1, false, &renderable->GetTransform().GetModelM()[0][0]);
-		glUniform3f(shader->GetUniformLocations().lightDirLoc, uniforms.lightDir.x, uniforms.lightDir.y, uniforms.lightDir.z);
-		glUniform3f(shader->GetUniformLocations().lightColorLoc, uniforms.lightColor.x, uniforms.lightColor.y, uniforms.lightColor.z);
-		glUniform3f(shader->GetUniformLocations().shadowColorLoc, uniforms.shadowColor.x, uniforms.shadowColor.y, uniforms.shadowColor.z);
+    	glm::mat4 mvp = uniforms.ViewState->ProjectionViewMatrix * renderable->GetTransform().GetModelM();
+		GL_CALL(glUniformMatrix4fv(shader->GetUniformLocations().MVPLoc, 1, false, &mvp[0][0]));
+		GL_CALL(glUniformMatrix4fv(shader->GetUniformLocations().MODELLoc, 1, false, &renderable->GetTransform().GetModelM()[0][0]));
+		GL_CALL(glUniform3f(shader->GetUniformLocations().lightDirLoc, uniforms.LightState->lightDir.x, uniforms.LightState->lightDir.y, uniforms.LightState->lightDir.z));
+		GL_CALL(glUniform3f(shader->GetUniformLocations().lightColorLoc, uniforms.LightState->lightColor.x, uniforms.LightState->lightColor.y, uniforms.LightState->lightColor.z));
+		GL_CALL(glUniform3f(shader->GetUniformLocations().shadowColorLoc, uniforms.LightState->shadowColor.x, uniforms.LightState->shadowColor.y, uniforms.LightState->shadowColor.z));
 		
 		GfxDevice::SetPipelineData(data, uniforms, renderable);
 
@@ -103,7 +103,7 @@ void OpenGLDevice::SetPipelineData(const PipelineData* data, const RendererState
 void OpenGLDevice::Begin(const RendererState &uniforms)
 {
 	// Clear
-	glClearColor(uniforms.Color.x, uniforms.Color.y, uniforms.Color.z, uniforms.Color.w);
+	glClearColor(uniforms.ViewState->Color.x, uniforms.ViewState->Color.y, uniforms.ViewState->Color.z, uniforms.ViewState->Color.w);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 }

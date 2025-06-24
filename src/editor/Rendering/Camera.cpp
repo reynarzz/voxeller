@@ -26,7 +26,7 @@ void Camera::SetBackgroundColor(f32 r, f32 g, f32 b, f32 a)
     _state.Color = { r, g, b, a};
 }
 
-const RendererState &Camera::GetState() const
+const ViewState &Camera::GetState() const
 {
     return _state;
 }

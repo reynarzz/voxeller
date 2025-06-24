@@ -16,8 +16,11 @@ public:
     const PipelineData* GetPipelineData(const PipelineRenderType type) const;
 
 private:
-    std::shared_ptr<PipelineData> CreateOpaquePipeline(GfxDevice* device);
+    std::shared_ptr<PipelineData> CreateOpaqueUnlitPipeline(GfxDevice* device);
+    std::shared_ptr<PipelineData> CreateOpaqueLitPipeline(GfxDevice* device);
     std::shared_ptr<PipelineData> CreateTransparentPipeline(GfxDevice* device);
+
+
 
     std::unordered_map<PipelineRenderType, std::shared_ptr<PipelineData>> _pipelinesData = {};
     std::unique_ptr<ShaderLibrary> _shaderLibrary = nullptr;

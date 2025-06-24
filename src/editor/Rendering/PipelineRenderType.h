@@ -3,6 +3,7 @@
 // No complex materials systems, just pre-defined draw types.
 enum class PipelineRenderType
 {
-    Opaque,
+    Opaque_Unlit,
+    Opaque_Lit,
     Transparent,
 };

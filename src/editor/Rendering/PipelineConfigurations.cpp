@@ -6,7 +6,8 @@ PipelineConfigurations::PipelineConfigurations(GfxDevice* device)
 
     _pipelinesData = 
     {
-        { PipelineRenderType::Opaque, CreateOpaquePipeline(device) },
+        { PipelineRenderType::Opaque_Unlit, CreateOpaqueUnlitPipeline(device) },
+        { PipelineRenderType::Opaque_Lit, CreateOpaqueLitPipeline(device) },
         { PipelineRenderType::Transparent, CreateTransparentPipeline(device) },
     };
 }
@@ -23,7 +24,25 @@ const PipelineData* PipelineConfigurations::GetPipelineData(const PipelineRender
     return nullptr;
 }
 
-std::shared_ptr<PipelineData> PipelineConfigurations::CreateOpaquePipeline(GfxDevice* device)
+std::shared_ptr<PipelineData> PipelineConfigurations::CreateOpaqueUnlitPipeline(GfxDevice* device)
+{
+    auto pipelineData = std::make_shared<PipelineData>();
+
+    // TODO: Create the opaque shader
+    ShaderDescriptor desc{};
+    desc.Vertex = _shaderLibrary->GetShaderBuffer(ShaderType::VERTEX_UNLIT);
+    desc.Fragment = _shaderLibrary->GetShaderBuffer(ShaderType::FRAGMENT_UNLIT);
+    desc.Geometry = {};
+   // desc.Geometry = _shaderLibrary->GetShaderBuffer(ShaderType::WIRE_GEOMETRY);
+
+    pipelineData->ZWrite = true;
+    pipelineData->Blending = false;
+    pipelineData->Shader = device->CreateShader(&desc);
+
+    return pipelineData;
+}
+
+std::shared_ptr<PipelineData> PipelineConfigurations::CreateOpaqueLitPipeline(GfxDevice *device)
 {
     auto pipelineData = std::make_shared<PipelineData>();
 
@@ -41,7 +60,7 @@ std::shared_ptr<PipelineData> PipelineConfigurations::CreateOpaquePipeline(GfxDe
     return pipelineData;
 }
 
-std::shared_ptr<PipelineData> PipelineConfigurations::CreateTransparentPipeline(GfxDevice* device)
+std::shared_ptr<PipelineData> PipelineConfigurations::CreateTransparentPipeline(GfxDevice *device)
 {
     auto pipelineData = std::make_shared<PipelineData>();
 

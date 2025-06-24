@@ -29,5 +29,5 @@ private:
     RenderableTransform _transform={};
     std::shared_ptr<Mesh> _mesh = nullptr;
     std::shared_ptr<Texture> _texture = {};
-    PipelineRenderType _renderType = PipelineRenderType::Opaque;
+    PipelineRenderType _renderType = PipelineRenderType::Opaque_Unlit;
 };
