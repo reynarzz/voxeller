@@ -148,30 +148,36 @@ void AtlasTextureGenerator::GenerateAtlasImage(s32 texWidth,
 	outImage.assign(texWidth * texHeight * 4, 0);
 
 	// Helper to fetch RGBA from palette given a MagicaVoxel colorIndex (1–255)
-	auto getRGBA = [&](uint8_t ci) {
+	auto getRGBA = [&](uint8_t ci) 
+	{
 		size_t idx = ci > 0 ? ci - 1 : 0;
 		if (idx >= palette.size()) idx = palette.size() - 1;
 		return palette[idx];
 		};
 
 	// Sample the colorIndex at a given (x,y,z)
-	auto sampleCI = [&](int x, int y, int z, s32 modelIndex)->uint8_t {
+	auto sampleCI = [&](int x, int y, int z, s32 modelIndex)->uint8_t 
+	{
 		int cell = models[modelIndex].voxel_3dGrid[z][y][x];
 		if (cell < 0) return 0;
 		return models[modelIndex].voxels[cell].colorIndex;
 		};
 
-	for (auto& face : faces) {
+	for (auto& face : faces) 
+	{
 		int x0 = face.atlasX;
 		int y0 = face.atlasY;
 		int w = face.w;
 		int h = face.h;
 
 		// 1) Fill interior (w×h) by sampling the original voxels
-		for (int iy = 0; iy < h; ++iy) {
-			for (int ix = 0; ix < w; ++ix) {
+		for (int iy = 0; iy < h; ++iy) 
+		{
+			for (int ix = 0; ix < w; ++ix) 
+			{
 				int vx, vy, vz;
-				switch (face.orientation) {
+				switch (face.orientation) 
+				{
 				case 'X': // +X face: plane at x+1, u→Z, v→Y
 					vx = face.constantCoord - 1;
 					vy = face.vMin + iy;
@@ -222,7 +228,8 @@ void AtlasTextureGenerator::GenerateAtlasImage(s32 texWidth,
 		// 2) Bleed edges into the 1-pixel border on all four sides:
 
 		// Top & bottom
-		for (int ix = 0; ix < w; ++ix) {
+		for (int ix = 0; ix < w; ++ix) 
+		{
 			// copy from first interior row → top border
 			int srcTop = ((y0 + border + 0) * texWidth + (x0 + border + ix)) * 4;
 			int dstTop = ((y0 + 0) * texWidth + (x0 + border + ix)) * 4;
@@ -235,7 +242,8 @@ void AtlasTextureGenerator::GenerateAtlasImage(s32 texWidth,
 		}
 
 		// Left & right
-		for (int iy = 0; iy < h; ++iy) {
+		for (int iy = 0; iy < h; ++iy) 
+		{
 			// copy from first interior column → left border
 			int srcL = ((y0 + border + iy) * texWidth + (x0 + border + 0)) * 4;
 			int dstL = ((y0 + border + iy) * texWidth + (x0 + 0)) * 4;
@@ -273,6 +281,23 @@ void AtlasTextureGenerator::GenerateAtlasImage(s32 texWidth,
 			4
 		);
 	}
+
+
+	// auto flipVertical = [&](std::vector<unsigned char>& img, int w, int h) {
+	// 	const int rowBytes = w * 4;
+	// 	std::vector<unsigned char> tmp(rowBytes);
+	// 	for (int y = 0; y < h/2; ++y) {
+	// 		int topIndex = y * rowBytes;
+	// 		int botIndex = (h - 1 - y) * rowBytes;
+	// 		// swap the entire row
+	// 		std::memcpy(tmp.data(),        &img[topIndex], rowBytes);
+	// 		std::memcpy(&img[topIndex],   &img[botIndex], rowBytes);
+	// 		std::memcpy(&img[botIndex],   tmp.data(),      rowBytes);
+	// 	}
+	// };
+
+	// flipVertical(outImage, texWidth, texHeight);
+
 }
 
 }

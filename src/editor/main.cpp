@@ -91,15 +91,16 @@ static std::vector<std::shared_ptr<RenderableObject>> CreateFromGeometry(const s
 				}
 			}
 
-			// auto tex = scene->Textures[mesh->TextureIndex];
-			// TextureDescriptor tDesc{};
-			// tDesc.width = tex->Width;
-			// tDesc.height= tex->Height;
-			// tDesc.image = tex->Buffer.data();
-			// renderable->SetTexture(Texture::Create(&tDesc));
+			auto tex = scene->Textures[mesh->TextureIndex];
+			TextureDescriptor tDesc{};
+			tDesc.width = tex->Width;
+			tDesc.height= tex->Height;
+			tDesc.image = tex->Buffer.data();
+			renderable->SetTexture(Texture::Create(&tDesc));
+
+			//renderable->SetTexture(textureTest);
 
 			renderable->SetMesh(Mesh::CreateMesh(mDesc.get()));
-			renderable->SetTexture(textureTest);
 			renderable->SetRenderType(PipelineRenderType::Opaque);
 
 			renderables.push_back(renderable);

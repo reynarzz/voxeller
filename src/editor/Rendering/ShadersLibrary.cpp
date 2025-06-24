@@ -27,10 +27,9 @@ out vec4 fragColor;
 uniform sampler2D uTexture;
 
 void main() {
-    fragColor = texture(uTexture, vTexCoord);
+    fragColor = texture(uTexture, vec2(vTexCoord.x, 1.0f - vTexCoord.y));
 }
 )";
-
 
 ShaderLibrary::ShaderLibrary()
 {
