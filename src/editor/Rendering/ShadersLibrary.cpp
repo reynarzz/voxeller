@@ -11,10 +11,35 @@ layout(location = 2) in vec2 aTexCoord;
 out vec2 vTexCoord;
 
 uniform mat4 _MVP_;
+uniform mat4 _MODEL_;
 
 void main() {
     vTexCoord = aTexCoord;
     gl_Position = _MVP_ * vec4(aPosition, 1.0);
+}
+)";
+
+static const std::string VertexLit = R"(
+#version 330 core
+
+layout(location = 0) in vec3 aPosition;
+layout(location = 1) in vec3 aNormal;
+layout(location = 2) in vec2 aTexCoord;
+
+out vec2 vTexCoord;
+
+uniform mat4 _MVP_;
+uniform mat4 _MODEL_;
+
+flat out vec3 vNormalWorld;
+
+void main() {
+    vTexCoord = aTexCoord;
+    gl_Position = _MVP_ * vec4(aPosition, 1.0);
+
+     // Transform normal to world-space; assume uModel has no non-uniform scale or handle via normalMatrix
+    mat3 normalMatrix = transpose(inverse(mat3(_MODEL_)));
+    vNormalWorld = normalMatrix * aNormal;
 }
 )";
 
@@ -31,15 +56,103 @@ void main() {
 }
 )";
 
+static const std::string wireFrag = R"(
+#version 330 core
+
+in  vec4 gsColor;
+out vec4 fragColor;
+
+void main() 
+{
+    fragColor = gsColor;
+}
+)";
+
+std::string wireFrame = R"(
+#version 330 core
+layout(triangles) in;
+layout(line_strip, max_vertices=2) out;
+
+uniform mat4 _MVP_;
+//uniform vec4 wireColor;
+
+out vec4 gsColor;
+
+void main()
+{
+    vec4 wireColor = vec4(1.0f, 1.0f, 1.0f, 1.0f);
+
+    // for each edge of the triangle
+    for(int e = 0; e < 3; ++e)
+    {
+        int i0 = e;
+        int i1 = (e+1)%3;
+
+        gsColor = wireColor;
+        gl_Position = gl_in[i0].gl_Position;
+        EmitVertex();
+
+        gsColor = wireColor;
+        gl_Position = gl_in[i1].gl_Position;
+        EmitVertex();
+
+        EndPrimitive();
+    }
+}
+)";
+
+const std::string fragmentLit = R"(
+// Fragment Shader (flat_fs.glsl)
+#version 330 core
+
+flat in vec3 vNormalWorld;
+
+uniform vec3 _LIGHT_DIR_;     // Direction _towards_ the light (should be normalized)
+uniform vec3 _LIGHT_COLOR_;   // e.g. vec3(1.0)
+uniform vec3 uAmbientColor; // e.g. vec3(0.1)
+
+out vec4 FragColor;
+in vec2 vTexCoord;
+uniform sampler2D uTexture;
+
+void main() 
+{
+    // Ensure unit length
+    vec3 N = normalize(vNormalWorld);
+    vec3 L = normalize(_LIGHT_DIR_);
+
+    // Lambertian diffuse
+    float diff = max(dot(N, L), 0.0);
+
+    // Combine ambient + diffuse
+    vec3 color = /*uAmbientColor + */_LIGHT_COLOR_ * diff;
+   
+
+    FragColor = texture(uTexture, vec2(vTexCoord.x, 1.0f - vTexCoord.y)) * vec4(color, 1.0);
+}
+)";
+
 ShaderLibrary::ShaderLibrary()
 {
     auto* v0 = reinterpret_cast<const u8*>(vertexUnlit.c_str());
     auto* f0 = reinterpret_cast<const u8*>(fragUnlit.c_str());
 
+    auto* vl0 = reinterpret_cast<const u8*>(VertexLit.c_str());
+    auto* fl0 = reinterpret_cast<const u8*>(fragmentLit.c_str());
+
+    auto* g0 = reinterpret_cast<const u8*>(wireFrame.c_str());
+    auto* fg0 = reinterpret_cast<const u8*>(wireFrag.c_str());
+
     _shadersBuffers =
     {
        { ShaderType::VERTEX_UNLIT, std::vector<u8>(v0, v0 + vertexUnlit.size() + 1) },
-       { ShaderType::FRAGMENT_UNLIT, std::vector<u8>(f0, f0 + fragUnlit.size() + 1) }
+       { ShaderType::FRAGMENT_UNLIT, std::vector<u8>(f0, f0 + fragUnlit.size() + 1) },
+
+       { ShaderType::VERTEX_LIT, std::vector<u8>(vl0, vl0 + VertexLit.size() + 1) },
+       { ShaderType::FRAGMENT_LIT, std::vector<u8>(fl0, fl0 + fragmentLit.size() + 1) },
+
+       { ShaderType::WIRE_GEOMETRY, std::vector<u8>(g0, g0 + wireFrame.size() + 1) },
+       { ShaderType::WIRE_FRAGMENT, std::vector<u8>(fg0, fg0 + wireFrag.size() + 1) },
     };
 }
 

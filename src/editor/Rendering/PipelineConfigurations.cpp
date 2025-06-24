@@ -29,8 +29,10 @@ std::shared_ptr<PipelineData> PipelineConfigurations::CreateOpaquePipeline(GfxDe
 
     // TODO: Create the opaque shader
     ShaderDescriptor desc{};
-    desc.Vertex = _shaderLibrary->GetShaderBuffer(ShaderType::VERTEX_UNLIT);
-    desc.Fragment = _shaderLibrary->GetShaderBuffer(ShaderType::FRAGMENT_UNLIT);
+    desc.Vertex = _shaderLibrary->GetShaderBuffer(ShaderType::VERTEX_LIT);
+    desc.Fragment = _shaderLibrary->GetShaderBuffer(ShaderType::FRAGMENT_LIT);
+    desc.Geometry = {};
+   // desc.Geometry = _shaderLibrary->GetShaderBuffer(ShaderType::WIRE_GEOMETRY);
 
     pipelineData->ZWrite = true;
     pipelineData->Blending = false;

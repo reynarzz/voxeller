@@ -70,6 +70,10 @@ void OpenGLDevice::SetPipelineData(const PipelineData* data, const RendererState
 
     	glm::mat4 mvp = uniforms.ProjectionViewMatrix * renderable->GetTransform().GetModelM();
 		glUniformMatrix4fv(shader->GetUniformLocations().MVPLoc, 1, false, &mvp[0][0]);
+		glUniformMatrix4fv(shader->GetUniformLocations().MODELLoc, 1, false, &renderable->GetTransform().GetModelM()[0][0]);
+		glUniform3f(shader->GetUniformLocations().lightDirLoc, uniforms.lightDir.x, uniforms.lightDir.y, uniforms.lightDir.z);
+		glUniform3f(shader->GetUniformLocations().lightColorLoc, uniforms.lightColor.x, uniforms.lightColor.y, uniforms.lightColor.z);
+		glUniform3f(shader->GetUniformLocations().shadowColorLoc, uniforms.shadowColor.x, uniforms.shadowColor.y, uniforms.shadowColor.z);
 		
 		GfxDevice::SetPipelineData(data, uniforms, renderable);
 

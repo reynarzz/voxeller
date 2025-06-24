@@ -10,6 +10,10 @@ public:
     struct ShaderUniformLocations
     {
         s32 MVPLoc = 0;
+        s32 MODELLoc = 0;
+        s32 lightDirLoc = 0;
+        s32 lightColorLoc = 0;
+        s32 shadowColorLoc = 0;
     }; 
 
     GLShader(const ShaderDescriptor* desc);

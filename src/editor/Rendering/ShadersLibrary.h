@@ -3,12 +3,15 @@
 #include <unordered_map>
 #include <Unvoxeller/Types.h>
 
-
 // Simple class to obtain shaders, nothing fancy
 enum class ShaderType
 {
     VERTEX_UNLIT,
-    FRAGMENT_UNLIT
+    FRAGMENT_UNLIT,
+    VERTEX_LIT,
+    FRAGMENT_LIT,
+    WIRE_GEOMETRY,
+    WIRE_FRAGMENT
 };
 
 class ShaderLibrary

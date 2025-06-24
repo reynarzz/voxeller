@@ -6,6 +6,7 @@ GLShader::GLShader(const ShaderDescriptor* desc)
 {
     u32 vertId{};
     u32 fragId{};
+    u32 geoId{};
 
     if(!CompileShader(reinterpret_cast<const c8*>(desc->Vertex.data()), GL_VERTEX_SHADER, vertId))
         return;
@@ -13,10 +14,21 @@ GLShader::GLShader(const ShaderDescriptor* desc)
     if(!CompileShader(reinterpret_cast<const c8*>(desc->Fragment.data()), GL_FRAGMENT_SHADER, fragId))
         return;
 
+    // if(desc->Geometry.size() > 0)
+    // {
+    //     if(!CompileShader(reinterpret_cast<const c8*>(desc->Geometry.data()), GL_GEOMETRY_SHADER, geoId))
+    //        return;
+    // }   
+    
     _id = glCreateProgram();
 
     glAttachShader(_id, vertId);
     glAttachShader(_id, fragId);
+
+    // if(geoId > 0)
+    // {
+    //     glAttachShader(_id, geoId);
+    // }
 
     glLinkProgram(_id);
 
@@ -39,6 +51,11 @@ GLShader::GLShader(const ShaderDescriptor* desc)
 
     // uniforms locations will enforce these names.
     _locations.MVPLoc = glGetUniformLocation(_id, "_MVP_");
+    _locations.MODELLoc = glGetUniformLocation(_id, "_MODEL_");
+    _locations.lightDirLoc = glGetUniformLocation(_id, "_LIGHT_DIR_");
+    _locations.lightColorLoc = glGetUniformLocation(_id, "_LIGHT_COLOR_");
+    _locations.shadowColorLoc= glGetUniformLocation(_id, "_SHADOW_COLOR_");
+    
 }
 
 const GLShader::ShaderUniformLocations &GLShader::GetUniformLocations() const

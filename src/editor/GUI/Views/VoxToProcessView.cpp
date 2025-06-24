@@ -25,6 +25,11 @@ std::shared_ptr<Texture> _trashIcon = nullptr;
 std::shared_ptr<Texture> _addFileIcon = nullptr;
 std::shared_ptr<Texture> _addFolderIcon = nullptr;
 std::shared_ptr<Texture> _configIcon = nullptr;
+std::shared_ptr<Texture> _cubeFillIcon = nullptr;
+std::shared_ptr<Texture> _uvIcon = nullptr;
+std::shared_ptr<Texture> _wireFrameIcon = nullptr;
+std::shared_ptr<Texture> _lightIcon = nullptr;
+
 
 std::vector<std::string> voxTest{ "Vox1", "vox animated", "another vox" };
 s32 currentSelection = 0;
@@ -55,6 +60,10 @@ VoxToProcessView::VoxToProcessView()
 	_addFileIcon = TextureLoader::LoadTexture(imagesRootFolder+"/icons8-plus-64.png");
 	_addFolderIcon = TextureLoader::LoadTexture(imagesRootFolder+"/icons8-open-file-64.png");
 	_configIcon = TextureLoader::LoadTexture(imagesRootFolder+"/icons8-config-48.png");
+	_cubeFillIcon = TextureLoader::LoadTexture(imagesRootFolder+"/icons8-cube-64.png");
+	_uvIcon = TextureLoader::LoadTexture(imagesRootFolder+"/icons8-image-24.png");
+	_wireFrameIcon = TextureLoader::LoadTexture(imagesRootFolder+"/icons8-cube-50.png");
+	_lightIcon = TextureLoader::LoadTexture(imagesRootFolder+"/icons8-light-48.png");
 
 	if(_trashIcon == nullptr || _addFileIcon == nullptr ||_addFolderIcon == nullptr ||_configIcon == nullptr )
 	{
@@ -132,10 +141,11 @@ void VoxToProcessView::ViewportWindow()
 	Screen::_width = ImGui::GetWindowWidth();
 	Screen::_height = ImGui::GetWindowHeight();
 
-// Cast it through intptr_t so the full 64-bit range is preserved,
-// then to ImTextureID (which on most backends is just void*)
+	const f32 cursorX = ImGui::GetCursorPosX();
 
-	
+	// Cast it through intptr_t so the full 64-bit range is preserved,
+	// then to ImTextureID (which on most backends is just void*)
+
 	//ImageRounded(TEXTURE_TO_IMGUI(tex), ImGui::GetWindowSize(), 10);
 	VoxGUI::ImageRounded(RENDER_TARGET_TO_IMGUI(RenderingSystem::GetRenderTarget().lock().get()), ImGui::GetWindowSize(), _windowsRound);
 	
@@ -143,24 +153,47 @@ void VoxToProcessView::ViewportWindow()
 	//ImGui::Image(nullptr, ImGui::GetWindowSize());
 
 	f32 spacing = 1;
-	f32 buttonDownWidth = 80;
-	f32 buttonDOwnHeight = 30;
+	f32 buttonDownWidth = 20;
+	f32 buttonDOwnHeight = 20;
+	f32 xStartPos = 5;
+	f32 yStartPos = 5;
+
 	std::string modelName = "Model converted Name";
 
 	auto textSize = ImGui::CalcTextSize(modelName.c_str());
+
 	ImGui::SetCursorPosY(ImGui::GetWindowSize().y - 67);
 	ImGui::SetCursorPosX(ImGui::GetWindowSize().x / 2.0 - textSize.x / 2);
 
 	ImGui::Text(modelName.c_str());
 
-	ImGui::SetCursorPosX(ImGui::GetWindowSize().x / 2.0 - buttonDownWidth);
+	ImGui::SetCursorPosX(xStartPos);
 	ImGui::SetCursorPosY(20);
+	ImGui::SetCursorPosY(ImGui::GetCursorPosY() + yStartPos);
 
 	ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(spacing, 0));
 	ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(spacing, 0));
-	VoxGUI::Button("3D view", TextAlign::Center, { buttonDownWidth, buttonDOwnHeight }, IM_COL32(65, 105, 255, 255), IM_COL32(255, 255, 255, 255), 30, ImDrawFlags_RoundCornersLeft);
-	ImGui::SameLine();
-	VoxGUI::Button("Atlas view", TextAlign::Center, { buttonDownWidth, buttonDOwnHeight }, IM_COL32(65, 105, 255, 255), IM_COL32(255, 255, 255, 255), 30, ImDrawFlags_RoundCornersRight);
+	VoxGUI::ImageButton("##Fill_View", TEXTURE_TO_IMGUI2(_cubeFillIcon), { buttonDownWidth, buttonDOwnHeight }, {1,1,1,1}, {1,1,1,1}, {1,1,1,0.5f}, ImDrawFlags_RoundCornersAll, ImVec2(0, 0),  ImVec2(1, 1));
+	ImGui::SetCursorPosX(xStartPos);
+		ImGui::SetCursorPosY(ImGui::GetCursorPosY() + yStartPos);
+
+
+	VoxGUI::ImageButton("##_WireFrame_View", TEXTURE_TO_IMGUI2(_wireFrameIcon), { buttonDownWidth, buttonDOwnHeight }, {1,1,1,1}, {1,1,1,1}, {1,1,1,0.5f}, ImDrawFlags_RoundCornersAll, ImVec2(0, 0),  ImVec2(1, 1));
+	
+		ImGui::SetCursorPosX(xStartPos);
+		ImGui::SetCursorPosY(ImGui::GetCursorPosY() + yStartPos);
+	VoxGUI::ImageButton("##_Light_View", TEXTURE_TO_IMGUI2(_lightIcon), { buttonDownWidth, buttonDOwnHeight }, {1,1,1,1}, {1,1,1,1}, {1,1,1,0.5f}, ImDrawFlags_RoundCornersAll, ImVec2(0, 0),  ImVec2(1, 1));
+
+
+	ImGui::SetCursorPosX(xStartPos);
+		ImGui::SetCursorPosY(ImGui::GetCursorPosY() + yStartPos);
+
+
+	VoxGUI::ImageButton("##_UV_View", TEXTURE_TO_IMGUI2(_uvIcon), { buttonDownWidth, buttonDOwnHeight }, {1,1,1,1}, {1,1,1,1}, {1,1,1,0.5f}, ImDrawFlags_RoundCornersAll, ImVec2(0, 0),  ImVec2(1, 1));
+	
+
+
+	
 	ImGui::PopStyleVar(2);
 	ImGui::End();
 	ImGui::PopStyleVar(4);
