@@ -95,7 +95,7 @@ target_link_libraries(Unvoxeller_editor PRIVATE
     target_compile_definitions(Unvoxeller_editor
         PRIVATE 
         STB_IMAGE_IMPLEMENTATION
-        GLM_FORCE_LEFT_HANDED
+        #GLM_FORCE_LEFT_HANDED
     )
 
 

@@ -1,7 +1,7 @@
 #pragma once
 #include <Unvoxeller/Data/UnvoxScene.h>
-#include <vector>
 #include <Unvoxeller/Data/ExportOptions.h>
+#include <vector>
 
 namespace Unvoxeller
 {

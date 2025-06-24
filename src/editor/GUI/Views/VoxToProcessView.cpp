@@ -17,7 +17,6 @@
 #include <imgui/imgui_internal.h>
 #include <GUI/VoxGUI.h>
 
-std::shared_ptr<Texture> textureTest = nullptr;
 std::shared_ptr<Texture> blackImage = nullptr;
 static std::vector<VOXFileToProcessData> _testVoxFiles{};
 
@@ -45,18 +44,6 @@ std::string searchBar = "";
 
 VoxToProcessView::VoxToProcessView()
 {
-	std::string texPath = Unvoxeller::File::GetExecutableDir() + "/testvox/nda/export/Output_atlas.png";
-
-		if(!std::filesystem::exists(texPath))
-		{
-			LOG_ERROR("FIle path doesn't exists: {0}", texPath);
-			return;
-		}
-		else
-		{
-			LOG_ERROR("Texture exists: {0}", texPath);
-		}
-
 		u8 black[] = { 0xFF, 0x00, 0xFF, 0xFF };
 		TextureDescriptor tex = {1, 1, 4, black};
 
@@ -64,11 +51,17 @@ VoxToProcessView::VoxToProcessView()
 
 		const std::string imagesRootFolder = Unvoxeller::File::GetExecutableDir() + "/assets/Images";
 
-	textureTest= TextureLoader::LoadTexture(texPath);
 	_trashIcon = TextureLoader::LoadTexture(imagesRootFolder+"/icons8-cancel-30.png");
 	_addFileIcon = TextureLoader::LoadTexture(imagesRootFolder+"/icons8-plus-64.png");
 	_addFolderIcon = TextureLoader::LoadTexture(imagesRootFolder+"/icons8-open-file-64.png");
 	_configIcon = TextureLoader::LoadTexture(imagesRootFolder+"/icons8-config-48.png");
+
+	if(_trashIcon == nullptr || _addFileIcon == nullptr ||_addFolderIcon == nullptr ||_configIcon == nullptr )
+	{
+		LOG_ERROR("Icons null");
+	}
+	
+	LOG_INFO("Initialize icons");
 	_testVoxFiles.resize(30);
 }
 
@@ -142,12 +135,6 @@ void VoxToProcessView::ViewportWindow()
 // Cast it through intptr_t so the full 64-bit range is preserved,
 // then to ImTextureID (which on most backends is just void*)
 
-	std::shared_ptr<Texture> tex = textureTest;
-
-	if(!textureTest)
-	{
-		tex = blackImage;
-	}
 	
 	//ImageRounded(TEXTURE_TO_IMGUI(tex), ImGui::GetWindowSize(), 10);
 	VoxGUI::ImageRounded(RENDER_TARGET_TO_IMGUI(RenderingSystem::GetRenderTarget().lock().get()), ImGui::GetWindowSize(), _windowsRound);

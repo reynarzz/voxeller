@@ -13,7 +13,7 @@ void Camera::Update()
         
         _state.ProjectionMatrix = glm::perspective(glm::radians(65.0f), _state.ScrWidth / _state.ScrHeight, _state.NearPlane, _state.FarPlane);
         
-        _state.ViewMatrix = glm::inverse(glm::translate(glm::mat4(1.0f), { 0, 0, -10}));
+        _state.ViewMatrix = glm::inverse(glm::translate(glm::mat4(1.0f), { 0, 35, 200}));
 
         _state.ProjectionViewMatrix = _state.ProjectionMatrix * _state.ViewMatrix;
     }

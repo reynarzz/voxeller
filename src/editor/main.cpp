@@ -24,7 +24,7 @@
 std::unique_ptr<ImGuiApp> _imgui = nullptr;
 std::unique_ptr<RenderingSystem> _renderingSystem = nullptr;
 std::unique_ptr<Camera> _camera = nullptr;
-std::shared_ptr<RenderableObject> _testRenderObject;
+std::vector<std::shared_ptr<RenderableObject>> _renderables = {};
 
 f32 _rotY = 0;
 
@@ -33,10 +33,13 @@ void Render(GLFWwindow* window)
 	glfwPollEvents();
 
 	_camera->Update();
-	_testRenderObject->GetTransform().SetRotation({_rotY,_rotY,0});
 
 	_rotY += 0.1f;
-
+	for (auto& renderable : _renderables)
+	{
+		renderable->GetTransform().SetRotation({0,_rotY,0});
+	}
+	
 	_renderingSystem->Update(_camera->GetState());
 
 	_imgui->Update();
@@ -49,77 +52,61 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 	Render(window);
 }
 
-static std::shared_ptr<RenderableObject> GetTestRenderableObject()
+static std::vector<std::shared_ptr<RenderableObject>> CreateFromGeometry(const std::vector<std::shared_ptr<Unvoxeller::UnvoxScene>>& scenes)
 {
-	MeshDescriptor mDesc{};
-	
-	auto renderable = std::make_shared<RenderableObject>();
-
-	renderable->GetTransform().SetPosition({});
-	mDesc.RenderType = MeshRenderType::TRIANGLES;
-
-	mDesc.Vertices = {
-		// Back face (−Z)
-		{{-0.5f, -0.5f, -0.5f}, { 0.0f,  0.0f, -1.0f}, {0.0f, 0.0f}},
-		{{ 0.5f, -0.5f, -0.5f}, { 0.0f,  0.0f, -1.0f}, {1.0f, 0.0f}},
-		{{ 0.5f,  0.5f, -0.5f}, { 0.0f,  0.0f, -1.0f}, {1.0f, 1.0f}},
-		{{-0.5f,  0.5f, -0.5f}, { 0.0f,  0.0f, -1.0f}, {0.0f, 1.0f}},
-
-		// Front face (+Z)
-		{{-0.5f, -0.5f,  0.5f}, { 0.0f,  0.0f,  1.0f}, {0.0f, 0.0f}},
-		{{ 0.5f, -0.5f,  0.5f}, { 0.0f,  0.0f,  1.0f}, {1.0f, 0.0f}},
-		{{ 0.5f,  0.5f,  0.5f}, { 0.0f,  0.0f,  1.0f}, {1.0f, 1.0f}},
-		{{-0.5f,  0.5f,  0.5f}, { 0.0f,  0.0f,  1.0f}, {0.0f, 1.0f}},
-
-		// Left face (−X)
-		{{-0.5f, -0.5f, -0.5f}, {-1.0f,  0.0f,  0.0f}, {0.0f, 0.0f}},
-		{{-0.5f,  0.5f, -0.5f}, {-1.0f,  0.0f,  0.0f}, {1.0f, 0.0f}},
-		{{-0.5f,  0.5f,  0.5f}, {-1.0f,  0.0f,  0.0f}, {1.0f, 1.0f}},
-		{{-0.5f, -0.5f,  0.5f}, {-1.0f,  0.0f,  0.0f}, {0.0f, 1.0f}},
-
-		// Right face (+X)
-		{{ 0.5f, -0.5f, -0.5f}, { 1.0f,  0.0f,  0.0f}, {0.0f, 0.0f}},
-		{{ 0.5f,  0.5f, -0.5f}, { 1.0f,  0.0f,  0.0f}, {1.0f, 0.0f}},
-		{{ 0.5f,  0.5f,  0.5f}, { 1.0f,  0.0f,  0.0f}, {1.0f, 1.0f}},
-		{{ 0.5f, -0.5f,  0.5f}, { 1.0f,  0.0f,  0.0f}, {0.0f, 1.0f}},
-
-		// Bottom face (−Y)
-		{{-0.5f, -0.5f, -0.5f}, { 0.0f, -1.0f,  0.0f}, {0.0f, 0.0f}},
-		{{-0.5f, -0.5f,  0.5f}, { 0.0f, -1.0f,  0.0f}, {1.0f, 0.0f}},
-		{{ 0.5f, -0.5f,  0.5f}, { 0.0f, -1.0f,  0.0f}, {1.0f, 1.0f}},
-		{{ 0.5f, -0.5f, -0.5f}, { 0.0f, -1.0f,  0.0f}, {0.0f, 1.0f}},
-
-		// Top face (+Y)
-		{{-0.5f,  0.5f, -0.5f}, { 0.0f,  1.0f,  0.0f}, {0.0f, 0.0f}},
-		{{-0.5f,  0.5f,  0.5f}, { 0.0f,  1.0f,  0.0f}, {1.0f, 0.0f}},
-		{{ 0.5f,  0.5f,  0.5f}, { 0.0f,  1.0f,  0.0f}, {1.0f, 1.0f}},
-		{{ 0.5f,  0.5f, -0.5f}, { 0.0f,  1.0f,  0.0f}, {0.0f, 1.0f}}
-	};
-
-	mDesc.Indices = {
-		// Back
-		0,  1,  2,   2,  3,  0,
-		// Front
-		4,  5,  6,   6,  7,  4,
-		// Left
-		8,  9, 10,  10, 11,  8,
-		// Right
-		12, 13, 14,  14, 15, 12,
-		// Bottom
-		16, 17, 18,  18, 19, 16,
-		// Top
-		20, 21, 22,  22, 23, 20
-	};
-
 	std::string texPath = Unvoxeller::File::GetExecutableDir() + "/testvox/nda/export/Output_atlas.png";
-
 	auto textureTest= TextureLoader::LoadTexture(texPath, false);
-	
-	renderable->SetMesh(Mesh::CreateMesh(&mDesc));
-	renderable->SetTexture(textureTest);
-	renderable->SetRenderType(PipelineRenderType::Opaque);
 
-	return renderable;
+	std::vector<std::shared_ptr<RenderableObject>> renderables{};
+	for (const auto& scene : scenes)
+	{
+		for (const auto& mesh : scene->Meshes)
+		{
+			std::unique_ptr<MeshDescriptor> mDesc = std::make_unique<MeshDescriptor>();
+			mDesc->RenderType = MeshRenderType::TRIANGLES;
+	
+			auto renderable = std::make_shared<RenderableObject>();
+
+			mDesc->Vertices.resize(mesh->Vertices.size());
+
+			for (size_t i = 0; i < mesh->Vertices.size(); i++)
+			{
+				const auto& vert = mesh->Vertices[i];
+				const auto& normal = mesh->Normals[i];
+				const auto& uv = mesh->UVs[i];
+
+				mDesc->Vertices[i] = { {vert.x, vert.y, vert.z}, {normal.x, normal.y, normal.z}, {uv.x, uv.y }};
+			}
+			
+			mDesc->Indices.resize(mesh->Faces.size() * 3);
+			s32 idx = {};
+			for (size_t i = 0; i < mesh->Faces.size(); i++)
+			{
+				const auto& face = mesh->Faces[i];
+
+				for (size_t j = 0; j < face.Indices.size(); j++)
+				{
+					mDesc->Indices[idx] = face.Indices[j];
+					idx++;
+				}
+			}
+
+			// auto tex = scene->Textures[mesh->TextureIndex];
+			// TextureDescriptor tDesc{};
+			// tDesc.width = tex->Width;
+			// tDesc.height= tex->Height;
+			// tDesc.image = tex->Buffer.data();
+			// renderable->SetTexture(Texture::Create(&tDesc));
+
+			renderable->SetMesh(Mesh::CreateMesh(mDesc.get()));
+			renderable->SetTexture(textureTest);
+			renderable->SetRenderType(PipelineRenderType::Opaque);
+
+			renderables.push_back(renderable);
+		}
+	}
+
+	return renderables;
 }
 
 int Init()
@@ -241,12 +228,14 @@ int Init()
 	unvox.ExportVoxToModel(path, exportOptions);
 	auto scene = unvox.VoxToMem(path, exportOptions.Converting);
 	
-	std::string texPath = Unvoxeller::File::GetExecutableDir() + "/testvox/nda/export/Output_atlas.png";
-	
-	_testRenderObject = GetTestRenderableObject();
-	_testRenderObject->GetTransform().SetScale({5,5,5});
-	RenderingSystem::PushRenderable(_testRenderObject.get());
-	
+	_renderables = CreateFromGeometry(scene.Scenes);
+	for (auto renderables : _renderables)
+	{
+		RenderingSystem::PushRenderable(renderables.get());
+	}
+		
+
+
 	while (!glfwWindowShouldClose(win))
 	{
 		if (glfwGetWindowAttrib(win, GLFW_ICONIFIED))
