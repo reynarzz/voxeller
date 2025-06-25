@@ -22,7 +22,6 @@ GLFrameBuffer::GLFrameBuffer(const RenderTargetDescriptor* desc)
 void GLFrameBuffer::Bind() const 
 {
     glBindFramebuffer(GL_FRAMEBUFFER, _fbo);
-    glViewport(0, 0, _width, _height);
 }
 
 void GLFrameBuffer::Unbind() 

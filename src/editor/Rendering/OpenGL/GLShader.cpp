@@ -46,6 +46,13 @@ GLShader::GLShader(const ShaderDescriptor* desc)
 
     glDetachShader(_id, vertId);
     glDetachShader(_id, fragId);
+    
+    if(geoId > 0)
+    {
+       glDetachShader(_id, geoId);
+       glDeleteShader(geoId);
+    }
+    
     glDeleteShader(vertId);
     glDeleteShader(fragId);
 

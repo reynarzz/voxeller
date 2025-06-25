@@ -10,10 +10,10 @@ void OpenGLDevice::Initialize()
 	_deviceInfo = {};
 	
 	glGetIntegerv(GL_MAX_SAMPLES, &_deviceInfo.MaxSamples);
-	_deviceInfo.Vendor = reinterpret_cast<const char*>(glGetString(GL_VENDOR));              // e.g. “NVIDIA Corporation”
-	_deviceInfo.Renderer = reinterpret_cast<const char*>(glGetString(GL_RENDERER));            // e.g. “GeForce RTX 3080/PCIe/SSE2”
-	_deviceInfo.Version  = reinterpret_cast<const char*>(glGetString(GL_VERSION));             // e.g. “4.6.0 NVIDIA 525.60.13”
-	_deviceInfo.ShaderVersion  = reinterpret_cast<const char*>(glGetString(GL_SHADING_LANGUAGE_VERSION)); // e.g. “4.60 NVIDIA”
+	_deviceInfo.Vendor = reinterpret_cast<const char*>(glGetString(GL_VENDOR));              
+	_deviceInfo.Renderer = reinterpret_cast<const char*>(glGetString(GL_RENDERER));           
+	_deviceInfo.Version  = reinterpret_cast<const char*>(glGetString(GL_VERSION));             
+	_deviceInfo.ShaderVersion  = reinterpret_cast<const char*>(glGetString(GL_SHADING_LANGUAGE_VERSION));
 }
 
 const DeviceInfo& OpenGLDevice::GetInfo() const
@@ -65,7 +65,7 @@ void OpenGLDevice::SetPipelineData(const PipelineData* data, const RendererState
 	if(NeedChangePipeline(data))
 	{
 		// Bind shader
-		auto shader = static_cast<GLShader*>(data->Shader.get());
+		const GLShader* shader = static_cast<GLShader*>(data->Shader.get());
 		shader->Bind();
 
     	glm::mat4 mvp = uniforms.ViewState->ProjectionViewMatrix * renderable->GetTransform().GetModelM();
@@ -123,19 +123,21 @@ void OpenGLDevice::SetCurrentRenderTarget(const RenderTarget* target)
 {
 	if(target != nullptr)
 	{
-		static_cast<const GLFrameBuffer*>(target)->Bind();
+		const GLFrameBuffer* fbo = static_cast<const GLFrameBuffer*>(target);
+		fbo->Bind();
+
+    	glViewport(0, 0, target->GetWidth(), target->GetHeight());
 	}
 	else
 	{
    		glBindFramebuffer(GL_FRAMEBUFFER, 0);
-		//glViewport();
 	}
 }
 
 void OpenGLDevice::CopyRenderTargetTo(const RenderTarget* from, RenderTarget* to) 
 {
-	auto glFrom = static_cast<const GLFrameBuffer*>(from);
-	auto glTo = static_cast<const GLFrameBuffer*>(to);
+	const GLFrameBuffer* glFrom = static_cast<const GLFrameBuffer*>(from);
+	const GLFrameBuffer* glTo = static_cast<const GLFrameBuffer*>(to);
 
 	glBindFramebuffer(GL_READ_FRAMEBUFFER, glFrom->GetFrameBufferID());
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, glTo->GetFrameBufferID());

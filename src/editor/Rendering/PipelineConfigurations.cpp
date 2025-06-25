@@ -9,6 +9,7 @@ PipelineConfigurations::PipelineConfigurations(GfxDevice* device)
         { PipelineRenderType::Opaque_Unlit, CreateOpaqueUnlitPipeline(device) },
         { PipelineRenderType::Opaque_Lit, CreateOpaqueLitPipeline(device) },
         { PipelineRenderType::Transparent, CreateTransparentPipeline(device) },
+        { PipelineRenderType::Wireframe, CreateWireFramePipeline(device) },
     };
 }
 
@@ -33,7 +34,6 @@ std::shared_ptr<PipelineData> PipelineConfigurations::CreateOpaqueUnlitPipeline(
     desc.Vertex = _shaderLibrary->GetShaderBuffer(ShaderType::VERTEX_UNLIT);
     desc.Fragment = _shaderLibrary->GetShaderBuffer(ShaderType::FRAGMENT_UNLIT);
     desc.Geometry = {};
-   // desc.Geometry = _shaderLibrary->GetShaderBuffer(ShaderType::WIRE_GEOMETRY);
 
     pipelineData->ZWrite = true;
     pipelineData->Blending = false;
@@ -42,16 +42,31 @@ std::shared_ptr<PipelineData> PipelineConfigurations::CreateOpaqueUnlitPipeline(
     return pipelineData;
 }
 
+std::shared_ptr<PipelineData> PipelineConfigurations::CreateWireFramePipeline(GfxDevice* device)
+{
+    auto pipelineData = std::make_shared<PipelineData>();
+
+    ShaderDescriptor desc{};
+    desc.Vertex = _shaderLibrary->GetShaderBuffer(ShaderType::VERTEX_UNLIT);
+    desc.Fragment = _shaderLibrary->GetShaderBuffer(ShaderType::WIRE_FRAGMENT);
+    desc.Geometry = _shaderLibrary->GetShaderBuffer(ShaderType::WIRE_GEOMETRY);
+
+    pipelineData->ZWrite = true;
+    pipelineData->Blending = false;
+    pipelineData->Shader = device->CreateShader(&desc);
+
+    return pipelineData;
+}
+
+
 std::shared_ptr<PipelineData> PipelineConfigurations::CreateOpaqueLitPipeline(GfxDevice *device)
 {
     auto pipelineData = std::make_shared<PipelineData>();
 
-    // TODO: Create the opaque shader
     ShaderDescriptor desc{};
     desc.Vertex = _shaderLibrary->GetShaderBuffer(ShaderType::VERTEX_LIT);
     desc.Fragment = _shaderLibrary->GetShaderBuffer(ShaderType::FRAGMENT_LIT);
     desc.Geometry = {};
-   // desc.Geometry = _shaderLibrary->GetShaderBuffer(ShaderType::WIRE_GEOMETRY);
 
     pipelineData->ZWrite = true;
     pipelineData->Blending = false;

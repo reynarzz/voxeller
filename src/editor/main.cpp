@@ -35,13 +35,12 @@ void Render(GLFWwindow* window)
 
 	Time::Update();
 
-	//_camera->Update();
+	_rotY += Time::GetDeltaTime() * 15.0f;
 
-	/*_rotY += 0.1f;
 	for (auto& renderable : _renderables)
 	{
 		renderable->GetTransform().SetRotation({0,_rotY,0});
-	}*/
+	}
 
 	LightState lightStateTest{};
 	lightStateTest.lightIntensity = 1.5f;
@@ -106,7 +105,7 @@ static std::vector<std::shared_ptr<RenderableObject>> CreateFromGeometry(const s
 			renderable->SetTexture(Texture::Create(&tDesc));
 
 			renderable->SetMesh(Mesh::CreateMesh(mDesc.get()));
-			renderable->SetRenderType(PipelineRenderType::Opaque_Unlit);
+			renderable->SetRenderType(PipelineRenderType::Wireframe);
 
 			renderables.push_back(renderable);
 		}

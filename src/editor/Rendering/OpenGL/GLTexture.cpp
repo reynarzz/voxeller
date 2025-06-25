@@ -1,6 +1,5 @@
 #include "GLTexture.h"
 #include "GLInclude.h"
-#include <iostream>
 
 
 GLTexture::GLTexture(const TextureDescriptor* desc)
@@ -47,7 +46,6 @@ GLTexture& GLTexture::operator=(GLTexture&& other) noexcept
 	{
 		if (_id != 0) 
 		{
-			// We don't need the old, since we are replacing (moving)
 			glDeleteTextures(1, &_id);
 		}
 
@@ -59,15 +57,6 @@ GLTexture& GLTexture::operator=(GLTexture&& other) noexcept
 	return *this;
 }
 
-GLTexture::~GLTexture()
-{
-	if (_id != 0)
-	{
-		GL_CALL(glDeleteTextures(1, &_id));
-		std::cout << "GLTexture deleted";
-	}
-}
-
 u32 GLTexture::GetID() const
 {
 	return _id;
@@ -77,4 +66,12 @@ void GLTexture::Bind(s32 index) const
 {
 	GL_CALL(glActiveTexture(GL_TEXTURE0 + index));
 	GL_CALL(glBindTexture(GL_TEXTURE_2D, _id));
+}
+
+GLTexture::~GLTexture()
+{
+	if (_id != 0)
+	{
+		GL_CALL(glDeleteTextures(1, &_id));
+	}
 }
