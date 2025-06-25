@@ -15,7 +15,6 @@ namespace Unvoxeller
 
     struct UNVOXELLER_API UnvoxMesh 
     {
-        // optional human‐readable name
         std::string Name;
 
         s32 MaterialIndex = 0;
@@ -24,7 +23,6 @@ namespace Unvoxeller
         std::vector<vox_vec3> Normals;
         std::vector<vox_vec2> UVs;
 
-        // Triangulated faces.
         std::vector<UnvoxFace> Faces;
     };
 }
