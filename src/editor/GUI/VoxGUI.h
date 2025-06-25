@@ -3,6 +3,7 @@
 #include <vector>
 #include <string>
 #include <functional>
+#include <Unvoxeller/Types.h>
 
 enum class TextAlign 
 {

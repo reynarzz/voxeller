@@ -13,4 +13,4 @@
 
 
 #define RENDER_TARGET_TO_IMGUI(x) \
-        (long*)static_cast<const GLFrameBuffer*>(x)->GetColorTexture()
+        (intptr_t*)(long*)static_cast<const GLFrameBuffer*>(x)->GetColorTexture()

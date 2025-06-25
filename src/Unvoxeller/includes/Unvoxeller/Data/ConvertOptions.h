@@ -5,7 +5,6 @@
 #include <Unvoxeller/Data/TextureType.h>
 #include <Unvoxeller/Data/MeshType.h>
 #include <Unvoxeller/Math/VoxVector.h>
-
 #include <vector>
 
 namespace Unvoxeller 
@@ -113,7 +112,7 @@ namespace Unvoxeller
 		TexturingOptions Texturing{};
 
 		// To create n lods set factors (0.0 - 1.0), 1.0 = no change, Factor[0] = LOD1, Factor[1] = LOD2
-		std::array<f32, 10> Lods = { 0,0,0,0,0,0,0,0,0,0 };
+		std::vector<f32> Lods = { 0,0,0,0,0,0,0,0,0,0 };
 
 		// Scale, Ex, if 1.0, every single voxel will take up 1 unit.
 		vox_vec3 Scale = { 1.0f, 1.0f, 1.0f };

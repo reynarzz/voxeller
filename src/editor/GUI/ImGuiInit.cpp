@@ -7,6 +7,7 @@
 
 #include <GUI/Views/VoxToProcessView.h>
 #include <Unvoxeller/File.h>
+#include <memory>
 
 std::unique_ptr<VoxToProcessView> view = nullptr;
 

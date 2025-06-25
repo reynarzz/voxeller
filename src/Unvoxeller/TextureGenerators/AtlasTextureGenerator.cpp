@@ -1,6 +1,6 @@
 #include <Unvoxeller/TextureGenerators/AtlasTextureGen.h>
 #include <Unvoxeller/Log/Log.h>
-
+#include <algorithm>
 
 namespace Unvoxeller
 {

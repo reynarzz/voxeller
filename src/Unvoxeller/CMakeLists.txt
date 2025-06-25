@@ -108,7 +108,10 @@ install(TARGETS Unvoxeller
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/includes/Unvoxeller
         DESTINATION include COMPONENT Voxeller)
 
-#target_compile_definitions(Unvoxeller PRIVATE UNVOXELLER_BUILD_DLL UNVOXELLER_API_EXPORT)
+#General
+target_compile_definitions(Unvoxeller PRIVATE 
+
+_USE_MATH_DEFINES)
 
 # -----------------------------------------------------------------------------
 # 4) Include directories

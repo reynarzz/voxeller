@@ -221,7 +221,6 @@ int Init()
 	exportOptions.Converting.Meshing.RemoveOccludedFaces = false;
 
 	// V2
-	exportOptions.Converting.Lods = { 0.8f, 0.4f };
 	exportOptions.OutputPath = Unvoxeller::File::GetExecutableDir() + "/testvox/nda/export/Output.fbx";
 	
 	//Chicken_van_2.vox

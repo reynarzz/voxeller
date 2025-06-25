@@ -3,6 +3,7 @@
 // For now force openGL
 #include <Rendering/OpenGL/OpenGLDevice.h>
 #include <Unvoxeller/Log/Log.h>
+#include <algorithm>
 
 std::shared_ptr<GfxDevice> RenderingSystem::_device = nullptr;
 std::vector<const RenderableObject*> RenderingSystem::_renderables = {};

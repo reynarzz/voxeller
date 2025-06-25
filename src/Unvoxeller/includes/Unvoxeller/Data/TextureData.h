@@ -3,6 +3,7 @@
 #include <Unvoxeller/api.h>
 #include <Unvoxeller/Types.h>
 #include "TextureFormat.h"
+#include <string>
 
 namespace Unvoxeller 
 {
