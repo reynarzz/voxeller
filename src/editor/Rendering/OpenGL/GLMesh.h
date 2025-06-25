@@ -7,7 +7,13 @@ class GLMesh : public Mesh
 {
 public:
     GLMesh(const MeshDescriptor* desc);
-    ~GLMesh();
+    ~GLMesh() override;
+
+    GLMesh(const GLMesh&) = delete;
+    GLMesh& operator=(const GLMesh&) = delete;
+
+    GLMesh(GLMesh&&) noexcept;
+    GLMesh& operator=(GLMesh&&) noexcept;
 
     void Bind() const;
     void Unbind() const;

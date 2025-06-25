@@ -39,6 +39,43 @@ GLMesh::GLMesh(const MeshDescriptor *desc)
     GL_CALL(glBindVertexArray(0));
 }
 
+GLMesh::GLMesh(GLMesh&& other) noexcept : Mesh(std::move(other)), 
+            _vao(std::exchange(other._vao, 0)),
+            _vbo(std::exchange(other._vbo, 0)),
+            _ibo(std::exchange(other._ibo, 0))
+{
+
+}
+
+GLMesh& GLMesh::operator=(GLMesh&& other) noexcept
+{
+    if(this != &other)
+    {
+        if(_vbo)
+        {
+            glDeleteBuffers(1, &_vbo);
+        }
+
+        if(_ibo != 0)
+        {
+            glDeleteBuffers(1, &_ibo);
+        }
+
+        if(_vao != 0)
+        {
+            glDeleteVertexArrays(1, &_vao);
+        }
+
+        _vbo = std::exchange(other._vbo, 0);
+        _ibo = std::exchange(other._ibo, 0);
+        _vao = std::exchange(other._vao, 0);
+
+        Mesh::operator=(std::move(other));
+    }
+
+    return *this;
+}
+
 void GLMesh::Bind() const
 {
     GL_CALL(glBindVertexArray(_vao));
