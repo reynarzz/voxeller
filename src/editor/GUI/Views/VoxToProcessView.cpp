@@ -16,6 +16,7 @@
 #include <Data/VoxFileToProcessData.h>
 #include <imgui/imgui_internal.h>
 #include <GUI/VoxGUI.h>
+#include <Rendering/Camera.h> // Remove this
 
 std::shared_ptr<Texture> blackImage = nullptr;
 static std::vector<VOXFileToProcessData> _testVoxFiles{};
@@ -137,6 +138,11 @@ void VoxToProcessView::ViewportWindow()
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
 
 	ImGui::Begin("Viewport", &open, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize);
+	
+	//if (ImGui::IsWindowHovered()) 
+	{
+		Camera::Update();
+	}
 
 	Screen::_width = ImGui::GetWindowWidth();
 	Screen::_height = ImGui::GetWindowHeight();
@@ -267,7 +273,7 @@ void VoxToProcessView::UpdateGUI()
 	style.Colors[ImGuiCol_ScrollbarGrabHovered] = ImVec4(1, 1, 1, 0.5f);
 	style.Colors[ImGuiCol_ScrollbarGrabActive] = ImVec4(1, 1, 1, 1.0f);
 
-	ExportWin();
+	ExportWin(); 
 	ToolBar();
 	ViewportWindow();
 	// Sidebar region (no frame)

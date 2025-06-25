@@ -11,6 +11,7 @@
 
 #include <Rendering/RenderingSystem.h>
 #include <GUI/Utils/TextureLoader.h>
+#include <Time/Time.h>
 
 // TODO:
 // - Fix small offset happening.
@@ -32,13 +33,15 @@ void Render(GLFWwindow* window)
 {
 	glfwPollEvents();
 
-	_camera->Update();
+	Time::Update();
 
-	_rotY += 0.1f;
+	//_camera->Update();
+
+	/*_rotY += 0.1f;
 	for (auto& renderable : _renderables)
 	{
 		renderable->GetTransform().SetRotation({0,_rotY,0});
-	}
+	}*/
 
 	LightState lightStateTest{};
 	lightStateTest.lightIntensity = 1.5f;

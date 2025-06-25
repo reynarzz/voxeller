@@ -1,6 +1,7 @@
 #pragma once
 #include "ViewBase.h"
 
+
 class VoxToProcessView : public ViewBase
 {
 public:
