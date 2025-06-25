@@ -10,6 +10,14 @@ class GLTexture : public Texture
 public:
     GLTexture(const TextureDescriptor* desc);
     ~GLTexture() override;
+
+    GLTexture(const GLTexture&) = delete;
+    GLTexture& operator=(const GLTexture&) = delete;
+
+    // These in a cpp
+    GLTexture(GLTexture&&) noexcept;
+    GLTexture& operator=(GLTexture&&) noexcept;
+
     u32 GetID() const;
     void Bind(s32 index) const;
 

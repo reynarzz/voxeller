@@ -115,9 +115,26 @@ static std::vector<std::shared_ptr<RenderableObject>> CreateFromGeometry(const s
 	return renderables;
 }
 
+void reverseString(std::vector<char>& s)
+{
+	for (int i = 0, j = s.size() - 1; i < j; i++, j--)
+	{
+		std::swap(s[i], s[j]);
+	}
+
+	for (size_t i = 0; i < s.size(); i++)
+	{
+		LOG_INFO(s[i]);
+	}
+}
+
 int Init()
 {
+	std::vector<char> c = { 'h','e','l','l', 'o' };
+
+
 	VoxellerApp::init();
+	reverseString(c);
 
 	if (glfwInit() == GLFW_TRUE)
 	{
