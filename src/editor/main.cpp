@@ -59,9 +59,6 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 
 static std::vector<std::shared_ptr<RenderableObject>> CreateFromGeometry(const std::vector<std::shared_ptr<Unvoxeller::UnvoxScene>>& scenes)
 {
-	std::string texPath = Unvoxeller::File::GetExecutableDir() + "/testvox/nda/export/Output_atlas.png";
-	auto textureTest= TextureLoader::LoadTexture(texPath, false);
-
 	std::vector<std::shared_ptr<RenderableObject>> renderables{};
 	for (const auto& scene : scenes)
 	{
@@ -102,8 +99,6 @@ static std::vector<std::shared_ptr<RenderableObject>> CreateFromGeometry(const s
 			tDesc.height= tex->Height;
 			tDesc.image = tex->Buffer.data();
 			renderable->SetTexture(Texture::Create(&tDesc));
-
-			//renderable->SetTexture(textureTest);
 
 			renderable->SetMesh(Mesh::CreateMesh(mDesc.get()));
 			renderable->SetRenderType(PipelineRenderType::Opaque_Lit);
@@ -226,8 +221,8 @@ int Init()
 	
 	//Chicken_van_2.vox
 	//std::string path = Unvoxeller::File::GetExecutableDir() + "/testvox/nda/Ambulance_1.vox"; // Test this!
-	std::string path = Unvoxeller::File::GetExecutableDir() + "/testvox/nda/Bus_Green.vox"; // Test this!
-	//std::string path = Unvoxeller::File::GetExecutableDir() + "/testvox/nda/Chicken_van_3.vox"; // Test this!
+	//std::string path = Unvoxeller::File::GetExecutableDir() + "/testvox/nda/Bus_Green.vox"; // Test this!
+	std::string path = Unvoxeller::File::GetExecutableDir() + "/testvox/nda/Chicken_van_3.vox"; // Test this!
 
 	
 	//std::string path = Unvoxeller::File::GetExecutableDir() + "/testvox/monu2.vox"; // Test this!
@@ -243,8 +238,6 @@ int Init()
 	{
 		RenderingSystem::PushRenderable(renderables.get());
 	}
-		
-
 
 	while (!glfwWindowShouldClose(win))
 	{
