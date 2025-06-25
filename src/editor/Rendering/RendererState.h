@@ -22,6 +22,7 @@ struct LightState
     glm::vec3 lightDir { 0.0f, -0.5, 0.5 };   
     glm::vec3 lightColor { 1.0f, 1.0f, 1.0f };
     glm::vec3 shadowColor { 1.0f, 1.0f, 1.0f };
+    f32 lightIntensity = 1.0f;
 };
 
 struct RendererState

@@ -74,6 +74,7 @@ void OpenGLDevice::SetPipelineData(const PipelineData* data, const RendererState
 		GL_CALL(glUniform3f(shader->GetUniformLocations().lightDirLoc, uniforms.LightState->lightDir.x, uniforms.LightState->lightDir.y, uniforms.LightState->lightDir.z));
 		GL_CALL(glUniform3f(shader->GetUniformLocations().lightColorLoc, uniforms.LightState->lightColor.x, uniforms.LightState->lightColor.y, uniforms.LightState->lightColor.z));
 		GL_CALL(glUniform3f(shader->GetUniformLocations().shadowColorLoc, uniforms.LightState->shadowColor.x, uniforms.LightState->shadowColor.y, uniforms.LightState->shadowColor.z));
+		GL_CALL(glUniform1f(shader->GetUniformLocations().lightIntensityLoc, uniforms.LightState->lightIntensity));
 		
 		GfxDevice::SetPipelineData(data, uniforms, renderable);
 

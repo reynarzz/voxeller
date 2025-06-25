@@ -14,6 +14,7 @@ public:
         s32 lightDirLoc = 0;
         s32 lightColorLoc = 0;
         s32 shadowColorLoc = 0;
+        s32 lightIntensityLoc = 0;
     }; 
 
     GLShader(const ShaderDescriptor* desc);

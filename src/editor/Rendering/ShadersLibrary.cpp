@@ -109,6 +109,8 @@ flat in vec3 vNormalWorld;
 
 uniform vec3 _LIGHT_DIR_;  
 uniform vec3 _LIGHT_COLOR_;
+uniform float _LIGHT_INTENSITY_;
+
 uniform vec3 uAmbientColor;
 
 out vec4 FragColor;
@@ -125,9 +127,8 @@ void main()
     float diff = max(dot(N, L), 0.0);
 
     // Combine ambient + diffuse
-    vec3 color = /*uAmbientColor + */_LIGHT_COLOR_ * diff;
+    vec3 color = /*uAmbientColor + */_LIGHT_COLOR_ * diff * _LIGHT_INTENSITY_;
    
-
     FragColor = texture(uTexture, vec2(vTexCoord.x, 1.0f - vTexCoord.y)) * vec4(color, 1.0);
 }
 )";

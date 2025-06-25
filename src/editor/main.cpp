@@ -39,7 +39,9 @@ void Render(GLFWwindow* window)
 	{
 		renderable->GetTransform().SetRotation({0,_rotY,0});
 	}
+
 	LightState lightStateTest{};
+	lightStateTest.lightIntensity = 1.5f;
 
 	RendererState state{};
 	state.ViewState = &_camera->GetState();
@@ -101,7 +103,7 @@ static std::vector<std::shared_ptr<RenderableObject>> CreateFromGeometry(const s
 			renderable->SetTexture(Texture::Create(&tDesc));
 
 			renderable->SetMesh(Mesh::CreateMesh(mDesc.get()));
-			renderable->SetRenderType(PipelineRenderType::Opaque_Lit);
+			renderable->SetRenderType(PipelineRenderType::Opaque_Unlit);
 
 			renderables.push_back(renderable);
 		}

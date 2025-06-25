@@ -55,6 +55,7 @@ GLShader::GLShader(const ShaderDescriptor* desc)
     _locations.lightDirLoc = glGetUniformLocation(_id, "_LIGHT_DIR_");
     _locations.lightColorLoc = glGetUniformLocation(_id, "_LIGHT_COLOR_");
     _locations.shadowColorLoc = glGetUniformLocation(_id, "_SHADOW_COLOR_");
+    _locations.lightIntensityLoc = glGetUniformLocation(_id, "_LIGHT_INTENSITY_");
 }
 
 const GLShader::ShaderUniformLocations &GLShader::GetUniformLocations() const
