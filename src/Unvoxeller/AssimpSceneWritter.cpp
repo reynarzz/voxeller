@@ -1,4 +1,4 @@
-#include "AssimpSceneWritter.h"
+#include <Unvoxeller/AssimpSceneWritter.h>
 #include <assimp/postprocess.h>
 // Include Assimp headers for creating and exporting 3D assets
 #include <assimp/scene.h>
