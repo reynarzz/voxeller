@@ -5,7 +5,7 @@
 #include "GLShader.h"
 #include "GLFrameBuffer.h"
 
-void OpenGLDevice::Initialize() 
+void OpenGLDevice::Initialize()
 {
 	_deviceInfo = {};
 	
@@ -49,8 +49,8 @@ void OpenGLDevice::DrawRenderable(const RenderableObject *renderable)
 	}
 	else
 	{
-		glActiveTexture(GL_TEXTURE0 + 0);
-		glBindTexture(GL_TEXTURE_2D, 0);
+		GL_CALL(glActiveTexture(GL_TEXTURE0 + 0));
+		GL_CALL(glBindTexture(GL_TEXTURE_2D, 0));
 	}
 	
 	// Draw
@@ -80,23 +80,23 @@ void OpenGLDevice::SetPipelineData(const PipelineData* data, const RendererState
 
 		if(data->ZWrite)
 		{
-			glEnable(GL_DEPTH_TEST);
+			GL_CALL(glEnable(GL_DEPTH_TEST));
 		}
 		else
 		{
-			glDisable(GL_DEPTH_TEST);
+			GL_CALL(glDisable(GL_DEPTH_TEST));
 		}
 
 		if(data->Blending)
 		{
-			glEnable(GL_BLEND);
+			GL_CALL(glEnable(GL_BLEND));
 
 			// We are going to support just one type of blending.
-			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+			GL_CALL(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
 		}
 		else
 		{
-			glDisable(GL_BLEND);
+			GL_CALL(glDisable(GL_BLEND));
 		}
 	}
 }
