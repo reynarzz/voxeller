@@ -29,6 +29,49 @@ namespace Unvoxeller
 			// }
 		}
 
+		// if (options.ExportMeshesSeparatelly)
+		// {
+		// 	for (size_t i = 0; i < meshes.size(); i++)
+		// 	{
+		// 		auto sceneSplit = std::make_shared<UnvoxScene>();
+
+		// 		// — create & initialize the root node —
+		// 		sceneSplit->RootNode = std::make_shared<UnvoxNode>();
+		// 		sceneSplit->RootNode->Name = "RootNode";
+		// 		sceneSplit->RootNode->Transform = {};   // identity
+		// 		// ** zero out the root node’s mesh list **
+		// 		sceneSplit->RootNode->MeshesIndexes = {};
+
+		// 		// now attach exactly one child node:
+		// 		auto child = std::make_shared<UnvoxNode>();
+		// 		child->MeshesIndexes = { 0 };
+
+		// 		sceneSplit->RootNode->Children.push_back(child); // Overwrite to set the index to 0
+
+		// 		// — populate the scene’s mesh and material arrays —
+		// 		sceneSplit->Meshes = { meshes[i].Mesh };
+
+		// 		if (options.Meshing.GenerateMaterials)
+		// 		{
+		// 			aiString texPath(meshes[i].imageName);
+		// 			aiMaterial* mat = new aiMaterial();
+		// 			mat->AddProperty(&texPath, AI_MATKEY_TEXTURE(aiTextureType_DIFFUSE, 0));
+
+		// 			// Since the meshes will be exported separatelly, always create a material per mesh
+		// 			//sceneSplit->mNumMaterials = 1;
+		// 			//sceneSplit->mMaterials = new aiMaterial * [1] { mat };
+		// 		}
+		// 		else
+		// 		{
+		// 			//sceneSplit->mNumMaterials = 0;
+		// 			//sceneSplit->mMaterials = nullptr;
+		// 		}
+		// 		scenes.push_back(sceneSplit);
+		// 	}
+		// }
+		// else
+
+
         return nullptr;
     }
     

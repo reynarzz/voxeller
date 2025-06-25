@@ -228,7 +228,7 @@ int Init()
 	exportOptions.Converting.Meshing.MeshesToWorldCenter = false;
 
 	// Texturing:
-	exportOptions.Converting.Texturing.SeparateTexturesPerMesh = false;
+	exportOptions.Converting.Texturing.SeparateTexturesPerMesh = true;
 	exportOptions.Converting.Texturing.TexturesPOT = false;
 	exportOptions.Converting.Texturing.OptimizeTextures = false;
 	exportOptions.Converting.Texturing.TextureType = {};
@@ -240,13 +240,13 @@ int Init()
 	exportOptions.OutputPath = Unvoxeller::File::GetExecutableDir() + "/testvox/nda/export/Output.fbx";
 	
 	//Chicken_van_2.vox
-	//std::string path = Unvoxeller::File::GetExecutableDir() + "/testvox/nda/Ambulance_1.vox"; // Test this!
+	std::string path = Unvoxeller::File::GetExecutableDir() + "/testvox/nda/Ambulance_1.vox"; // Test this!
 	//std::string path = Unvoxeller::File::GetExecutableDir() + "/testvox/nda/Bus_Green.vox"; // Test this!
 	//std::string path = Unvoxeller::File::GetExecutableDir() + "/testvox/nda/Chicken_van_3.vox"; // Test this!
 
 	
 	//std::string path = Unvoxeller::File::GetExecutableDir() + "/testvox/monu2.vox"; // Test this!
-	std::string path = Unvoxeller::File::GetExecutableDir() + "/testvox/room.vox";
+	//std::string path = Unvoxeller::File::GetExecutableDir() + "/testvox/room.vox";
 	//std::string output = "testvox/nda/export/Output.fbx";
 	
 	Unvoxeller::Unvoxeller unvox{};
