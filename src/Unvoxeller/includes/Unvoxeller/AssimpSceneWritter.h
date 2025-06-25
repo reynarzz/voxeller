@@ -1,14 +1,12 @@
 #pragma once
-#include <Unvoxeller/Data/UnvoxScene.h>
-#include <Unvoxeller/Data/ExportOptions.h>
-#include <vector>
+#include <Unvoxeller/ExporterBase.h>
 
 namespace Unvoxeller
 {
-    class AssimpSceneWritter
-    {
-    public:
-        bool ExportScenes(const ExportOptions& options, const std::vector<std::shared_ptr<UnvoxScene>> scenes);
-    private:
-    };
+	class AssimpSceneWritter : public ExporterBase
+	{
+	public:
+		bool Export(const ExportOptions& options, const std::vector<std::shared_ptr<UnvoxScene>>& scenes) override;
+	private:
+	};
 }

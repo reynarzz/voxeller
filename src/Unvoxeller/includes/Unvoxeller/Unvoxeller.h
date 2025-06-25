@@ -30,6 +30,5 @@ namespace Unvoxeller
 
 		void ExportVoxToModelAsync(const char* buffer, int size, const ExportOptions& options, std::function<void(ExportResults)> callback);
 		void GetModelFromVOXMeshAsync(const char* buffer, int size, const ConvertOptions& options, std::function<void(ConvertResult)> callback);
-	private:
 	};
 }

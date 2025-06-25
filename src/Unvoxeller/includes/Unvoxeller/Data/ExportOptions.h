@@ -2,6 +2,7 @@
 #include <Unvoxeller/api.h>
 #include <Unvoxeller/Types.h>
 #include "ConvertOptions.h"
+#include <string>
 
 namespace Unvoxeller
 {
@@ -11,5 +12,4 @@ namespace Unvoxeller
 		ModelFormat OutputFormat = ModelFormat::FBX;
 		std::string OutputPath;
 	};
-
 }
