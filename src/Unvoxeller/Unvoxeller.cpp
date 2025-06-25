@@ -664,8 +664,6 @@ namespace Unvoxeller
 		return scene;
 	}
 
-
-
 	const std::vector<std::shared_ptr<UnvoxScene>> Run(const vox_file* voxData, const ConvertOptions& options)
 	{
 		if (!voxData || !voxData->isValid)
@@ -695,15 +693,6 @@ namespace Unvoxeller
 			return {};
 		}
 
-
-
-		std::vector<std::vector<unsigned char>> images; // store image data for possibly multiple textures
-		std::vector<std::string> imageFilenames;
-
-		// If exporting frames separately, we'll loop and export one scene per frame instead of building one scene with multiple.
-		// But we can reuse this code by simply generating one scene at a time inside the loop if separate.
-		// For combined output, we build scene once.
-
 		if (options.ExportFramesSeparatelly && frameCount >= 1 && voxData->shapes.size() > 0)
 		{
 			std::vector<std::shared_ptr<UnvoxScene>> scenesOut{};
@@ -721,203 +710,72 @@ namespace Unvoxeller
 		}
 		else
 		{
+			size_t meshCount = voxData->voxModels.size();
+
 			auto scene = std::make_shared<UnvoxScene>();
 			scene->RootNode = std::make_shared<UnvoxNode>();
 
-			frameCount = voxData->voxModels.size();
-			// Combined scene (either single frame or multiple frames in one file)
-			size_t meshCount = frameCount;
+			scene->RootNode->Children.resize(meshCount);
 			scene->Meshes.resize(meshCount);
 			scene->Materials.resize((unsigned int)(options.Texturing.SeparateTexturesPerMesh ? meshCount : 1));
 
+			std::vector<FaceRect> allFaces{};
+
 			if (options.Texturing.SeparateTexturesPerMesh)
 			{
-				// each mesh gets its own material
-				// for (size_t i = 0; i < meshCount; ++i) 
-				// {
-				// 	scene->Materials[i] = new aiMaterial();
-				// }
+				
 			}
-			else
-			{
-				// one material for all meshes
-				// scene->mMaterials[0] = new aiMaterial();
-				// for (size_t i = 1; i < meshCount; ++i) 
-				// {
-				// 	scene->mMaterials[i] = scene->mMaterials[0];
-				// }
-			}
-
-			// Root node children for each mesh
-			scene->RootNode->Children.resize(meshCount);
-
-			if (!options.Texturing.SeparateTexturesPerMesh)
+			else 
 			{
 				// If one atlas for all, gather all faces first
-				std::vector<FaceRect> allFaces;
-				std::unordered_set<uint8_t> usedColors;
 				for (size_t i = 0; i < meshCount; ++i)
 				{
-					size_t modelIndex = (i < voxData->voxModels.size() ? i : voxData->voxModels.size() - 1); // This is bad
-
-					std::vector<FaceRect> faces = _mesherFactory->Get(options.Meshing.MeshType)->CreateFaces(voxData->voxModels[modelIndex], voxData->sizes[modelIndex], modelIndex);
+					std::vector<FaceRect> faces = _mesherFactory->Get(options.Meshing.MeshType)->CreateFaces(voxData->voxModels[i], voxData->sizes[i], i);
 					// Tag faces with an offset or id if needed (not needed for atlas, we just combine)
 					allFaces.insert(allFaces.end(), faces.begin(), faces.end());
 				}
-
-				const auto texData = _textureGeneratorFactory->Get(options.Texturing.TextureType)->GetTexture(allFaces, voxData->palette, voxData->voxModels, options.Texturing.TexturesPOT);
-
-
-				// Save atlas image
-				// std::string baseName = outputPath;
-				// if (dot != std::string::npos) baseName = outputPath.substr(0, outputPath.find_last_of('.'));
-				// std::string atlasName = baseName + "_atlas.png";
-				// SaveAtlasImage(atlasName, texData->Width, texData->Height, texData->Buffer);
-
-				// TODO: 
-				LOG_INFO("TODO: Atlas saved");
-
-				// Assign this texture to the single material
-				//aiString texPath(atlasName);
-				auto oMat = std::make_shared<UnvoxMaterial>();
-				//oMat->Name = atlasName;
-				oMat->TextureIndex = 0;
-				scene->Materials[0] = oMat;
-
-				size_t faceOffset = 0;
-				for (size_t i = 0; i < meshCount; ++i)
-				{
-					size_t modelIndex = (i < voxData->voxModels.size() ? i : voxData->voxModels.size() - 1);
-
-					// Remesh the frame to get number of faces:            
-					std::vector<FaceRect> frameFaces = _mesherFactory->Get(options.Meshing.MeshType)->CreateFaces(voxData->voxModels[modelIndex], voxData->sizes[modelIndex], modelIndex);
-
-					// Now copy that many faces from allFaces (they should correspond in order to this frame).
-					std::vector<FaceRect> facesForMesh;
-					facesForMesh.insert(facesForMesh.end(), allFaces.begin() + faceOffset, allFaces.begin() + faceOffset + frameFaces.size());
-					faceOffset += frameFaces.size();
-
-					// Create mesh
-					//aiMesh* mesh = new aiMesh();
-
-					//scene->mMeshes[i] = mesh;
-
-					auto& sz = voxData->sizes[modelIndex];
-					auto& mdl = voxData->voxModels[modelIndex];
-					auto  box = mdl.boundingBox;
-
-					auto mesh = MeshBuilder::BuildMeshFromFaces(facesForMesh, texData->Width, texData->Height, options.Meshing.FlatShading, voxData->palette, box);
-					LOG_INFO("Build meshes from faces, mesh: {0}", i);
-
-					// TODO: position origin issue, take into account the position of the objects, this should be used, reynardo
-					//voxData->transforms.at(0).frameAttrib[0].translation;
-					//--voxData->transforms.at(0).frameAttrib[0].rotation;
-					//-----
-
-
-					mesh->MaterialIndex = options.Texturing.SeparateTexturesPerMesh ? (int)i : 0;
-					// Create node for this mesh
-					auto node = std::make_shared<UnvoxNode>();
-					node->Name = "Frame" + std::to_string(i);
-					node->MeshesIndexes = { static_cast<s32>(i) };
-
-					scene->RootNode->Children[i] = node;
-
-					LOG_INFO("Completed mesh: {0}", i);
-				}
-
-				return { scene };
 			}
-			else
+
+
+			LOG_INFO("TODO: Atlas saved");
+
+			// Assign this texture to the single material
+			//aiString texPath(atlasName);
+			auto oMat = std::make_shared<UnvoxMaterial>();
+			//oMat->Name = atlasName;
+			oMat->TextureIndex = 0;
+			scene->Materials[0] = oMat;
+
+			size_t faceOffset = 0;
+			for (size_t i = 0; i < meshCount; ++i)
 			{
-				// TODO:
+				// Remesh the frame to get number of faces:            
+				std::vector<FaceRect> frameFaces = _mesherFactory->Get(options.Meshing.MeshType)->CreateFaces(voxData->voxModels[i], voxData->sizes[i], i);
 
-				// separateTexturesPerMesh case:
-				// for (size_t i = 0; i < meshCount; ++i)
-				// {
-				// 	size_t modelIndex = (i < voxData->voxModels.size() ? i : voxData->voxModels.size() - 1);
+				const auto texData = _textureGeneratorFactory->Get(options.Texturing.TextureType)->GetTexture(frameFaces, voxData->palette, voxData->voxModels, options.Texturing.TexturesPOT);
 
-				// 	std::vector<FaceRect> faces = _mesherFactory->Get(options.Meshing.MeshType)->CreateFaces(voxData->voxModels[modelIndex], voxData->sizes[modelIndex], modelIndex);
+				auto& sz = voxData->sizes[i];
+				auto& mdl = voxData->voxModels[i];
+				auto& box = mdl.boundingBox;
 
-				// 	const auto texData = _textureGeneratorFactory->Get(options.Texturing.TextureType)->GetTexture(faces, voxData->palette, voxData->voxModels, options.Texturing.TexturesPOT);
+				auto mesh = MeshBuilder::BuildMeshFromFaces(frameFaces, texData->Width, texData->Height, options.Meshing.FlatShading, voxData->palette, box);
+				mesh->MaterialIndex = options.Texturing.SeparateTexturesPerMesh ? (int)i : 0;
 
-				// 	std::string baseName = outputPath;
-				// 	if (dot != std::string::npos) baseName = outputPath.substr(0, outputPath.find_last_of('.'));
-				// 	std::string imageName = baseName + "_mesh" + std::to_string(i) + ".png";
-				// 	SaveAtlasImage(imageName,texData->Width, texData->Height, texData->Buffer);
+				// Create node for this mesh
+				auto node = std::make_shared<UnvoxNode>();
+				node->Name = "Frame" + std::to_string(i);
+				node->MeshesIndexes = { static_cast<s32>(i) };
 
-				// 	aiString texPath(imageName);
-				// 	scene->mMaterials[i]->AddProperty(&texPath, AI_MATKEY_TEXTURE(aiTextureType_DIFFUSE, 0));
-				// 	// Create mesh geometry
-				// 	aiMesh* mesh = new aiMesh();
-				// 	scene->Meshes[i] = mesh;
+				scene->RootNode->Children[i] = node;
+				scene->Meshes[i] = mesh;
+				scene->Textures.push_back(texData);
 
-				// 	auto& sz = voxData->sizes[modelIndex];
-				// 	auto& mdl = voxData->voxModels[modelIndex];
-				// 	auto  box = mdl.boundingBox;
-
-				// 	auto mesh = MeshBuilder::BuildMeshFromFaces(faces, texData->Width, texData->Height, options.Meshing.FlatShading, voxData->palette, box);
-
-				// 	mesh->mMaterialIndex = (int)i;
-				// 	// Node
-				// 	aiNode* node = new aiNode();
-				// 	node->mName = aiString("Mesh" + std::to_string(i));
-				// 	node->mNumMeshes = 1;
-				// 	node->mMeshes = new unsigned int[1];
-				// 	node->mMeshes[0] = i;
-				// 	aiMatrix4x4 rot;
-				// 	aiMatrix4x4::RotationX(-static_cast<float>(AI_MATH_PI / 2.0f), rot);
-				// 	node->mTransformation = rot;
-
-				// 	scene->mRootNode->mChildren[i] = node;
-				// }
-
-				//return scene;
+				LOG_INFO("Completed mesh: {0}", i);
 			}
-			// If there was only one mesh in scene (no children used above), attach it directly to root node
 
-			// Export combined scene
-			// if(!exportScene(outputPath)) {
-			//     std::cerr << "Failed to export scene.\n";
-			//     return 1;
-			// } else {
-			//     std::cout << "Exported " << outputPath << " successfully.\n";
-			// }
-
-			return {};
+			return { scene };
 		}
 
-		// Clean up dynamically allocated scene data for combined case
-		if (!options.ExportFramesSeparatelly)
-		{
-			// Clean materials (if unique)
-			// std::unordered_set<aiMaterial*> uniqueMats;
-
-			// for (unsigned int i = 0; i < scene->mNumMaterials; ++i) 
-			// {
-			// 	uniqueMats.insert(scene->mMaterials[i]);
-			// }
-
-			// for (aiMaterial* mat : uniqueMats) 
-			// {
-			// 	delete mat;
-			// }
-			// Clean meshes
-			// for(unsigned int i = 0; i < scene->mNumMeshes; ++i) {
-			//     delete scene->mMeshes[i];
-			// }
-			// delete [] scene->mMeshes;
-			// delete [] scene->mMaterials;
-			// // Clean nodes
-			// for(unsigned int i = 0; i < scene->mRootNode->mNumChildren; ++i) {
-			//     aiNode* child = scene->mRootNode->mChildren[i];
-			//     delete [] child->mMeshes;
-			//     delete child;
-			// }
-			// if(scene->mRootNode->mMeshes) delete [] scene->mRootNode->mMeshes;
-			// delete scene->mRootNode;
-			// delete scene;
-		}
 		return {};
 	}
 
@@ -996,6 +854,8 @@ namespace Unvoxeller
 			// {
 			//     delete scenes[i];
 			// }
+
+			results.Convert.Scenes = scenes;
 
 			results.Convert.Msg = ConvertMSG::SUCESS;
 		}

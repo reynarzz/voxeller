@@ -18,7 +18,6 @@ namespace Unvoxeller
         // optional human‐readable name
         std::string Name;
 
-        s32 TextureIndex = 0;
         s32 MaterialIndex = 0;
         
         std::vector<vox_vec3> Vertices;

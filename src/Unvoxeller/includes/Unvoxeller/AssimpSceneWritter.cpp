@@ -9,8 +9,26 @@
 
 namespace Unvoxeller
 {
-    static std::unique_ptr<aiScene> GetAssimpScene(const UnvoxScene* unvoxScene)
+    static std::unique_ptr<aiScene> GetAssimpScene(const ConvertOptions& options, const UnvoxScene* unvoxScene)
     {
+		if (options.Texturing.SeparateTexturesPerMesh)
+		{
+			// each mesh gets its own material
+			// for (size_t i = 0; i < meshCount; ++i) 
+			// {
+			// 	scene->Materials[i] = new aiMaterial();
+			// }
+		}
+		else
+		{
+			// one material for all meshes
+			// scene->mMaterials[0] = new aiMaterial();
+			// for (size_t i = 1; i < meshCount; ++i) 
+			// {
+			// 	scene->mMaterials[i] = scene->mMaterials[0];
+			// }
+		}
+
         return nullptr;
     }
     
@@ -76,7 +94,7 @@ namespace Unvoxeller
 		const std::string convertedOutName = options.OutputPath.substr(0, dot) + (scenes.size() > 1 ? "_" + std::to_string(i) : "");
 		//--scene->RootNode->Transform = scaleMat * scene->RootNode->Transform;
 
-		aiReturn ret = exporter.Export(GetAssimpScene(scene.get()).get(), formatId.c_str(), convertedOutName + "." + ext, preprocess);
+		aiReturn ret = exporter.Export(GetAssimpScene(options.Converting, scene.get()).get(), formatId.c_str(), convertedOutName + "." + ext, preprocess);
 
 		if (ret != aiReturn_SUCCESS)
 		{

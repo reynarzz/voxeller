@@ -97,7 +97,7 @@ static std::vector<std::shared_ptr<RenderableObject>> CreateFromGeometry(const s
 				}
 			}
 
-			auto tex = scene->Textures[mesh->TextureIndex];
+			auto tex = scene->Textures[scene->Materials[mesh->MaterialIndex]->TextureIndex];
 			TextureDescriptor tDesc{};
 			tDesc.width = tex->Width;
 			tDesc.height= tex->Height;
@@ -105,7 +105,7 @@ static std::vector<std::shared_ptr<RenderableObject>> CreateFromGeometry(const s
 			renderable->SetTexture(Texture::Create(&tDesc));
 
 			renderable->SetMesh(Mesh::CreateMesh(mDesc.get()));
-			renderable->SetRenderType(PipelineRenderType::Wireframe);
+			renderable->SetRenderType(PipelineRenderType::Opaque_Unlit);
 
 			renderables.push_back(renderable);
 		}
@@ -153,7 +153,7 @@ int Init()
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
 	// set: 'glfwGetPrimaryMonitor()' to make the window full screen
-	GLFWwindow* win = glfwCreateWindow(1000, 600, "Unvoxeller", nullptr, nullptr);
+	GLFWwindow* win = glfwCreateWindow(1100, 600, "Unvoxeller", nullptr, nullptr);
 
 	if (!win)
 	{
@@ -242,15 +242,15 @@ int Init()
 	//Chicken_van_2.vox
 	//std::string path = Unvoxeller::File::GetExecutableDir() + "/testvox/nda/Ambulance_1.vox"; // Test this!
 	//std::string path = Unvoxeller::File::GetExecutableDir() + "/testvox/nda/Bus_Green.vox"; // Test this!
-	std::string path = Unvoxeller::File::GetExecutableDir() + "/testvox/nda/Chicken_van_3.vox"; // Test this!
+	//std::string path = Unvoxeller::File::GetExecutableDir() + "/testvox/nda/Chicken_van_3.vox"; // Test this!
 
 	
 	//std::string path = Unvoxeller::File::GetExecutableDir() + "/testvox/monu2.vox"; // Test this!
-	//std::string path = Unvoxeller::File::GetExecutableDir() + "/testvox/room.vox";
+	std::string path = Unvoxeller::File::GetExecutableDir() + "/testvox/room.vox";
 	//std::string output = "testvox/nda/export/Output.fbx";
 	
 	Unvoxeller::Unvoxeller unvox{};
-	//unvox.ExportVoxToModel(path, exportOptions);
+	//auto scene =unvox.ExportVoxToModel(path, exportOptions).Convert;
 	auto scene = unvox.VoxToMem(path, exportOptions.Converting);
 	
 	_renderables = CreateFromGeometry(scene.Scenes);
