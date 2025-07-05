@@ -13,7 +13,10 @@ public:
     void Bind() const;
     // Unbind (bind default framebuffer)
     static void Unbind();
-
+    
+    GLFrameBuffer(const GLFrameBuffer&) = delete;
+    GLFrameBuffer& operator=(const GLFrameBuffer&) = delete;
+    
     // Resize color and depth attachments
     void Resize(s32 width, s32 height);
 

@@ -742,18 +742,25 @@ namespace Unvoxeller
 		VoxellerApp::init();
 	}
 
-	ExportResults Unvoxeller::ExportVoxToModel(const std::string& inVoxPath, const ExportOptions& options)
+	ExportResults Unvoxeller::ExportVoxToModel(const ExportOptions& eOptions, const ConvertOptions& cOptions)
 	{
-		std::shared_ptr<vox_file> voxData = VoxParser::read_vox_file(inVoxPath.c_str());
-		const auto scenes = Run(voxData.get(), options.Converting);
+		if(eOptions.InputPath.empty())
+		{
+			LOG_ERROR("Path is empty");
+
+			return { ConvertMSG::ERROR_EMPTY_PATH };
+		}
+
+		std::shared_ptr<vox_file> voxData = VoxParser::read_vox_file(eOptions.InputPath.c_str());
+		const auto scenes = Run(voxData.get(), cOptions);
 
 		ExportResults results{};
 		std::string imageName = "";
-		std::string baseName = options.OutputPath;
-		const size_t dot = options.OutputPath.find_last_of('.');
+		std::string baseName = eOptions.OutputPath;
+		const size_t dot = eOptions.OutputPath.find_last_of('.');
 		if (dot != std::string::npos)
 		{
-			baseName = options.OutputPath.substr(0, options.OutputPath.find_last_of('.'));
+			baseName = eOptions.OutputPath.substr(0, eOptions.OutputPath.find_last_of('.'));
 		}
 
 		LOG_INFO("About to save texture: {0}", baseName);
@@ -789,10 +796,10 @@ namespace Unvoxeller
 
 		if (scenes.size() > 0)
 		{
-			LOG_INFO("TJuntctions: {0}", options.Converting.Meshing.RemoveTJunctions);
+			LOG_INFO("TJuntctions: {0}", cOptions.Meshing.RemoveTJunctions);
 
 			// TODO: This makes the algorithm freeze when a vox has multiple frames, and is exported as no separated
-			if (options.Converting.Meshing.RemoveTJunctions)
+			if (cOptions.Meshing.RemoveTJunctions)
 			{
 				for (unsigned int m = 0; m < scenes.size(); ++m)
 				{

@@ -6,7 +6,7 @@ namespace Unvoxeller
 	class AssimpSceneWritter : public ExporterBase
 	{
 	public:
-		bool Export(const ExportOptions& options, const std::vector<std::shared_ptr<UnvoxScene>>& scenes) override;
+		bool Export(const ExportOptions& options, const ConvertOptions& cOptions, const std::vector<std::shared_ptr<UnvoxScene>>& scenes) override;
 	private:
 	};
 }

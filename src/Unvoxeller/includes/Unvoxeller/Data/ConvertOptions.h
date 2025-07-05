@@ -9,12 +9,6 @@
 
 namespace Unvoxeller 
 {
-	
-	enum class ModelFormat
-	{
-		FBX, OBJ,
-	};
-
 	struct UNVOXELLER_API PaletteTextureConfig
 	{
 		bool UseColumns = false;

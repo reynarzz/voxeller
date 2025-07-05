@@ -3,12 +3,13 @@
 #include <vector>
 #include <Unvoxeller/Data/ExportOptions.h>
 #include <Unvoxeller/Data/UnvoxScene.h>
+#include <Unvoxeller/Data/ConvertOptions.h>
 
 namespace Unvoxeller
 {
    class ExporterBase
    {
    public:
-      virtual bool Export(const ExportOptions& options, const std::vector<std::shared_ptr<UnvoxScene>>& scenes) = 0;
+      virtual bool Export(const ExportOptions& options, const ConvertOptions& cOptions, const std::vector<std::shared_ptr<UnvoxScene>>& scenes) = 0;
    };
 }

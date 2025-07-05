@@ -38,11 +38,11 @@ namespace Unvoxeller
 		// 	{
 		// 		auto sceneSplit = std::make_shared<UnvoxScene>();
 
-		// 		// — create & initialize the root node —
+		// 		// ï¿½ create & initialize the root node ï¿½
 		// 		sceneSplit->RootNode = std::make_shared<UnvoxNode>();
 		// 		sceneSplit->RootNode->Name = "RootNode";
 		// 		sceneSplit->RootNode->Transform = {};   // identity
-		// 		// ** zero out the root node’s mesh list **
+		// 		// ** zero out the root nodeï¿½s mesh list **
 		// 		sceneSplit->RootNode->MeshesIndexes = {};
 
 		// 		// now attach exactly one child node:
@@ -51,7 +51,7 @@ namespace Unvoxeller
 
 		// 		sceneSplit->RootNode->Children.push_back(child); // Overwrite to set the index to 0
 
-		// 		// — populate the scene’s mesh and material arrays —
+		// 		// ï¿½ populate the sceneï¿½s mesh and material arrays ï¿½
 		// 		sceneSplit->Meshes = { meshes[i].Mesh };
 
 		// 		if (options.Meshing.GenerateMaterials)
@@ -77,7 +77,7 @@ namespace Unvoxeller
 		return {};
 	}
 
-	bool AssimpSceneWritter::Export(const ExportOptions& options, const std::vector<std::shared_ptr<UnvoxScene>>& scenes)
+	bool AssimpSceneWritter::Export(const ExportOptions& options, const ConvertOptions& cOptions, const std::vector<std::shared_ptr<UnvoxScene>>& scenes)
 	{
 		// Determine export format from extension
 		std::string ext = "";
@@ -118,7 +118,7 @@ namespace Unvoxeller
 
 		const u32 dot = static_cast<u32>(options.OutputPath.find_last_of('.'));
 
-		const auto assimpScenes = GetAssimpScene(options.Converting, scenes);
+		const auto assimpScenes = GetAssimpScene(cOptions, scenes);
 
 		for (size_t i = 0; i < assimpScenes.size(); i++)
 		{

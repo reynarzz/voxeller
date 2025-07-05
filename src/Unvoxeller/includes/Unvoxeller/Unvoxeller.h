@@ -22,9 +22,9 @@ namespace Unvoxeller
 		Unvoxeller(const Unvoxeller&) = delete;
 		Unvoxeller& operator=(const Unvoxeller&) = delete;
 		
-		ExportResults ExportVoxToModel(const std::string& inVoxPath, const ExportOptions& options);
+		ExportResults ExportVoxToModel(const ExportOptions& eOptions, const ConvertOptions& cOptions);
 		ExportResults ExportVoxToModel(const char* buffer, int size, const ExportOptions& options);
-
+		
 		ConvertResult VoxToMem(const std::string& inVoxPath, const ConvertOptions& options);
 		ConvertResult VoxToMem(const char* buffer, int size, const ConvertOptions& options);
 

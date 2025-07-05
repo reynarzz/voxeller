@@ -16,11 +16,13 @@ namespace Unvoxeller
 {
     int VoxParser::modelIndex = 0;
     
-    vox_header VoxParser::read_vox_metadata(const char* path) {
+    vox_header VoxParser::read_vox_metadata(const char* path) 
+    {
         std::ifstream voxFile(path, std::ios::binary);
         vox_header header{};
         modelIndex = 0;
-        if (voxFile.is_open()) {
+        if (voxFile.is_open()) 
+        {
             char magic[4];
             int version;
             voxFile.read(magic, 4);
@@ -29,20 +31,24 @@ namespace Unvoxeller
             header.id = magicStr;
             header.version = std::to_string(version);
         }
-        else {
+        else 
+        {
             std::cerr << "Invalid file path: " << path << '\n';
         }
         return header;
     }
 
-    vox_header VoxParser::read_vox_metadata(const void* bytes) {
+    vox_header VoxParser::read_vox_metadata(const void* bytes) 
+    {
         // Not implemented: reading from a memory buffer
         return {};
     }
 
-    std::shared_ptr<vox_file> VoxParser::read_vox_file(const char* path) {
+    std::shared_ptr<vox_file> VoxParser::read_vox_file(const char* path) 
+    {
         std::ifstream voxFile(path, std::ios::binary);
-        if (!voxFile.is_open()) {
+        if (!voxFile.is_open()) 
+        {
             std::cerr << "Invalid file path: " << path << '\n';
             return nullptr;
         }
@@ -77,7 +83,8 @@ namespace Unvoxeller
         voxFile.read(magic, 4);
         voxFile.read(reinterpret_cast<char*>(&version), 4);
         std::string magicStr(magic, 4);
-        if (magicStr != "VOX ") {
+        if (magicStr != "VOX ") 
+        {
             std::cerr << "Invalid .vox file format (magic number not found)\n";
             return vox;
         }

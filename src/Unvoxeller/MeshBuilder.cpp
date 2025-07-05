@@ -192,10 +192,10 @@ namespace Unvoxeller
 		auto i3 = addVertex(x3, y3, z3, nx, ny, nz, u1, v0, face.colorIndex);
 
 		// winding test
-		vox_vec3 P0{ x0,y0,z0 }, P1{ x1,y1,z1 }, P2{ x2,y2,z2 };
-		vox_vec3 triN = cross(P1 - P0, P2 - P0);
-		bool baseIsCCW = (dot(triN, vox_vec3{ nx,ny,nz }) > 0.0f);
-		bool finalIsCCW = shouldInvert ? !baseIsCCW : baseIsCCW;
+		const vox_vec3 P0{ x0,y0,z0 }, P1{ x1,y1,z1 }, P2{ x2,y2,z2 };
+		const vox_vec3 triN = cross(P1 - P0, P2 - P0);
+		const bool baseIsCCW = (dot(triN, vox_vec3{ nx,ny,nz }) > 0.0f);
+		const bool finalIsCCW = shouldInvert ? !baseIsCCW : baseIsCCW;
 
 		if (finalIsCCW)
 		{
@@ -265,18 +265,10 @@ namespace Unvoxeller
 		pos.x += translation.x; pos.y += translation.z; pos.z += translation.y;
 		pos.x = -pos.x;  norm.x = -norm.x;
 
-		// mesh->mVertices[i] = pos;
-		// mesh->mNormals[i] = norm;
-		// mesh->mTextureCoords[0][i] = aiVector3D(verts[i].u, verts[i].v, 0.f);
-
 		mesh->Vertices[i] = pos;
 		mesh->Normals[i] = norm;
 		mesh->UVs[i] = { verts[i].u, verts[i].v };
 	}
-
-	// 5) Build faces
-	// mesh->mNumFaces = (unsigned int)(indices.size() / 3);
-	// mesh->mFaces = new aiFace[mesh->mNumFaces];
 
 	mesh->Faces.resize(static_cast<u32>((indices.size() / 3)));
 
@@ -284,13 +276,6 @@ namespace Unvoxeller
 	{
 		auto& faceOut = mesh->Faces[f];
 		
-		// faceOut.mNumIndices = 3;
-		// faceOut.mIndices = new unsigned int[3] {
-		// 	indices[3 * f + 0],
-		// 		indices[3 * f + 1],
-		// 		indices[3 * f + 2]
-		// };
-
 		faceOut.Indices =
 		{
 			indices[3 * f + 0],

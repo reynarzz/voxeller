@@ -196,32 +196,30 @@ int Init()
 	_imgui->Init(win);
 	
 	Unvoxeller::ExportOptions exportOptions{};
+	Unvoxeller::ConvertOptions convertOptions{};
 	exportOptions.OutputFormat = Unvoxeller::ModelFormat::FBX;
-	exportOptions.Converting.Meshing.RemoveTJunctions = false;
-	exportOptions.Converting.Meshing.WeldVertices = false;
-	exportOptions.Converting.Meshing.FlatShading = false;
-	exportOptions.Converting.Meshing.MaterialPerMesh = true;
-	exportOptions.Converting.Meshing.MeshType = MeshType::Greedy;
-	exportOptions.Converting.Scale = { 1.3f, 1.3f, 1.3f };
-	exportOptions.Converting.Pivots = { { 0.5f, 0.0f, 0.5f } };
-	exportOptions.Converting.ExportFramesSeparatelly = true;
-	exportOptions.Converting.ExportMeshesSeparatelly = false;
+	convertOptions.Meshing.RemoveTJunctions = false;
+	convertOptions.Meshing.WeldVertices = false;
+	convertOptions.Meshing.FlatShading = false;
+	convertOptions.Meshing.MaterialPerMesh = true;
+	convertOptions.Meshing.MeshType = MeshType::Greedy;
+	convertOptions.Scale = { 1.3f, 1.3f, 1.3f };
+	convertOptions.Pivots = { { 0.5f, 0.0f, 0.5f } };
+	convertOptions.ExportFramesSeparatelly = true;
+	convertOptions.ExportMeshesSeparatelly = false;
 
-	exportOptions.Converting.Meshing.GenerateMaterials = true;
-	exportOptions.Converting.Meshing.MeshesToWorldCenter = false;
+	convertOptions.Meshing.GenerateMaterials = true;
+	convertOptions.Meshing.MeshesToWorldCenter = false;
 
 	// Texturing:
-	exportOptions.Converting.Texturing.SeparateTexturesPerMesh = true;
-	exportOptions.Converting.Texturing.TexturesPOT = false;
-	exportOptions.Converting.Texturing.OptimizeTextures = false;
-	exportOptions.Converting.Texturing.TextureType = {};
+	convertOptions.Texturing.SeparateTexturesPerMesh = true;
+	convertOptions.Texturing.TexturesPOT = false;
+	convertOptions.Texturing.OptimizeTextures = false;
+	convertOptions.Texturing.TextureType = {};
 
 	// TODO:
-	exportOptions.Converting.Meshing.RemoveOccludedFaces = false;
+	convertOptions.Meshing.RemoveOccludedFaces = false;
 
-	// V2
-	exportOptions.OutputPath = Unvoxeller::File::GetExecutableDir() + "/testvox/nda/export/Output.fbx";
-	
 	//Chicken_van_2.vox
 	//std::string path = Unvoxeller::File::GetExecutableDir() + "/testvox/nda/Ambulance_1.vox"; // Test this!
 	//std::string path = Unvoxeller::File::GetExecutableDir() + "/testvox/nda/Bus_Green.vox"; // Test this!
@@ -232,9 +230,13 @@ int Init()
 	//std::string path = Unvoxeller::File::GetExecutableDir() + "/testvox/room.vox";
 	//std::string output = "testvox/nda/export/Output.fbx";
 	
+	// V2
+	exportOptions.OutputPath = Unvoxeller::File::GetExecutableDir() + "/testvox/nda/export/Output.fbx";
+	exportOptions.InputPath = path;
+	
 	Unvoxeller::Unvoxeller unvox{};
-	//auto scene =unvox.ExportVoxToModel(path, exportOptions).Convert;
-	auto scene = unvox.VoxToMem(path, exportOptions.Converting);
+	auto scene =unvox.ExportVoxToModel(exportOptions, convertOptions).Convert;
+	//auto scene = unvox.VoxToMem(path, exportOptions.Converting);
 	
 	_renderables = CreateFromGeometry(scene.Scenes);
 	for (auto renderables : _renderables)

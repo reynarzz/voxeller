@@ -11,6 +11,8 @@ namespace Unvoxeller
 	{
 		FAILED,
 		SUCESS,
+		ERROR_EMPTY_PATH,
+		ERROR_FILE_NOT_FOUND_IN_PATH,
 	};
     
 	struct UNVOXELLER_API ConvertResult

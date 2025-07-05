@@ -1,15 +1,19 @@
 #pragma once
 #include <Unvoxeller/api.h>
 #include <Unvoxeller/Types.h>
-#include "ConvertOptions.h"
 #include <string>
 
 namespace Unvoxeller
 {
+	enum class ModelFormat
+	{
+		FBX, OBJ,
+	};
+
 	struct UNVOXELLER_API ExportOptions
 	{
-		ConvertOptions Converting;
-		ModelFormat OutputFormat = ModelFormat::FBX;
+		std::string InputPath;
 		std::string OutputPath;
+		ModelFormat OutputFormat = ModelFormat::FBX;
 	};
 }
