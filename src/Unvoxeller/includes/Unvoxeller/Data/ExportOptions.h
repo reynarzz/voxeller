@@ -13,7 +13,8 @@ namespace Unvoxeller
 	struct UNVOXELLER_API ExportOptions
 	{
 		std::string InputPath;
-		std::string OutputPath;
+		std::string OutputDir;
+		std::string OutputName;
 		ModelFormat OutputFormat = ModelFormat::FBX;
 	};
 }

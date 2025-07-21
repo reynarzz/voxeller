@@ -756,15 +756,8 @@ namespace Unvoxeller
 
 		ExportResults results{};
 		std::string imageName = "";
-		std::string baseName = eOptions.OutputPath;
-		const size_t dot = eOptions.OutputPath.find_last_of('.');
-		if (dot != std::string::npos)
-		{
-			baseName = eOptions.OutputPath.substr(0, eOptions.OutputPath.find_last_of('.'));
-		}
 
-		LOG_INFO("About to save texture: {0}", baseName);
-
+		LOG_INFO("About to save texture: {0}", eOptions.OutputName);
 
 		for (const auto& scene : scenes)
 		{
@@ -773,8 +766,8 @@ namespace Unvoxeller
 			for (size_t i = 0; i < scene->Textures.size(); i++)
 			{
 				const auto& textureData = scene->Textures[i];
-				imageName = baseName + (isMultiTexture ? "_" + std::to_string(i) : "") + "_atlas.png";
-				SaveAtlasImage(imageName, textureData->Width, textureData->Height, textureData->Buffer);
+				imageName = eOptions.OutputName + (isMultiTexture ? "_" + std::to_string(i) : "") + "_atlas.png";
+				SaveAtlasImage(eOptions.OutputDir + "/" + imageName, textureData->Width, textureData->Height, textureData->Buffer);
 			}
 		}
 
@@ -814,11 +807,6 @@ namespace Unvoxeller
 
 			// TODO: fix assimp exporter
 			_assimpWriter->Export(eOptions, cOptions, scenes);
-
-			// for (size_t i = 0; i < scenes.size(); i++)
-			// {
-			//     delete scenes[i];
-			// }
 
 			results.Convert.Scenes = scenes;
 

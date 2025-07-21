@@ -197,7 +197,6 @@ int Init()
 	
 	Unvoxeller::ExportOptions exportOptions{};
 	Unvoxeller::ConvertOptions convertOptions{};
-	exportOptions.OutputFormat = Unvoxeller::ModelFormat::FBX;
 	convertOptions.Meshing.RemoveTJunctions = false;
 	convertOptions.Meshing.WeldVertices = false;
 	convertOptions.Meshing.FlatShading = false;
@@ -231,11 +230,13 @@ int Init()
 	//std::string output = "testvox/nda/export/Output.fbx";
 	
 	// V2
-	exportOptions.OutputPath = Unvoxeller::File::GetExecutableDir() + "/testvox/nda/export/Output.fbx";
+	exportOptions.OutputDir = Unvoxeller::File::GetExecutableDir() + "/testvox/nda/export";
+	exportOptions.OutputName = "Output";
 	exportOptions.InputPath = path;
+	exportOptions.OutputFormat = Unvoxeller::ModelFormat::OBJ;
 	
 	Unvoxeller::Unvoxeller unvox{};
-	auto scene =unvox.ExportVoxToModel(exportOptions, convertOptions).Convert;
+	auto scene = unvox.ExportVoxToModel(exportOptions, convertOptions).Convert;
 	//auto scene = unvox.VoxToMem(path, exportOptions.Converting);
 	
 	_renderables = CreateFromGeometry(scene.Scenes);

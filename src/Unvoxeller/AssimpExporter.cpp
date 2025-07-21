@@ -42,7 +42,7 @@ namespace Unvoxeller
 		if (!options.ExportMeshesSeparatelly)
 		{
 			auto sceneOut = new aiScene();
-			
+
 			// � create & initialize the root node �
 			sceneOut->mRootNode = new aiNode();
 			sceneOut->mRootNode->mName = "RootNode";
@@ -100,13 +100,11 @@ namespace Unvoxeller
 					const auto& uv = mesh->UVs[i];
 					meshOut->mTextureCoords[0][i] = { uv.x, uv.y, 0 };
 				}
-			}
 
-			scenesOut[i] = sceneOut;
-
-			if (options.Meshing.GenerateMaterials)
+				if (options.Meshing.GenerateMaterials)
 				{
-					const aiString texPath(name);//(meshes[i].imageName);
+					const aiString texPath("Output.png");//(scene->Textures[scene->Materials[mesh->MaterialIndex]->TextureIndex]->Name.data());
+					
 					aiMaterial* mat = new aiMaterial();
 					mat->AddProperty(&texPath, AI_MATKEY_TEXTURE(aiTextureType_DIFFUSE, 0));
 
@@ -119,7 +117,9 @@ namespace Unvoxeller
 					sceneOut->mNumMaterials = 0;
 					sceneOut->mMaterials = nullptr;
 				}
+			}
 
+			scenesOut[i] = sceneOut;
 		}
 		}
 
@@ -165,16 +165,13 @@ namespace Unvoxeller
 
 		u32 preprocess = 0;
 
-		const u32 dot = static_cast<u32>(options.OutputPath.find_last_of('.'));
-		const std::string sceneName = options.OutputPath.substr(0, dot);
-
-		const auto assimpScenes = GetAssimpScene(sceneName, cOptions, scenes);
+		const auto assimpScenes = GetAssimpScene(options.OutputName, cOptions, scenes);
 
 		for (size_t i = 0; i < assimpScenes.size(); i++)
 		{
-			const std::string convertedOutName = options.OutputPath.substr(0, dot) + (assimpScenes.size() > 1 ? "_" + std::to_string(i) : "");
+			const std::string convertedOutName = options.OutputName + (assimpScenes.size() > 1 ? "_" + std::to_string(i) : "");
 
-			const std::string outPath = convertedOutName + "." + ext;
+			const std::string outPath = options.OutputDir + "/" + convertedOutName + "." + ext;
 			LOG_INFO("Export begin: '{0}'", convertedOutName);
 			//--scene->RootNode->Transform = scaleMat * scene->RootNode->Transform;
 
