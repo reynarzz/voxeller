@@ -3,7 +3,7 @@
 namespace Unvoxeller
 {
     // Build the actual geometry (vertices and indices) for a mesh from the FaceRect list and a given texture atlas configuration.
- std::shared_ptr<UnvoxMesh> MeshBuilder::BuildMeshFromFaces(
+std::shared_ptr<UnvoxMesh> MeshBuilder::BuildMeshFromFaces(
         const std::vector<FaceRect>& faces,
         int texWidth, int texHeight,
         bool flatShading,

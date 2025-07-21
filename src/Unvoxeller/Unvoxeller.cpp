@@ -813,7 +813,7 @@ namespace Unvoxeller
 			}
 
 			// TODO: fix assimp exporter
-			//--_assimpWriter->ExportScenes(options, scenes);
+			_assimpWriter->Export(eOptions, cOptions, scenes);
 
 			// for (size_t i = 0; i < scenes.size(); i++)
 			// {
