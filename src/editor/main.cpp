@@ -236,8 +236,8 @@ int Init()
 	exportOptions.OutputFormat = Unvoxeller::ModelFormat::OBJ;
 	
 	Unvoxeller::Unvoxeller unvox{};
-	auto scene = unvox.ExportVoxToModel(exportOptions, convertOptions).Convert;
-	//auto scene = unvox.VoxToMem(path, exportOptions.Converting);
+	//unvox.ExportVoxToModel(exportOptions, convertOptions);
+	auto scene = unvox.VoxToMem(path, convertOptions);
 	
 	_renderables = CreateFromGeometry(scene.Scenes);
 	for (auto renderables : _renderables)

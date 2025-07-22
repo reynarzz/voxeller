@@ -8,7 +8,7 @@ namespace Unvoxeller
 {
 	struct UNVOXELLER_API ExportResults
     {
-        ConvertResult Convert = {};
+        ConvertMSG Msg;
         std::string OutPath = "";
     };
 }

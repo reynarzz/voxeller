@@ -770,7 +770,7 @@ namespace Unvoxeller
 				SaveAtlasImage(eOptions.OutputDir + "/" + imageName, textureData->Width, textureData->Height, textureData->Buffer);
 			}
 		}
-
+		
 		LOG_INFO("Textures saved");
 
 		// Export this scene
@@ -806,15 +806,15 @@ namespace Unvoxeller
 			}
 
 			// TODO: fix assimp exporter
-			_assimpWriter->Export(eOptions, cOptions, scenes);
+			if(_assimpWriter->Export(eOptions, cOptions, scenes))
+			{
+				results.Msg = ConvertMSG::SUCESS;
+			}
 
-			results.Convert.Scenes = scenes;
-
-			results.Convert.Msg = ConvertMSG::SUCESS;
 		}
 		else
 		{
-			results.Convert.Msg = ConvertMSG::FAILED;
+			results.Msg = ConvertMSG::FAILED;
 		}
 
 		return results;

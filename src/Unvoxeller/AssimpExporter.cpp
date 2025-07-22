@@ -150,6 +150,9 @@ namespace Unvoxeller
 		for (size_t i = 0; i < exporter.GetExportFormatCount(); ++i) 
 		{
 			const aiExportFormatDesc* fmt = exporter.GetExportFormatDescription(i);
+
+			LOG_INFO("- {0}", fmt->fileExtension);
+
 			if (fmt && fmt->fileExtension == ext) 
 			{
 				selectedFormat = fmt;
