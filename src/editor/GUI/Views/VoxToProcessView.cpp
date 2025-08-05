@@ -17,11 +17,13 @@
 #include <imgui/imgui_internal.h>
 #include <GUI/VoxGUI.h>
 #include <Rendering/Camera.h> // Remove this
+#include <Unvoxeller/Unvoxeller.h>
 
 
 std::shared_ptr<Texture> blackImage = nullptr;
 static std::vector<VOXFileToProcessData> _testVoxFiles{};
-
+static Unvoxeller::Unvoxeller unvox{};
+ 
 // Icons
 std::shared_ptr<Texture> _trashIcon = nullptr;
 std::shared_ptr<Texture> _addFileIcon = nullptr;
@@ -48,6 +50,45 @@ s32 selectedIndex = 0;
 f32 donuFill = 0;
 std::string searchBar = "";
 
+static std::string GetFileName(const std::string& fullPath)
+{
+	const s32 start = fullPath.find_last_of("/")+1;
+	return fullPath.substr(start, fullPath.find_last_of(".") - start);
+}
+
+static std::string GetFileExtension(const std::string& fullPath)
+{
+	return fullPath.substr(fullPath.find_last_of(".")+1);
+}
+
+static Unvoxeller::ConvertOptions GetConvertOptions()
+{
+	Unvoxeller::ConvertOptions convertOptions{};
+	convertOptions.Meshing.RemoveTJunctions = false;
+	convertOptions.Meshing.WeldVertices = false;
+	convertOptions.Meshing.FlatShading = false;
+	convertOptions.Meshing.MaterialPerMesh = true;
+	convertOptions.Meshing.MeshType = MeshType::Greedy;
+	convertOptions.Scale = { 1.3f, 1.3f, 1.3f };
+	convertOptions.Pivots = { { 0.5f, 0.0f, 0.5f } };
+	convertOptions.ExportFramesSeparatelly = true;
+	convertOptions.ExportMeshesSeparatelly = false;
+
+	convertOptions.Meshing.GenerateMaterials = true;
+	convertOptions.Meshing.MeshesToWorldCenter = false;
+
+	// Texturing:
+	convertOptions.Texturing.SeparateTexturesPerMesh = false;
+	convertOptions.Texturing.TexturesPOT = false;
+	convertOptions.Texturing.OptimizeTextures = false;
+	convertOptions.Texturing.TextureType = {};
+
+	// TODO:
+	convertOptions.Meshing.RemoveOccludedFaces = false;
+
+	return convertOptions;
+	
+}
 
 VoxToProcessView::VoxToProcessView()
 {
@@ -73,7 +114,7 @@ VoxToProcessView::VoxToProcessView()
 	}
 
 	LOG_INFO("Initialize icons");
-	_testVoxFiles.resize(30);
+	//_testVoxFiles.resize(30);
 }
 
 void VoxToProcessView::OnShowView()
@@ -243,10 +284,42 @@ void ExportWin()
 
 	ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(spacing, 0));
 	ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(spacing, 0));
-	VoxGUI::Button("Build", TextAlign::Center, { buttonDownWidth, buttonDOwnHeight }, IM_COL32(65, 105, 255, 255), IM_COL32(255, 255, 255, 255), 10, ImDrawFlags_RoundCornersAll);
+	const bool isBuild = VoxGUI::Button("Build", TextAlign::Center, { buttonDownWidth, buttonDOwnHeight }, IM_COL32(65, 105, 255, 255), IM_COL32(255, 255, 255, 255), 10, ImDrawFlags_RoundCornersAll);
+
+	if(isBuild)
+	{
+		const Unvoxeller::ConvertOptions cOptions = GetConvertOptions();
+
+		for (const auto& fileInfo : _testVoxFiles)
+		{
+			if(!fileInfo.Enabled)
+			{	
+				LOG_INFO("Disabled file: '{0}', Not exported.", fileInfo.FileName);
+				continue;
+			}
+			Unvoxeller::ExportOptions exportOptions{};
+				
+			//Chicken_van_2.vox
+			//std::string path = Unvoxeller::File::GetExecutableDir() + "/testvox/nda/Ambulance_1.vox"; // Test this!
+			//std::string path = Unvoxeller::File::GetExecutableDir() + "/testvox/nda/Bus_Green.vox"; // Test this!
+			//std::string path = Unvoxeller::File::GetExecutableDir() + "/testvox/nda/Chicken_van_3.vox"; // Test this!
+
+			
+			//std::string path = Unvoxeller::File::GetExecutableDir() + "/testvox/chr_knight.vox"; // Test this!
+			//std::string path = Unvoxeller::File::GetExecutableDir() + "/testvox/room.vox";
+			//std::string output = "testvox/nda/export/Output.fbx";
+			
+			// V2
+			exportOptions.OutputDir = Unvoxeller::File::GetExecutableDir() + "/testvox/nda/export";
+			exportOptions.OutputName = fileInfo.FileName;
+			exportOptions.InputPath = fileInfo.FullPath;
+			exportOptions.OutputFormat = Unvoxeller::ModelFormat::OBJ;
+			
+			unvox.ExportVoxToModel(exportOptions, cOptions);
+		}
+	}
 
 	ImGui::PopStyleVar(2);
-
 
 	ImGui::End();
 
@@ -319,6 +392,7 @@ void VoxToProcessView::UpdateGUI()
 			// Scroll only this list
 			f32 defCursor = ImGui::GetCursorPosX();
 
+			s32 deletedIndex = -1;
 			for (int i = 0; i < _testVoxFiles.size(); ++i)
 			{
 				auto& voxFile = _testVoxFiles[i];
@@ -347,7 +421,12 @@ void VoxToProcessView::UpdateGUI()
 				ImGui::SameLine();
 				ImGui::SetCursorPosX(ImGui::GetWindowSize().x - 30);
 
-				VoxGUI::ImageButton(std::string("##_Delete_Vox_" + std::to_string(i)).c_str(), TEXTURE_TO_IMGUI2(_trashIcon), { 19, 19 }, { 1,1,1,1 }, { 1,1,1,1 }, { 1,1,1,0.5f });
+				const bool isDeleted = VoxGUI::ImageButton(std::string("##_Delete_Vox_" + std::to_string(i)).c_str(), TEXTURE_TO_IMGUI2(_trashIcon), { 19, 19 }, { 1,1,1,1 }, { 1,1,1,1 }, { 1,1,1,0.5f });
+
+				if(isDeleted)
+				{
+					deletedIndex = i;
+				}
 
 				//ImGui::Image(TEXTURE_TO_IMGUI(_trashIcon), {20, 20});
 				//VoxGUI::Button(std::string("T##D" + std::to_string(i)).c_str(), TextAlign::Center, {20, 20}, IM_COL32(255, 05, 55, 255), IM_COL32(255, 255, 255, 255), 10, ImDrawFlags_RoundCornersAll);
@@ -363,6 +442,11 @@ void VoxToProcessView::UpdateGUI()
 					currentSelection = i;
 					// your on‐select logic…
 				}
+			}
+
+			if(deletedIndex >= 0)
+			{
+				_testVoxFiles.erase(_testVoxFiles.begin()+deletedIndex);
 			}
 		}, childSize, _windowsRound, IM_COL32(25, 25, 25, 255));
 
@@ -386,16 +470,32 @@ void VoxToProcessView::UpdateGUI()
 	ImGui::SetCursorPosX(ImGui::GetWindowSize().x / 2.0 - buttonDownWidth);
 	//bool pressed = VoxGUI::Button("+", TextAlign::Center, { buttonUpWidth, buttonUpHeight }, IM_COL32(65, 105, 255, 255), IM_COL32(255, 255, 255, 255), 20, ImDrawFlags_RoundCornersAll);
 	bool pressed = VoxGUI::ImageButton("_OPEN_VOX_FILE", TEXTURE_TO_IMGUI2(_addFileIcon), { 22, 22 }, { 1,1,1,1 }, { 1,1,1,1 }, { 1,1,1,0.5f });
-
+	
 	if (pressed)
 	{
 		auto selectedFiles = FileDialog::OpenFiles("", { { "Voxels", "vox"} });
 
-		for (auto txt : selectedFiles)
+		for (auto fullPath : selectedFiles)
 		{
-			LOG_INFO(txt);
-		}
+			auto it = std::find_if(_testVoxFiles.begin(), _testVoxFiles.end(), [&](const VOXFileToProcessData& item) {return item.FullPath == fullPath;});
 
+			if(it == _testVoxFiles.end())
+			{	
+				VOXFileToProcessData dataFile{};
+				dataFile.Enabled = true;
+				dataFile.UseCustomConfig = false;
+				dataFile.FileName = GetFileName(fullPath);
+				dataFile.FullPath = fullPath;
+				dataFile.Extension = GetFileExtension(fullPath);
+				_testVoxFiles.push_back(dataFile);
+				
+				LOG_INFO("Selected files: {0}", fullPath);
+			}
+			else
+			{
+				LOG_WARN("Already added: {0}", GetFileName(fullPath));
+			}
+		}
 	}
 
 	ImGui::SameLine();

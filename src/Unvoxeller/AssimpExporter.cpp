@@ -91,7 +91,8 @@ namespace Unvoxeller
 					const auto& face = mesh->Faces[i];
 					aiFace oFace;
 					oFace.mNumIndices = static_cast<u32>(face.Indices.size());
-					oFace.mIndices = const_cast<u32*>(face.Indices.data());
+					oFace.mIndices = new u32[face.Indices.size()];
+					std::copy(face.Indices.begin(), face.Indices.end(), oFace.mIndices);
 					meshOut->mFaces[i] = oFace;
 				}
 

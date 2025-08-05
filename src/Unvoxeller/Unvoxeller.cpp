@@ -32,7 +32,6 @@ namespace Unvoxeller
 
 	Unvoxeller::~Unvoxeller()
 	{
-
 	}
 
 	static vox_mat3 decode_rotation(uint8_t r)
@@ -736,7 +735,7 @@ namespace Unvoxeller
 
 		return {};
 	}
-
+	
 	void VoxellerInit()
 	{
 		VoxellerApp::init();
@@ -769,7 +768,7 @@ namespace Unvoxeller
 				imageName = eOptions.OutputName + (isMultiTexture ? "_" + std::to_string(i) : "") + "_atlas.png";
 				SaveAtlasImage(eOptions.OutputDir + "/" + imageName, textureData->Width, textureData->Height, textureData->Buffer);
 			}
-		}
+		}	
 		
 		LOG_INFO("Textures saved");
 

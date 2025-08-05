@@ -4,8 +4,13 @@
 
 namespace Unvoxeller
 {
-    template<typename K, typename V>
     class FactoryBase
+    {
+
+    };
+
+    template<typename K, typename V>
+    class FactoryBase_T : public FactoryBase
     {
     public:
         virtual V Get(const K& key)
@@ -24,4 +29,5 @@ namespace Unvoxeller
     protected:
         std::unordered_map<K, V> Elements;
     };
+
 }

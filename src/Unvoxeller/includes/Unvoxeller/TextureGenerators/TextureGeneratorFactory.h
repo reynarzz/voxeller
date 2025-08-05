@@ -5,10 +5,9 @@
 
 namespace Unvoxeller
 {
-    class TextureGeneratorFactory : public FactoryBase<TextureType, std::shared_ptr<TextureGeneratorBase>>
+    class TextureGeneratorFactory : public FactoryBase_T<TextureType, std::shared_ptr<TextureGeneratorBase>>
     {
     public:
         TextureGeneratorFactory();
-
     };
 }

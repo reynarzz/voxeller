@@ -6,7 +6,7 @@
 
 namespace Unvoxeller
 {
-    class MesherFactory : public FactoryBase<MeshType, std::shared_ptr<MesherBase>>
+    class MesherFactory : public FactoryBase_T<MeshType, std::shared_ptr<MesherBase>>
     {
     public:
         MesherFactory();
