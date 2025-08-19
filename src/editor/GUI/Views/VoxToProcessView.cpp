@@ -85,9 +85,9 @@ static Unvoxeller::ConvertOptions GetConvertOptions()
 
 	// TODO:
 	convertOptions.Meshing.RemoveOccludedFaces = false;
+	convertOptions.Meshing.MergeMeshes = false;
 
 	return convertOptions;
-	
 }
 
 VoxToProcessView::VoxToProcessView()
@@ -288,6 +288,12 @@ void ExportWin()
 
 	if(isBuild)
 	{
+
+		if(_testVoxFiles.size() == 0)
+		{
+			LOG_WARN("Nothing to build");
+		}
+
 		const Unvoxeller::ConvertOptions cOptions = GetConvertOptions();
 
 		for (const auto& fileInfo : _testVoxFiles)
@@ -299,30 +305,18 @@ void ExportWin()
 			}
 			Unvoxeller::ExportOptions exportOptions{};
 				
-			//Chicken_van_2.vox
-			//std::string path = Unvoxeller::File::GetExecutableDir() + "/testvox/nda/Ambulance_1.vox"; // Test this!
-			//std::string path = Unvoxeller::File::GetExecutableDir() + "/testvox/nda/Bus_Green.vox"; // Test this!
-			//std::string path = Unvoxeller::File::GetExecutableDir() + "/testvox/nda/Chicken_van_3.vox"; // Test this!
-
-			
-			//std::string path = Unvoxeller::File::GetExecutableDir() + "/testvox/chr_knight.vox"; // Test this!
-			//std::string path = Unvoxeller::File::GetExecutableDir() + "/testvox/room.vox";
-			//std::string output = "testvox/nda/export/Output.fbx";
-			
 			// V2
 			exportOptions.OutputDir = Unvoxeller::File::GetExecutableDir() + "/testvox/nda/export";
 			exportOptions.OutputName = fileInfo.FileName;
 			exportOptions.InputPath = fileInfo.FullPath;
-			exportOptions.OutputFormat = Unvoxeller::ModelFormat::OBJ;
+			exportOptions.OutputFormat = static_cast<Unvoxeller::ModelFormat>(selectedIndex);
 			
 			unvox.ExportVoxToModel(exportOptions, cOptions);
 		}
 	}
 
 	ImGui::PopStyleVar(2);
-
 	ImGui::End();
-
 	ImGui::PopStyleVar(2);
 	ImGui::PopStyleColor(2);
 }

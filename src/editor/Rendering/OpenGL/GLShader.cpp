@@ -56,7 +56,7 @@ GLShader::GLShader(const ShaderDescriptor* desc)
     glDeleteShader(vertId);
     glDeleteShader(fragId);
 
-    // uniforms locations will enforce these names.
+    // uniforms locations will enforce these names, not ideal in most apps, but since we will be rendering geometries that will use these, is not too 'bad'
     _locations.MVPLoc = glGetUniformLocation(_id, "_MVP_");
     _locations.MODELLoc = glGetUniformLocation(_id, "_MODEL_");
     _locations.lightDirLoc = glGetUniformLocation(_id, "_LIGHT_DIR_");

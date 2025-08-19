@@ -241,17 +241,22 @@ std::shared_ptr<UnvoxMesh> MeshBuilder::BuildMeshFromFaces(
 	{
 		// recenter → rotate → swizzle → translate → mirror (exactly as before)
 		float x = verts[i].px - pivot.x,
-			y = verts[i].py - pivot.y,
-			z = verts[i].pz - pivot.z;
+			  y = verts[i].py - pivot.y,
+			  z = verts[i].pz - pivot.z;
+			  
 		float nx = verts[i].nx,
-			ny = verts[i].ny,
-			nz = verts[i].nz;
+			  ny = verts[i].ny,
+			  nz = verts[i].nz;
 
 		// apply rotation to pos & normal...
 		float tx = rotation.m00 * x + rotation.m01 * y + rotation.m02 * z;
 		float ty = rotation.m10 * x + rotation.m11 * y + rotation.m12 * z;
 		float tz = rotation.m20 * x + rotation.m21 * y + rotation.m22 * z;
-		x = tx; y = ty; z = tz;
+		
+		x = tx; 
+		y = ty; 
+		z = tz;
+
 		tx = rotation.m00 * nx + rotation.m01 * ny + rotation.m02 * nz;
 		ty = rotation.m10 * nx + rotation.m11 * ny + rotation.m12 * nz;
 		tz = rotation.m20 * nx + rotation.m21 * ny + rotation.m22 * nz;
@@ -262,8 +267,12 @@ std::shared_ptr<UnvoxMesh> MeshBuilder::BuildMeshFromFaces(
 		vox_vec3 norm{ nx, nz, ny };
 
 		// translation w/ Y⇄Z swap, then un-mirror X
-		pos.x += translation.x; pos.y += translation.z; pos.z += translation.y;
-		pos.x = -pos.x;  norm.x = -norm.x;
+		pos.x += translation.x; 
+		pos.y += translation.z; 
+		pos.z += translation.y;
+
+		pos.x = -pos.x;  
+		norm.x = -norm.x;
 
 		mesh->Vertices[i] = pos;
 		mesh->Normals[i] = norm;

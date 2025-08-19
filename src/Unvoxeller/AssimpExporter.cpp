@@ -52,13 +52,13 @@ namespace Unvoxeller
 			sceneOut->mNumMeshes = scene->Meshes.size();
 			sceneOut->mMeshes = new aiMesh*[scene->Meshes.size()];
 			
+			std::vector<aiNode*> nodes{};
 			for (size_t i = 0; i < scene->Meshes.size(); i++)
 			{
 				auto child = new aiNode();
 				child->mNumMeshes = 1;
-				sceneOut->mRootNode->addChildren(1, &child); // Overwrite to set the index to 0
 				child->mMeshes = new u32[1] { static_cast<u32>(i) };
-
+				nodes.push_back(child);
 				const auto mesh = scene->Meshes[i];
 
 				aiMesh* meshOut = new aiMesh();
@@ -104,7 +104,7 @@ namespace Unvoxeller
 
 				if (options.Meshing.GenerateMaterials)
 				{
-					const aiString texPath("Output.png");//(scene->Textures[scene->Materials[mesh->MaterialIndex]->TextureIndex]->Name.data());
+					const aiString texPath((name + ".png"));//(scene->Textures[scene->Materials[mesh->MaterialIndex]->TextureIndex]->Name.data());
 					
 					aiMaterial* mat = new aiMaterial();
 					mat->AddProperty(&texPath, AI_MATKEY_TEXTURE(aiTextureType_DIFFUSE, 0));
@@ -119,6 +119,8 @@ namespace Unvoxeller
 					sceneOut->mMaterials = nullptr;
 				}
 			}
+
+			sceneOut->mRootNode->addChildren(nodes.size(), std::move(nodes.data())); // Overwrite to set the index to 0
 
 			scenesOut[i] = sceneOut;
 		}

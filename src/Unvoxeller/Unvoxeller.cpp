@@ -765,7 +765,7 @@ namespace Unvoxeller
 			for (size_t i = 0; i < scene->Textures.size(); i++)
 			{
 				const auto& textureData = scene->Textures[i];
-				imageName = eOptions.OutputName + (isMultiTexture ? "_" + std::to_string(i) : "") + "_atlas.png";
+				imageName = eOptions.OutputName + (isMultiTexture ? "_" + std::to_string(i) : "") + ".png";
 				SaveAtlasImage(eOptions.OutputDir + "/" + imageName, textureData->Width, textureData->Height, textureData->Buffer);
 			}
 		}	
