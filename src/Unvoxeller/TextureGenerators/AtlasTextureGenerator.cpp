@@ -178,32 +178,32 @@ void AtlasTextureGenerator::GenerateAtlasImage(s32 texWidth,
 				int vx, vy, vz;
 				switch (face.orientation) 
 				{
-				case 'X': // +X face: plane at x+1, u→Z, v→Y
+				case Orientation::PosX: // +X face: plane at x+1, u→Z, v→Y
 					vx = face.constantCoord - 1;
 					vy = face.vMin + iy;
 					vz = face.uMin + ix;
 					break;
-				case 'x': // -X face: plane at x,  u→←Z, v→Y
+				case Orientation::NegX: // -X face: plane at x,  u→←Z, v→Y
 					vx = face.constantCoord;
 					vy = face.vMin + iy;
 					vz = face.uMin + (w - 1 - ix);
 					break;
-				case 'Y': // +Y face: plane at y+1, u→X, v→Z
+				case Orientation::PosY: // +Y face: plane at y+1, u→X, v→Z
 					vx = face.uMin + ix;
 					vy = face.constantCoord - 1;
 					vz = face.vMin + iy;
 					break;
-				case 'y': // -Y face: plane at y,  u→X, v→←Z
+				case Orientation::NegY: // -Y face: plane at y,  u→X, v→←Z
 					vx = face.uMin + ix;
 					vy = face.constantCoord;
 					vz = face.vMin + (h - 1 - iy);
 					break;
-				case 'Z': // +Z face: plane at z+1, u→X, v→Y
+				case Orientation::PosZ: // +Z face: plane at z+1, u→X, v→Y
 					vx = face.uMin + ix;
 					vy = face.vMin + iy;
 					vz = face.constantCoord - 1;
 					break;
-				case 'z': // -Z face: plane at z,  u→←X, v→Y
+				case Orientation::NegZ: // -Z face: plane at z,  u→←X, v→Y
 					vx = face.uMin + (w - 1 - ix);
 					vy = face.vMin + iy;
 					vz = face.constantCoord;

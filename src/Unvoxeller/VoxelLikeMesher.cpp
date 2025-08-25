@@ -21,7 +21,7 @@ namespace Unvoxeller
 	};
 
 	// one 2D sweep over a “mask” of size U×V at depth w
-	auto sweep = [&](char orient,
+	auto sweep = [&](Orientation orient,
 		int dimU, int dimV, int dimW,
 		auto mapUVtoXYZ_face,   // (u,v,w)->(x,y,z) of the face‐voxel
 		auto mapUVtoXYZ_adj,    // (u,v,w)->(x,y,z) of the neighbor
@@ -102,7 +102,7 @@ namespace Unvoxeller
 		};
 
 	// +X faces: at voxel (x,y,z) looking +X, UV=(z,y)
-	sweep('X',
+	sweep(Orientation::PosX,
 		/*U=Z*/Z, /*V=Y*/Y, /*W=X*/X,
 		/*face*/ [](int z, int y, int x) { return std::tuple{ x,y,z }; },
 		/*adj */ [](int z, int y, int x) { return std::tuple{ x + 1,y,z }; },
@@ -110,35 +110,35 @@ namespace Unvoxeller
 	);
 
 	// -X faces: UV=(z,y)
-	sweep('x', Z, Y, X,
+	sweep(Orientation::NegX, Z, Y, X,
 		[](int z, int y, int x) { return std::tuple{ x,y,z };      },
 		[](int z, int y, int x) { return std::tuple{ x - 1,y,z };    },
 		[](int z, int y, int x) { return x; }
 	);
 
 	// +Y: UV=(x,z)
-	sweep('Y', X, Z, Y,
+	sweep(Orientation::PosY, X, Z, Y,
 		[](int x, int z, int y) { return std::tuple{ x,y,z };    },
 		[](int x, int z, int y) { return std::tuple{ x,y + 1,z };  },
 		[](int x, int z, int y) { return y + 1; }
 	);
 
 	// -Y: UV=(x,z)
-	sweep('y', X, Z, Y,
+	sweep(Orientation::NegY, X, Z, Y,
 		[](int x, int z, int y) { return std::tuple{ x,y,z };    },
 		[](int x, int z, int y) { return std::tuple{ x,y - 1,z };  },
 		[](int x, int z, int y) { return y; }
 	);
 
 	// +Z: UV=(x,y)
-	sweep('Z', X, Y, Z,
+	sweep(Orientation::PosZ, X, Y, Z,
 		[](int x, int y, int z) { return std::tuple{ x,y,z };    },
 		[](int x, int y, int z) { return std::tuple{ x,y,z + 1 };  },
 		[](int x, int y, int z) { return z + 1; }
 	);
 
 	// -Z: UV=(x,y)
-	sweep('z', X, Y, Z,
+	sweep(Orientation::NegZ, X, Y, Z,
 		[](int x, int y, int z) { return std::tuple{ x,y,z };    },
 		[](int x, int y, int z) { return std::tuple{ x,y,z - 1 };  },
 		[](int x, int y, int z) { return z; }

@@ -11,8 +11,8 @@
 #include <GLFW/glfw3native.h>
 
 // Static callback storage
-DropAndDrop::DropCallback DropAndDrop::dropCallback = nullptr;
-DropAndDrop::HoverCallback DropAndDrop::hoverCallback = nullptr;
+DragAndDrop::DropCallback DragAndDrop::dropCallback = nullptr;
+DragAndDrop::HoverCallback DragAndDrop::hoverCallback = nullptr;
 
 static HWND        g_hwnd = nullptr;
 static IDropTarget* g_dropTarget = nullptr;
@@ -55,11 +55,11 @@ public:
 	}
 	HRESULT __stdcall DragOver(DWORD /*key*/, POINTL pt, DWORD* effect) override
 	{
-		if (DropAndDrop::hoverCallback && (pt.x != g_lastX || pt.y != g_lastY))
+		if (DragAndDrop::hoverCallback && (pt.x != g_lastX || pt.y != g_lastY))
 		{
 			g_lastX = pt.x;
 			g_lastY = pt.y;
-			DropAndDrop::hoverCallback({ pt.x, pt.y });
+			DragAndDrop::hoverCallback({ pt.x, pt.y });
 		}
 		*effect = DROPEFFECT_COPY;
 
@@ -91,8 +91,8 @@ public:
 		GlobalUnlock(stg.hGlobal);
 		ReleaseStgMedium(&stg);
 
-		if (DropAndDrop::dropCallback) {
-			DropAndDrop::dropCallback({ paths, pt.x, pt.y });
+		if (DragAndDrop::dropCallback) {
+			DragAndDrop::dropCallback({ paths, pt.x, pt.y });
 		}
 		*effect = DROPEFFECT_COPY;
 		return S_OK;
@@ -100,7 +100,7 @@ public:
 };
 
 //-----------------------------------------------------------------------------
-void DropAndDrop::Initialize(void* glfwWindow)
+void DragAndDrop::Initialize(void* glfwWindow)
 {
 	g_hwnd = glfwGetWin32Window(static_cast<GLFWwindow*>(glfwWindow));
 	if (!g_hwnd) return;
@@ -116,7 +116,7 @@ void DropAndDrop::Initialize(void* glfwWindow)
 	RegisterDragDrop(g_hwnd, g_dropTarget);
 }
 
-void DropAndDrop::Shutdown()
+void DragAndDrop::Shutdown()
 {
 	if (g_hwnd && g_dropTarget)
 	{
@@ -129,12 +129,12 @@ void DropAndDrop::Shutdown()
 	g_lastX = g_lastY = -1;
 }
 
-void DropAndDrop::SetDropCallback(DropCallback cb)
+void DragAndDrop::SetDropCallback(DropCallback cb)
 {
 	dropCallback = std::move(cb);
 }
 
-void DropAndDrop::SetHoverCallback(HoverCallback cb)
+void DragAndDrop::SetHoverCallback(HoverCallback cb)
 {
 	hoverCallback = std::move(cb);
 }

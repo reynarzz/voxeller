@@ -127,14 +127,14 @@ std::shared_ptr<UnvoxMesh> MeshBuilder::BuildMeshFromFaces(
 		float x0, y0, z0, x1, y1, z1, x2, y2, z2, x3, y3, z3;
 		switch (face.orientation) 
 		{
-		case 'X':
+		case Orientation::PosX:
 			nx = +1;
 			x0 = face.constantCoord; y0 = face.vMin; z0 = face.uMin;
 			x1 = face.constantCoord; y1 = face.vMax; z1 = face.uMin;
 			x2 = face.constantCoord; y2 = face.vMax; z2 = face.uMax;
 			x3 = face.constantCoord; y3 = face.vMin; z3 = face.uMax;
 			break;
-		case 'x':
+		case Orientation::NegX:
 			nx = -1;
 			{
 				float f = face.constantCoord, zmin = face.uMin, zmax = face.uMax;
@@ -145,14 +145,14 @@ std::shared_ptr<UnvoxMesh> MeshBuilder::BuildMeshFromFaces(
 				x3 = f; y3 = face.vMin; z3 = zmax;
 			}
 			break;
-		case 'Y':
+		case Orientation::PosY:
 			ny = +1;
 			x0 = face.uMin; y0 = face.constantCoord; z0 = face.vMin;
 			x1 = face.uMin; y1 = face.constantCoord; z1 = face.vMax;
 			x2 = face.uMax; y2 = face.constantCoord; z2 = face.vMax;
 			x3 = face.uMax; y3 = face.constantCoord; z3 = face.vMin;
 			break;
-		case 'y':
+		case Orientation::NegY:
 			ny = -1;
 			{
 				float f = face.constantCoord, zmin = face.vMin, zmax = face.vMax;
@@ -163,14 +163,14 @@ std::shared_ptr<UnvoxMesh> MeshBuilder::BuildMeshFromFaces(
 				x3 = face.uMax; y3 = f; z3 = zmin;
 			}
 			break;
-		case 'Z':
+		case Orientation::PosZ:
 			nz = +1;
 			x0 = face.uMin; y0 = face.vMin; z0 = face.constantCoord;
 			x1 = face.uMin; y1 = face.vMax; z1 = face.constantCoord;
 			x2 = face.uMax; y2 = face.vMax; z2 = face.constantCoord;
 			x3 = face.uMax; y3 = face.vMin; z3 = face.constantCoord;
 			break;
-		case 'z':
+		case Orientation::NegZ:
 			nz = -1;
 			{
 				float f = face.constantCoord, xmin = face.uMin, xmax = face.uMax;

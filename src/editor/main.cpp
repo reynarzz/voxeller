@@ -14,13 +14,17 @@
 #include <Time/Time.h>
 
 // TODO:
+// - UV texture viewer.
+// - Fix app UX: Feature set
+// - Create config export menu, and individual
+// - Modal progress UI.
 // - Fix small offset happening.
 // - Reuse colors in texture (check which faces have the same colors, and set an id, to ref an island).
 // - Pallete textures (decide the max width/height. Note not override POT)
 // - Localization: English, Spanish, French, Chinese, Japanese, German.
 // - Finish shader creation.
 // - Implement frame buffer for OpenGL [Done]
-// - Fix app UX
+// - Multithreading
 
 std::unique_ptr<ImGuiApp> _imgui = nullptr;
 std::unique_ptr<RenderingSystem> _renderingSystem = nullptr;
@@ -66,6 +70,7 @@ static std::vector<std::shared_ptr<RenderableObject>> CreateFromGeometry(const s
 	std::vector<std::shared_ptr<RenderableObject>> renderables{};
 	for (const auto& scene : scenes)
 	{
+		s32 meshesIdx = {};
 		for (const auto& mesh : scene->Meshes)
 		{
 			std::unique_ptr<MeshDescriptor> mDesc = std::make_unique<MeshDescriptor>();
@@ -77,13 +82,15 @@ static std::vector<std::shared_ptr<RenderableObject>> CreateFromGeometry(const s
 
 			for (size_t i = 0; i < mesh->Vertices.size(); i++)
 			{
-				const auto& vert = mesh->Vertices[i];
+				const auto& vert = Unvoxeller::vox_vec4(mesh->Vertices[i]);
 				const auto& normal = mesh->Normals[i];
 				const auto& uv = mesh->UVs[i];
 
 				mDesc->Vertices[i] = { {vert.x, vert.y, vert.z}, {normal.x, normal.y, normal.z}, {uv.x, uv.y }};
 			}
 			
+			meshesIdx++;
+
 			mDesc->Indices.resize(mesh->Faces.size() * 3);
 			s32 idx = {};
 			for (size_t i = 0; i < mesh->Faces.size(); i++)
@@ -169,9 +176,9 @@ int Init()
 	_renderingSystem->Initialize();
 	
 	
-	DropAndDrop::Initialize(win);
+	DragAndDrop::Initialize(win);
 
-	DropAndDrop::SetDropCallback([](DropEvent info)
+	DragAndDrop::SetDropCallback([](DropEvent info)
 		{
 			LOG_INFO("Dropped position ({0}, {1}): ", info.x, info.y);
 
@@ -181,7 +188,7 @@ int Init()
 			}
 		});
 
-	DropAndDrop::SetHoverCallback([](HoverEvent info)
+	DragAndDrop::SetHoverCallback([](HoverEvent info)
 		{
 
 			LOG_INFO("Hover position ({0}, {1}): ", info.x, info.y);

@@ -24,7 +24,7 @@ namespace Unvoxeller
 	};
 
 	// Helper lambda to do one 2D‐greedy pass:
-	auto sweep = [&](char orient,
+	auto sweep = [&](Orientation orient,
 		int dimU, int dimV, int dimW,
 		auto getFilled,
 		auto getPlaneConst)
@@ -110,7 +110,7 @@ namespace Unvoxeller
 		};
 
 	// +X ('X'): sweep w=x in [0..X-1], UV=(z,y)
-	sweep('X',
+	sweep(Orientation::PosX,
 		/*dimU=*/Z, /*dimV=*/Y, /*dimW=*/X,
 		[&](int z, int y, int x) {
 			return isFilled(x, y, z)
@@ -121,7 +121,7 @@ namespace Unvoxeller
 		});
 
 	// -X ('x'): sweep w=x, UV=(z,y)
-	sweep('x',
+	sweep(Orientation::NegX,
 		Z, Y, X,
 		[&](int z, int y, int x) {
 			return isFilled(x, y, z)
@@ -132,7 +132,7 @@ namespace Unvoxeller
 		});
 
 	// +Y ('Y'): sweep w=y, UV=(x,z)
-	sweep('Y',
+	sweep(Orientation::PosY,
 		X, Z, Y,
 		[&](int x, int z, int y) {
 			return isFilled(x, y, z)
@@ -143,7 +143,7 @@ namespace Unvoxeller
 		});
 
 	// -Y ('y'): sweep w=y, UV=(x,z)
-	sweep('y',
+	sweep(Orientation::NegY,
 		X, Z, Y,
 		[&](int x, int z, int y) {
 			return isFilled(x, y, z)
@@ -154,7 +154,7 @@ namespace Unvoxeller
 		});
 
 	// +Z ('Z'): sweep w=z, UV=(x,y)
-	sweep('Z',
+	sweep(Orientation::PosZ,
 		X, Y, Z,
 		[&](int x, int y, int z) {
 			return isFilled(x, y, z)
@@ -165,7 +165,7 @@ namespace Unvoxeller
 		});
 
 	// -Z ('z'): sweep w=z, UV=(x,y)
-	sweep('z',
+	sweep(Orientation::NegZ,
 		X, Y, Z,
 		[&](int x, int y, int z)
         {

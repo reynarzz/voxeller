@@ -17,7 +17,7 @@ struct HoverEvent
     int y; // Mouse Y
 };
 
-class DropAndDrop 
+class DragAndDrop 
 {
 public:
     using DropCallback = std::function<void(const DropEvent&)>;

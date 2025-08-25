@@ -64,6 +64,7 @@ namespace Unvoxeller
 		// Constructors
 		vox_vec4();
 		vox_vec4(f32 _x, f32 _y, f32 _z, f32 _w);
+		vox_vec4(vox_vec3 vec);
 
 		// Member arithmetic ops
 		vox_vec4 operator+(const vox_vec4& v) const;

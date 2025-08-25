@@ -18,7 +18,7 @@
 #include <GUI/VoxGUI.h>
 #include <Rendering/Camera.h> // Remove this
 #include <Unvoxeller/Unvoxeller.h>
-
+#include <filesystem>
 
 std::shared_ptr<Texture> blackImage = nullptr;
 static std::vector<VOXFileToProcessData> _testVoxFiles{};
@@ -52,7 +52,8 @@ std::string searchBar = "";
 
 static std::string GetFileName(const std::string& fullPath)
 {
-	const s32 start = fullPath.find_last_of("/")+1;
+	s32 start = fullPath.find_last_of(std::filesystem::path::preferred_separator) + 1;
+	
 	return fullPath.substr(start, fullPath.find_last_of(".") - start);
 }
 
@@ -160,7 +161,8 @@ void ToolBar()
 	ImGui::SetCursorPosY((toolBarHeight - elementsHeight) / 2.0f);
 	ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 3);
 
-	VoxGUI::Button("Open", TextAlign::Center, { 50, 25 }, IM_COL32(255, 255, 255, 50), IM_COL32(255, 255, 255, 255), _windowsRound, ImDrawFlags_RoundCornersAll);
+	// Code Here
+
 	ImGui::End();
 	ImGui::PopStyleVar(4);
 	ImGui::PopStyleColor(2);
@@ -170,7 +172,7 @@ void VoxToProcessView::ViewportWindow()
 {
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, _windowsRound);
 	bool open = true;
-	ImGui::SetNextWindowSize({ ImGui::GetIO().DisplaySize.x - 270.0f, ImGui::GetIO().DisplaySize.y - toolBarHeight - windowsSpacingY - 13 }, ImGuiCond_Always);
+	ImGui::SetNextWindowSize({ ImGui::GetIO().DisplaySize.x /2 - 60.0f, ImGui::GetIO().DisplaySize.y - toolBarHeight - windowsSpacingY - 13 }, ImGuiCond_Always);
 	ImGui::SetNextWindowPos({ 5, toolBarHeight + windowsSpacingY * 2 }, ImGuiCond_Always);
 
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 1.0f);

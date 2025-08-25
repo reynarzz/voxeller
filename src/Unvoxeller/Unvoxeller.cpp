@@ -172,75 +172,125 @@ namespace Unvoxeller
 		return boundingBox;
 	}
 
-	vox_vec3 TransformToMeshSpace(const vox_vec3& p,
-		const vox_vec3& voxCenter,
+	//vox_vec3 TransformToMeshSpace(const vox_vec3& p,
+	//	const vox_vec3& voxCenter,
+	//	const vox_mat3& rot,
+	//	const vox_vec3& trans)
+	//{
+	//	// 1. Translate so pivot is at origin (pivot recentering)
+	//	vox_vec3 v = p - voxCenter;
+
+	//	// 2. Apply MagicaVoxel's rotation
+	//	v = rot * v;
+
+	//	// 3. Swizzle axes to (x, z, y) to match Assimp's coordinate system
+	//	vox_vec3 sw{ v.x, v.z, v.y };
+
+	//	// 4. Apply translation (note Y↔Z swap)
+	//	sw.x += trans.x;
+	//	sw.y += trans.z;
+	//	sw.z += trans.y;
+
+	//	// 5. Mirror the X-axis to restore right-handedness
+	//	sw.x = -sw.x;
+
+	//	return sw;
+	//}
+
+	//aiMatrix4x4 BuildAiTransformMatrix(
+	//	const vox_mat3& rot,      // 3×3 rotation from MagicaVoxel
+	//	const vox_vec3& trans      // translation from MagicaVoxel (_t), in voxel units
+	//) {
+	//	// 1. Assemble a 4×4 matrix from rot and trans,
+	//	//    with axis swap and X mirroring baked in.
+
+	//	// Prepare rotation rows
+	//	// MagicaVoxel uses row-vectors; we map to column-major aiMatrix4x4
+	//	float R[4][4] = {
+	//		{ rot.m00, rot.m10, rot.m20, 0.0f },
+	//		{ rot.m01, rot.m11, rot.m21, 0.0f },
+	//		{ rot.m02, rot.m12, rot.m22, 0.0f },
+	//		{    0.0f,    0.0f,    0.0f, 1.0f }
+	//	};
+
+	//	// 2. Swap axes: convert (x, y, z) → (x, z, y)
+	//	//    Effectively multiply on the right with a permutation matrix.
+	//	aiMatrix4x4 perm;
+	//	perm.a1 = 1.0f; // X → X
+	//	perm.b3 = 1.0f; // Y → Z
+	//	perm.c2 = 1.0f; // Z → Y
+
+	//	// 3. Mirror X: scale X by –1
+	//	aiMatrix4x4 mirror;
+	//	mirror.a1 = -1.0f;
+
+	//	// Combine rotation, permutation, and mirroring
+	//	aiMatrix4x4 mRot(
+	//		R[0][0], R[0][1], R[0][2], 0.0f,
+	//		R[1][0], R[1][1], R[1][2], 0.0f,
+	//		R[2][0], R[2][1], R[2][2], 0.0f,
+	//		0.0f, 0.0f, 0.0f, 1.0f
+	//	);
+
+	//	aiMatrix4x4 xf = mirror * perm * mRot;
+
+	//	// 4. Apply translation: note the Y ↔ Z swap
+	//	aiVector3D t;
+	//	t.x = trans.x;
+	//	t.y = trans.z;
+	//	t.z = trans.y;
+
+	//	aiMatrix4x4::Translation(t, xf);
+	//	return xf;
+	//}
+
+	vox_mat4 BuildVoxTransformMatrix(
 		const vox_mat3& rot,
-		const vox_vec3& trans)
+		const vox_vec3& trans
+	)
 	{
-		// 1. Translate so pivot is at origin (pivot recentering)
-		vox_vec3 v = p - voxCenter;
-
-		// 2. Apply MagicaVoxel's rotation
-		v = rot * v;
-
-		// 3. Swizzle axes to (x, z, y) to match Assimp's coordinate system
-		vox_vec3 sw{ v.x, v.z, v.y };
-
-		// 4. Apply translation (note Y↔Z swap)
-		sw.x += trans.x;
-		sw.y += trans.z;
-		sw.z += trans.y;
-
-		// 5. Mirror the X-axis to restore right-handedness
-		sw.x = -sw.x;
-
-		return sw;
-	}
-
-	aiMatrix4x4 BuildAiTransformMatrix(
-		const vox_mat3& rot,      // 3×3 rotation from MagicaVoxel
-		const vox_vec3& trans      // translation from MagicaVoxel (_t), in voxel units
-	) {
-		// 1. Assemble a 4×4 matrix from rot and trans,
-		//    with axis swap and X mirroring baked in.
-
-		// Prepare rotation rows
-		// MagicaVoxel uses row-vectors; we map to column-major aiMatrix4x4
-		float R[4][4] = {
-			{ rot.m00, rot.m10, rot.m20, 0.0f },
-			{ rot.m01, rot.m11, rot.m21, 0.0f },
-			{ rot.m02, rot.m12, rot.m22, 0.0f },
-			{    0.0f,    0.0f,    0.0f, 1.0f }
-		};
-
-		// 2. Swap axes: convert (x, y, z) → (x, z, y)
-		//    Effectively multiply on the right with a permutation matrix.
-		aiMatrix4x4 perm;
-		perm.a1 = 1.0f; // X → X
-		perm.b3 = 1.0f; // Y → Z
-		perm.c2 = 1.0f; // Z → Y
-
-		// 3. Mirror X: scale X by –1
-		aiMatrix4x4 mirror;
-		mirror.a1 = -1.0f;
-
-		// Combine rotation, permutation, and mirroring
-		aiMatrix4x4 mRot(
-			R[0][0], R[0][1], R[0][2], 0.0f,
-			R[1][0], R[1][1], R[1][2], 0.0f,
-			R[2][0], R[2][1], R[2][2], 0.0f,
+		// 1. Convert MagicaVoxel’s row-major 3×3 rot into column-major 4×4
+		vox_mat4 mRot(
+			rot.m00, rot.m10, rot.m20, 0.0f,
+			rot.m01, rot.m11, rot.m21, 0.0f,
+			rot.m02, rot.m12, rot.m22, 0.0f,
 			0.0f, 0.0f, 0.0f, 1.0f
 		);
 
-		aiMatrix4x4 xf = mirror * perm * mRot;
+		// 2. Axis swap: (x, y, z) → (x, z, y)
+		vox_mat4 perm(
+			1, 0, 0, 0,
+			0, 0, 1, 0,
+			0, 1, 0, 0,
+			0, 0, 0, 1
+		);
 
-		// 4. Apply translation: note the Y ↔ Z swap
-		aiVector3D t;
-		t.x = trans.x;
-		t.y = trans.z;
-		t.z = trans.y;
+		// 3. Mirror X (scale X by –1)
+		vox_mat4 mirror(
+			-1, 0, 0, 0,
+			0, 1, 0, 0,
+			0, 0, 1, 0,
+			0, 0, 0, 1
+		);
 
-		aiMatrix4x4::Translation(t, xf);
+		// Combine: mirror * perm * rot
+		vox_mat4 xf = mirror * perm * mRot;
+
+		// 4. Apply translation, with Y↔Z swap and **–0.5 offset**
+		vox_vec3 t;
+		t.x = trans.x - 0.5f;
+		t.y = trans.z - 0.5f; // swap Y/Z
+		t.z = trans.y - 0.5f;
+
+		vox_mat4 transMat(
+			1, 0, 0, t.x,
+			0, 1, 0, t.y,
+			0, 0, 1, t.z,
+			0, 0, 0, 1
+		);
+
+		// Final
+		xf = transMat * xf;
 		return xf;
 	}
 
@@ -502,32 +552,33 @@ namespace Unvoxeller
 				//  float cyy = box.minY + (box.maxY - box.minY) * options.Pivot.y;
 				//  float czz = box.minZ + (box.maxZ - box.minZ) * options.Pivot.z;
 
-				auto bbbox = ComputeMeshBoundingBox(mesh.get());
-				float cxx = bbbox.minX + (bbbox.maxX - bbbox.minX) * currentPivot.x;
-				float cyy = bbbox.minY + (bbbox.maxY - bbbox.minY) * currentPivot.y;
-				float czz = bbbox.minZ + (bbbox.maxZ - bbbox.minZ) * currentPivot.z;
+				//auto bbbox = ComputeMeshBoundingBox(mesh.get());
+				//float cxx = bbbox.minX + (bbbox.maxX - bbbox.minX) * currentPivot.x;
+				//float cyy = bbbox.minY + (bbbox.maxY - bbbox.minY) * currentPivot.y;
+				//float czz = bbbox.minZ + (bbbox.maxZ - bbbox.minZ) * currentPivot.z;
 
-				vox_vec3 cent(cxx, cyy, czz);
+				//vox_vec3 cent(cxx, cyy, czz);
 
-				if (options.Meshing.MeshesToWorldCenter)
-				{
-					for (unsigned int i = 0; i < mesh->Vertices.size(); ++i)
-					{
-						mesh->Vertices[i] -= cent;
-					}
-				}
-				else
-				{
-					for (unsigned int i = 0; i < mesh->Vertices.size(); ++i)
-					{
-						mesh->Vertices[i] -= cent;
-					}
+				//if (options.Meshing.MeshesToWorldCenter)
+				//{
+				//	for (unsigned int i = 0; i < mesh->Vertices.size(); ++i)
+				//	{
+				//		mesh->Vertices[i] -= cent;
+				//	}
+				//}
+				//else
+				//{
+				//	for (unsigned int i = 0; i < mesh->Vertices.size(); ++i)
+				//	{
+				//		mesh->Vertices[i] -= cent;
+				//	}
 
-					// TODO:
-					//--node->Transform = vox_vec4(cent.x, cent.y,cent.z, 1.0f) * node->Transform;
-				}
+				//	// TODO:
+				//	//--node->Transform = vox_vec4(cent.x, cent.y,cent.z, 1.0f) * node->Transform;
+				//}
 
 				// ----------------------------------------------------------------------------------------------------------------------------------------------------------
+				node->Transform = BuildVoxTransformMatrix(wxf.rot, wxf.trans);
 
 				meshes.push_back({ mesh, shapeIndex });
 				shapeNodes.push_back(node);

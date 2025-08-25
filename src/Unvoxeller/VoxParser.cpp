@@ -216,7 +216,8 @@ namespace Unvoxeller
     }
 
     void VoxParser::parse_XYZI(std::shared_ptr<vox_file> vox, std::ifstream& voxFile,
-        uint32_t contentBytes, uint32_t childrenBytes) {
+        uint32_t contentBytes, uint32_t childrenBytes)
+    {
         // XYZI chunk: int N (number of voxels), then N * 4 bytes (x,y,z,colorIndex)
         uint32_t numVoxels = 0;
         voxFile.read(reinterpret_cast<char*>(&numVoxels), 4);
@@ -235,6 +236,14 @@ namespace Unvoxeller
             }
         }
 
+        // Initialize bounding box (start as empty)
+        model.boundingBox.minX = std::numeric_limits<float>::infinity();
+        model.boundingBox.minY = std::numeric_limits<float>::infinity();
+        model.boundingBox.minZ = std::numeric_limits<float>::infinity();
+        model.boundingBox.maxX = -std::numeric_limits<float>::infinity();
+        model.boundingBox.maxY = -std::numeric_limits<float>::infinity();
+        model.boundingBox.maxZ = -std::numeric_limits<float>::infinity();
+
         // Read each voxel
         for (uint32_t i = 0; i < numVoxels; ++i) {
             vox_voxel voxData;
@@ -248,17 +257,21 @@ namespace Unvoxeller
             voxData.z = zi;
             voxData.colorIndex = ci;
             model.voxels[i] = voxData;
-            // Mark voxel in 3D grid and update model bounding box
+
+            // Mark voxel in 3D grid
             model.voxel_3dGrid[zi][yi][xi] = static_cast<int>(i);
+
+            // Update bounding box (note: max side includes full cube extent!)
             model.boundingBox.minX = std::min(model.boundingBox.minX, static_cast<float>(xi));
             model.boundingBox.minY = std::min(model.boundingBox.minY, static_cast<float>(yi));
             model.boundingBox.minZ = std::min(model.boundingBox.minZ, static_cast<float>(zi));
-            model.boundingBox.maxX = std::max(model.boundingBox.maxX, static_cast<float>(xi));
-            model.boundingBox.maxY = std::max(model.boundingBox.maxY, static_cast<float>(yi));
-            model.boundingBox.maxZ = std::max(model.boundingBox.maxZ, static_cast<float>(zi));
+            model.boundingBox.maxX = std::max(model.boundingBox.maxX, static_cast<float>(xi + 1));
+            model.boundingBox.maxY = std::max(model.boundingBox.maxY, static_cast<float>(yi + 1));
+            model.boundingBox.maxZ = std::max(model.boundingBox.maxZ, static_cast<float>(zi + 1));
         }
 
         vox->voxModels.push_back(std::move(model));
+
         // Skip any children chunks (XYZI typically has none)
         if (childrenBytes > 0) {
             voxFile.seekg(childrenBytes, std::ios::cur);

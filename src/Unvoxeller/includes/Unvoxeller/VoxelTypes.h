@@ -151,7 +151,8 @@ namespace Unvoxeller
 	};
 
 	inline vox_transform operator*(const vox_transform& parent, const vox_transform& child) {
-		return {
+		return 
+		{
 			parent.rot * child.rot,              // rotate child by parent
 			parent.rot * child.trans + parent.trans // rotate+offset child's translation
 		};

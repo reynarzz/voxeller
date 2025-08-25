@@ -56,6 +56,7 @@ namespace Unvoxeller
 
 	vox_vec4::vox_vec4() : x(0), y(0), z(0), w(0) {}
 	vox_vec4::vox_vec4(f32 _x, f32 _y, f32 _z, f32 _w) : x(_x), y(_y), z(_z), w(_w) {}
+	vox_vec4::vox_vec4(vox_vec3 vec) : x(vec.x), y(vec.y), z(vec.z), w(0) {}
 
 	vox_vec4 vox_vec4::operator+(const vox_vec4& v) const { return { x + v.x, y + v.y, z + v.z, w + v.w }; }
 	vox_vec4 vox_vec4::operator-(const vox_vec4& v) const { return { x - v.x, y - v.y, z - v.z, w - v.w }; }
