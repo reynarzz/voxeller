@@ -373,7 +373,6 @@ void VoxToProcessView::TextureViewport()
 	ImGui::End();
 	ImGui::PopStyleColor();
 	ImGui::PopStyleVar(2);
-	ImGui::PopStyleVar();
 }
 
 void ExportWin()
