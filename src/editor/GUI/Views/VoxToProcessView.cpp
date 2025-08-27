@@ -270,10 +270,10 @@ void VoxToProcessView::TextureViewport()
 	ImGui::Begin("Texture Viewport", &open,
 		ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize);
 
-	// === Persistent state (static keeps it across frames) ===
+	// === Persistent state ===
 	static float zoom = 1.0f;
 	static ImVec2 pan(0.0f, 0.0f);
-	static int selectedVertex = -1;   // currently dragged vertex id
+	static int selectedVertex = -1;
 
 	ImVec2 winPos = ImGui::GetWindowPos();
 	ImVec2 winSize = ImGui::GetWindowSize();
@@ -292,22 +292,11 @@ void VoxToProcessView::TextureViewport()
 		}
 	}
 
-	// === Draw checker background ===
-	const int gridSize = 16;
-	for (int y = 0; y < (int)winSize.y; y += gridSize) {
-		for (int x = 0; x < (int)winSize.x; x += gridSize) {
-			bool light = ((x / gridSize + y / gridSize) % 2) == 0;
-			dl->AddRectFilled(
-				ImVec2(winPos.x + (float)x, winPos.y + (float)y),
-				ImVec2(winPos.x + (float)(x + gridSize), winPos.y + (float)(y + gridSize)),
-				light ? IM_COL32(200, 200, 200, 255) : IM_COL32(120, 120, 120, 255));
-		}
-	}
-
-	// === Draw texture (if you have one) ===
+	// === Draw texture as background ===
+	// Replace `myTex` with your texture handle
 	// ImGui::Image(TEXTURE_TO_IMGUI(myTex), winSize, ImVec2(0,1), ImVec2(1,0));
 
-	// === Example mesh UVs (replace with your own mesh data) ===
+	// === Example mesh UVs (replace with your own data) ===
 	static std::vector<ImVec2> uvs = {
 		{0.1f, 0.1f}, {0.4f, 0.1f}, {0.25f, 0.4f},
 		{0.6f, 0.2f}, {0.9f, 0.2f}, {0.75f, 0.5f}
@@ -342,8 +331,8 @@ void VoxToProcessView::TextureViewport()
 	for (int i = 0; i < (int)uvs.size(); i++) {
 		ImVec2 p = UVToScreen(uvs[i]);
 		bool hovered = ImGui::IsMouseHoveringRect(
-			  ImVec2(p.x - handleSize, p.y - handleSize),
-			  ImVec2(p.x + handleSize, p.y + handleSize));
+			ImVec2(p.x - handleSize, p.y - handleSize),
+			ImVec2(p.x + handleSize, p.y + handleSize));
 
 		ImU32 col = (hovered || selectedVertex == i)
 			? IM_COL32(255, 128, 0, 255)

@@ -25,6 +25,8 @@ namespace Unvoxeller
 		ExportResults ExportVoxToModel(const ExportOptions& eOptions, const ConvertOptions& cOptions);
 		ExportResults ExportVoxToModel(const char* buffer, int size, const ExportOptions& options);
 		
+		ExportResults ExportScene(const ExportOptions& eOptions, const ConvertOptions& cOptions, const std::weak_ptr<UnvoxScene> scene);
+
 		ConvertResult VoxToMem(const std::string& inVoxPath, const ConvertOptions& options);
 		ConvertResult VoxToMem(const char* buffer, int size, const ConvertOptions& options);
 

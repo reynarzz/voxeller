@@ -870,6 +870,18 @@ namespace Unvoxeller
 		return results;
 	}
 
+	ExportResults Unvoxeller::ExportScene(const ExportOptions& eOptions, const ConvertOptions& cOptions, const std::weak_ptr<UnvoxScene> scene)
+	{
+		ExportResults results{};
+
+		if (_assimpWriter->Export(eOptions, cOptions, { scene.lock() }))
+		{
+			results.Msg = ConvertMSG::SUCESS;
+		}
+
+		return results;
+	}
+
 
 	ExportResults Unvoxeller::ExportVoxToModel(const char* buffer, int size, const ExportOptions& options)
 	{
