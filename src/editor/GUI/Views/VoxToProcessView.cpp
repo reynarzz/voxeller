@@ -226,17 +226,44 @@ void VoxToProcessView::ViewportWindow()
 
 	ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(spacing, 0));
 	ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(spacing, 0));
-	VoxGUI::ImageButton("##Fill_View", TEXTURE_TO_IMGUI2(_cubeFillIcon), { buttonDownWidth, buttonDOwnHeight }, { 1,1,1,1 }, { 1,1,1,1 }, { 1,1,1,0.5f }, ImDrawFlags_RoundCornersAll, ImVec2(0, 0), ImVec2(1, 1));
+	const bool isFillView =  VoxGUI::ImageButton("##Fill_View", TEXTURE_TO_IMGUI2(_cubeFillIcon), { buttonDownWidth, buttonDOwnHeight }, { 1,1,1,1 }, { 1,1,1,1 }, { 1,1,1,0.5f }, ImDrawFlags_RoundCornersAll, ImVec2(0, 0), ImVec2(1, 1));
+	
+	if(isFillView)
+	{
+		for (auto renderable : GUIData::_voxObject.lock()->GetRenderables())
+		{
+			renderable->SetDrawType(RenderDrawType::Triangles);
+			renderable->SetRenderType(PipelineRenderType::Opaque_Unlit);
+		}
+	}
+	
 	ImGui::SetCursorPosX(xStartPos);
 	ImGui::SetCursorPosY(ImGui::GetCursorPosY() + yStartPos);
 
 
-	VoxGUI::ImageButton("##_WireFrame_View", TEXTURE_TO_IMGUI2(_wireFrameIcon), { buttonDownWidth, buttonDOwnHeight }, { 1,1,1,1 }, { 1,1,1,1 }, { 1,1,1,0.5f }, ImDrawFlags_RoundCornersAll, ImVec2(0, 0), ImVec2(1, 1));
+	const bool isWireframeRender = VoxGUI::ImageButton("##_WireFrame_View", TEXTURE_TO_IMGUI2(_wireFrameIcon), { buttonDownWidth, buttonDOwnHeight }, { 1,1,1,1 }, { 1,1,1,1 }, { 1,1,1,0.5f }, ImDrawFlags_RoundCornersAll, ImVec2(0, 0), ImVec2(1, 1));
 
+	if(isWireframeRender)
+	{
+		for (auto renderable : GUIData::_voxObject.lock()->GetRenderables())
+		{
+			renderable->SetDrawType(RenderDrawType::Lines);
+			renderable->SetRenderType(PipelineRenderType::NoTexture);
+		}
+		
+	}
 	ImGui::SetCursorPosX(xStartPos);
 	ImGui::SetCursorPosY(ImGui::GetCursorPosY() + yStartPos);
-	VoxGUI::ImageButton("##_Light_View", TEXTURE_TO_IMGUI2(_lightIcon), { buttonDownWidth, buttonDOwnHeight }, { 1,1,1,1 }, { 1,1,1,1 }, { 1,1,1,0.5f }, ImDrawFlags_RoundCornersAll, ImVec2(0, 0), ImVec2(1, 1));
+	const bool isLightView = VoxGUI::ImageButton("##_Light_View", TEXTURE_TO_IMGUI2(_lightIcon), { buttonDownWidth, buttonDOwnHeight }, { 1,1,1,1 }, { 1,1,1,1 }, { 1,1,1,0.5f }, ImDrawFlags_RoundCornersAll, ImVec2(0, 0), ImVec2(1, 1));
 
+	if(isLightView)
+	{
+		for (auto renderable : GUIData::_voxObject.lock()->GetRenderables())
+		{
+			renderable->SetDrawType(RenderDrawType::Triangles);
+			renderable->SetRenderType(PipelineRenderType::Opaque_Lit);
+		}
+	}
 
 	ImGui::SetCursorPosX(xStartPos);
 	ImGui::SetCursorPosY(ImGui::GetCursorPosY() + yStartPos);
