@@ -13,6 +13,7 @@
 #include <GUI/Utils/TextureLoader.h>
 #include <Time/Time.h>
 #include <Rendering/VoxObject.h>
+#include <GUI/GUIData.h>
 
 // TODO:
 // - UV texture viewer.
@@ -243,7 +244,7 @@ int Init()
 	auto scene = unvox.VoxToMem(path, convertOptions);
 	
 	auto voxObject = CreateFromGeometry(scene.Scenes);
-	
+	GUIData::_voxObject = voxObject;
 	while (!glfwWindowShouldClose(win))
 	{
 		if (glfwGetWindowAttrib(win, GLFW_ICONIFIED))

@@ -19,6 +19,8 @@
 #include <Rendering/Camera.h> // Remove this
 #include <Unvoxeller/Unvoxeller.h>
 #include <filesystem>
+#include <GUI/GUIData.h>
+
 
 std::shared_ptr<Texture> blackImage = nullptr;
 static std::vector<VOXFileToProcessData> _testVoxFiles{};
@@ -253,6 +255,11 @@ void VoxToProcessView::ViewportWindow()
 
 void VoxToProcessView::TextureViewport()
 {
+	if(!GUIData::_voxObject.lock())
+	{
+		return;
+	}
+
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, _windowsRound);
 	bool open = true;
 
@@ -296,19 +303,22 @@ void VoxToProcessView::TextureViewport()
 		}
 	}
 
+	auto renderable = GUIData::_voxObject.lock()->GetRenderables().at(0);
+	const auto mesh = renderable->GetMesh().lock();
+	auto& vertices = mesh->GetVertices();
+	auto& indices = mesh->GetIndices();
+
+
 	// === Draw texture as background ===
 	// Replace `myTex` with your texture handle
-	// ImGui::Image(TEXTURE_TO_IMGUI(myTex), winSize, ImVec2(0,1), ImVec2(1,0));
+	 ImGui::Image(TEXTURE_TO_IMGUI(renderable->GetTexture().lock()), winSize, ImVec2(0,1), ImVec2(1,0));
 
 	// === Example mesh UVs (replace with your own data) ===
-	static std::vector<ImVec2> uvs = 
-	{
-		{0.1f, 0.1f}, {0.4f, 0.1f}, {0.25f, 0.4f},
-		{0.6f, 0.2f}, {0.9f, 0.2f}, {0.75f, 0.5f}
-	};
-	static std::vector<int> indices = { 0,1,2, 3,4,5 };
 
-	auto UVToScreen = [&](ImVec2 uv)  
+	
+	//static std::vector<int> indices = { 0,1,2, 3,4,5 };
+
+	auto UVToScreen = [&](glm::vec2 uv)  
 	{
 		return ImVec2(
 			winPos.x + pan.x + uv.x * winSize.x * zoom,
@@ -326,19 +336,19 @@ void VoxToProcessView::TextureViewport()
 	// === Draw triangles ===
 	for (size_t i = 0; i < indices.size(); i += 3) 
 	{
-		ImVec2 p0 = UVToScreen(uvs[indices[i]]);
-		ImVec2 p1 = UVToScreen(uvs[indices[i + 1]]);
-		ImVec2 p2 = UVToScreen(uvs[indices[i + 2]]);
+		ImVec2 p0 = UVToScreen(vertices[indices[i]].UV);
+		ImVec2 p1 = UVToScreen(vertices[indices[i + 1]].UV);
+		ImVec2 p2 = UVToScreen(vertices[indices[i + 2]].UV);
 		dl->AddLine(p0, p1, IM_COL32(255, 255, 255, 255), 1.0f);
 		dl->AddLine(p1, p2, IM_COL32(255, 255, 255, 255), 1.0f);
 		dl->AddLine(p2, p0, IM_COL32(255, 255, 255, 255), 1.0f);
 	}
 
 	// === Draw vertices (draggable) ===
-	float handleSize = 6.0f;
-	for (int i = 0; i < (int)uvs.size(); i++) 
+	float handleSize = 4.0f;
+	for (int i = 0; i < (int)vertices.size(); i++) 
 	{
-		ImVec2 p = UVToScreen(uvs[i]);
+		ImVec2 p = UVToScreen(vertices[i].UV);
 		bool hovered = ImGui::IsMouseHoveringRect(
 			ImVec2(p.x - handleSize, p.y - handleSize),
 			ImVec2(p.x + handleSize, p.y + handleSize));
@@ -347,7 +357,7 @@ void VoxToProcessView::TextureViewport()
 			? IM_COL32(255, 128, 0, 255)
 			: IM_COL32(0, 255, 255, 255);
 
-		dl->AddCircleFilled(p, handleSize, col);
+		dl->AddCircleFilled(p, handleSize / 2, col);
 
 		// Begin drag if clicked
 		if (hovered && ImGui::IsMouseClicked(ImGuiMouseButton_Left))
@@ -360,10 +370,11 @@ void VoxToProcessView::TextureViewport()
 		if (ImGui::IsMouseDown(ImGuiMouseButton_Left)) 
 		{
 			ImVec2 mousePos = io.MousePos;
-			uvs[selectedVertex] = ScreenToUV(mousePos);
+			auto uvImgui = ScreenToUV({mousePos.x, mousePos.y});
+			vertices[selectedVertex].UV = {uvImgui.x,uvImgui.y};
 			// Clamp to [0,1]
-			uvs[selectedVertex].x = std::max(0.0f, std::min(1.0f, uvs[selectedVertex].x));
-			uvs[selectedVertex].y = std::max(0.0f, std::min(1.0f, uvs[selectedVertex].y));
+			vertices[selectedVertex].UV.x = std::max(0.0f, std::min(1.0f, vertices[selectedVertex].UV.x));
+			vertices[selectedVertex].UV.y = std::max(0.0f, std::min(1.0f, vertices[selectedVertex].UV.y));
 		}
 		else 
 		{
