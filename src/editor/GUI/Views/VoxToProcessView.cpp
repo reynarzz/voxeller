@@ -255,137 +255,141 @@ void VoxToProcessView::ViewportWindow()
 
 void VoxToProcessView::TextureViewport()
 {
-	if(!GUIData::_voxObject.lock())
-	{
-		return;
-	}
+    if(!GUIData::_voxObject.lock())
+        return;
 
-	ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, _windowsRound);
-	bool open = true;
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, _windowsRound);
+    bool open = true;
 
-	const f32 xPos = ImGui::GetIO().DisplaySize.x / 2 - 60.0f + 10;
-	const ImVec2 windowSize = {
-		ImGui::GetIO().DisplaySize.x - 265.0f - xPos,
-		ImGui::GetIO().DisplaySize.y - toolBarHeight - windowsSpacingY - 13
-	};
+    const f32 xPos = ImGui::GetIO().DisplaySize.x / 2 - 60.0f + 10;
+    const ImVec2 windowSize = {
+        ImGui::GetIO().DisplaySize.x - 265.0f - xPos,
+        ImGui::GetIO().DisplaySize.y - toolBarHeight - windowsSpacingY - 13
+    };
 
-	ImGui::SetNextWindowSize(windowSize, ImGuiCond_Always);
-	ImGui::SetNextWindowPos({ xPos, toolBarHeight + windowsSpacingY * 2 }, ImGuiCond_Always);
+    ImGui::SetNextWindowSize(windowSize, ImGuiCond_Always);
+    ImGui::SetNextWindowPos({ xPos, toolBarHeight + windowsSpacingY * 2 }, ImGuiCond_Always);
 
-	ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
-	ImGui::PushStyleColor(ImGuiCol_WindowBg, IM_COL32(60, 60, 60, 255));
-	ImGui::Begin("Texture Viewport", &open,
-		ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+    ImGui::PushStyleColor(ImGuiCol_WindowBg, IM_COL32(60, 60, 60, 255));
+    ImGui::Begin("Texture Viewport", &open,
+        ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize);
 
-	// === Persistent state ===
-	static float zoom = 1.0f;
-	static ImVec2 pan(0.0f, 0.0f);
-	static int selectedVertex = -1;
+    // === Persistent state ===
+    static float zoom = 1.0f;
+    static ImVec2 pan(0.0f, 0.0f);
+    static int selectedVertex = -1;
 
-	ImVec2 winPos = ImGui::GetWindowPos();
-	ImVec2 winSize = ImGui::GetWindowSize();
-	ImDrawList* dl = ImGui::GetWindowDrawList();
-	ImGuiIO& io = ImGui::GetIO();
+    ImVec2 winPos = ImGui::GetWindowPos();
+    ImVec2 winSize = ImGui::GetWindowSize();
+    ImDrawList* dl = ImGui::GetWindowDrawList();
+    ImGuiIO& io = ImGui::GetIO();
 
-	// === Handle zoom/pan ===
-	if (ImGui::IsWindowHovered()) 
-	{
-		if (io.MouseWheel != 0.0f) 
-		{
-			zoom *= (1.0f + io.MouseWheel * 0.1f);
-			zoom = std::max(0.1f, std::min(zoom, 20.0f));
-		}
+    // Canvas center for transforms
+    ImVec2 canvasCenter = ImVec2(winPos.x + winSize.x * 0.5f,
+                                 winPos.y + winSize.y * 0.5f);
 
-		if (ImGui::IsMouseDragging(ImGuiMouseButton_Middle)) 
-		{
-			pan.x += io.MouseDelta.x;
-			pan.y += io.MouseDelta.y;
-		}
-	}
+    // === Transform helpers ===
+    auto UVToScreen = [&](glm::vec2 uv) -> ImVec2 {
+        ImVec2 centered((uv.x - 0.5f) * winSize.x,
+                        (uv.y - 0.5f) * winSize.y);
+        return ImVec2(canvasCenter.x + centered.x * zoom + pan.x,
+                      canvasCenter.y + centered.y * zoom + pan.y);
+    };
 
-	auto renderable = GUIData::_voxObject.lock()->GetRenderables().at(0);
-	const auto mesh = renderable->GetMesh().lock();
-	auto& vertices = mesh->GetVertices();
-	auto& indices = mesh->GetIndices();
+    auto ScreenToUV = [&](ImVec2 pos) -> ImVec2 {
+        ImVec2 local((pos.x - canvasCenter.x - pan.x) / zoom,
+                     (pos.y - canvasCenter.y - pan.y) / zoom);
+        return ImVec2(local.x / winSize.x + 0.5f,
+                      local.y / winSize.y + 0.5f);
+    };
 
+    // === Handle zoom/pan ===
+    if (ImGui::IsWindowHovered())
+    {
+        if (io.MouseWheel != 0.0f) {
+            ImVec2 mouse = io.MousePos;
+            ImVec2 uvBefore = ScreenToUV(mouse);
 
-	// === Draw texture as background ===
-	// Replace `myTex` with your texture handle
-	 ImGui::Image(TEXTURE_TO_IMGUI(renderable->GetTexture().lock()), winSize, ImVec2(0,1), ImVec2(1,0));
+            zoom *= (1.0f + io.MouseWheel * 0.1f);
+            zoom = std::max(0.1f, std::min(zoom, 20.0f));
 
-	// === Example mesh UVs (replace with your own data) ===
+            ImVec2 newScreen = UVToScreen({uvBefore.x, uvBefore.y});
+            pan.x += (mouse.x - newScreen.x);
+            pan.y += (mouse.y - newScreen.y);
+        }
 
-	
-	//static std::vector<int> indices = { 0,1,2, 3,4,5 };
+        if (ImGui::IsMouseDragging(ImGuiMouseButton_Middle)) {
+            pan.x += io.MouseDelta.x;
+            pan.y += io.MouseDelta.y;
+        }
+    }
 
-	auto UVToScreen = [&](glm::vec2 uv)  
-	{
-		return ImVec2(
-			winPos.x + pan.x + uv.x * winSize.x * zoom,
-			winPos.y + pan.y + uv.y * winSize.y * zoom
-		);
-	};
-	auto ScreenToUV = [&](ImVec2 pos)  
-	{
-		return ImVec2(
-			(pos.x - winPos.x - pan.x) / (winSize.x * zoom),
-			(pos.y - winPos.y - pan.y) / (winSize.y * zoom)
-		);
-	};
+    // === Access mesh/texture ===
+    auto renderable = GUIData::_voxObject.lock()->GetRenderables().at(0);
+    const auto mesh = renderable->GetMesh().lock();
+    auto& vertices = mesh->GetVertices();
+    auto& indices = mesh->GetIndices();
+    auto tex = renderable->GetTexture().lock();
 
-	// === Draw triangles ===
-	for (size_t i = 0; i < indices.size(); i += 3) 
-	{
-		ImVec2 p0 = UVToScreen(vertices[indices[i]].UV);
-		ImVec2 p1 = UVToScreen(vertices[indices[i + 1]].UV);
-		ImVec2 p2 = UVToScreen(vertices[indices[i + 2]].UV);
-		dl->AddLine(p0, p1, IM_COL32(255, 255, 255, 255), 1.0f);
-		dl->AddLine(p1, p2, IM_COL32(255, 255, 255, 255), 1.0f);
-		dl->AddLine(p2, p0, IM_COL32(255, 255, 255, 255), 1.0f);
-	}
+    // === Draw texture transformed ===
+    if (tex) {
+        ImVec2 topLeft  = UVToScreen({0.0f, 0.0f});
+        ImVec2 topRight = UVToScreen({1.0f, 0.0f});
+        ImVec2 botRight = UVToScreen({1.0f, 1.0f});
+        ImVec2 botLeft  = UVToScreen({0.0f, 1.0f});
 
-	// === Draw vertices (draggable) ===
-	float handleSize = 4.0f;
-	for (int i = 0; i < (int)vertices.size(); i++) 
-	{
-		ImVec2 p = UVToScreen(vertices[i].UV);
-		bool hovered = ImGui::IsMouseHoveringRect(
-			ImVec2(p.x - handleSize, p.y - handleSize),
-			ImVec2(p.x + handleSize, p.y + handleSize));
+       dl->AddImageQuad(TEXTURE_TO_IMGUI(tex),
+    topLeft, topRight, botRight, botLeft,
+    ImVec2(0,1), ImVec2(1,1), ImVec2(1,0), ImVec2(0,0));
+    }
 
-		ImU32 col = (hovered || selectedVertex == i)
-			? IM_COL32(255, 128, 0, 255)
-			: IM_COL32(0, 255, 255, 255);
+    // === Draw triangles ===
+    for (size_t i = 0; i < indices.size(); i += 3) {
+        ImVec2 p0 = UVToScreen(vertices[indices[i]].UV);
+        ImVec2 p1 = UVToScreen(vertices[indices[i + 1]].UV);
+        ImVec2 p2 = UVToScreen(vertices[indices[i + 2]].UV);
+        dl->AddLine(p0, p1, IM_COL32(255, 255, 255, 255), 1.0f);
+        dl->AddLine(p1, p2, IM_COL32(255, 255, 255, 255), 1.0f);
+        dl->AddLine(p2, p0, IM_COL32(255, 255, 255, 255), 1.0f);
+    }
 
-		dl->AddCircleFilled(p, handleSize / 2, col);
+    // === Draw vertices (draggable) ===
+    float handleSize = 4.0f;
+    for (int i = 0; i < (int)vertices.size(); i++) {
+        ImVec2 p = UVToScreen(vertices[i].UV);
+        bool hovered = ImGui::IsMouseHoveringRect(
+            ImVec2(p.x - handleSize, p.y - handleSize),
+            ImVec2(p.x + handleSize, p.y + handleSize));
 
-		// Begin drag if clicked
-		if (hovered && ImGui::IsMouseClicked(ImGuiMouseButton_Left))
-			selectedVertex = i;
-	}
+        ImU32 col = (hovered || selectedVertex == i)
+            ? IM_COL32(255, 128, 0, 255)
+            : IM_COL32(0, 255, 255, 255);
 
-	// === Drag selected vertex ===
-	if (selectedVertex >= 0) 
-	{
-		if (ImGui::IsMouseDown(ImGuiMouseButton_Left)) 
-		{
-			ImVec2 mousePos = io.MousePos;
-			auto uvImgui = ScreenToUV({mousePos.x, mousePos.y});
-			vertices[selectedVertex].UV = {uvImgui.x,uvImgui.y};
-			// Clamp to [0,1]
-			vertices[selectedVertex].UV.x = std::max(0.0f, std::min(1.0f, vertices[selectedVertex].UV.x));
-			vertices[selectedVertex].UV.y = std::max(0.0f, std::min(1.0f, vertices[selectedVertex].UV.y));
-		}
-		else 
-		{
-			selectedVertex = -1; // release
-		}
-	}
+        dl->AddCircleFilled(p, handleSize, col);
 
-	ImGui::End();
-	ImGui::PopStyleColor();
-	ImGui::PopStyleVar(2);
+        if (hovered && ImGui::IsMouseClicked(ImGuiMouseButton_Left))
+            selectedVertex = i;
+    }
+
+    // === Drag selected vertex ===
+    if (selectedVertex >= 0) {
+        if (ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
+            ImVec2 mousePos = io.MousePos;
+            ImVec2 uvImgui = ScreenToUV(mousePos);
+            vertices[selectedVertex].UV = {uvImgui.x, uvImgui.y};
+            vertices[selectedVertex].UV.x = std::max(0.0f, std::min(1.0f, vertices[selectedVertex].UV.x));
+            vertices[selectedVertex].UV.y = std::max(0.0f, std::min(1.0f, vertices[selectedVertex].UV.y));
+        } else {
+            selectedVertex = -1;
+        }
+    }
+
+    ImGui::End();
+    ImGui::PopStyleColor();
+    ImGui::PopStyleVar(2);
 }
+
 
 void ExportWin()
 {
