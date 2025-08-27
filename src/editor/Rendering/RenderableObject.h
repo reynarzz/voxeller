@@ -8,6 +8,8 @@
 class RenderableObject
 {
 public:
+    RenderableObject();
+    
     void SetRenderType(const PipelineRenderType type);
     PipelineRenderType GetRenderType() const;
 
@@ -25,9 +27,12 @@ public:
 
     RenderableTransform& GetTransform();
     const RenderableTransform& GetTransform() const;
+    void SetCanDraw(bool draw);
+    bool GetCanDraw() const;
 
 private:
     bool _pendingForDestroy = false;
+    bool _canDraw = true;
 
     RenderableTransform _transform={};
     std::shared_ptr<Mesh> _mesh = nullptr;

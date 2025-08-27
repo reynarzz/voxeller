@@ -4,9 +4,6 @@
 
 GLMesh::GLMesh(const MeshDescriptor *desc)
 {
-    VertexCount = desc->Vertices.size();
-    IndexCount = desc->Indices.size();
-    
     GL_CALL(glGenVertexArrays(1, &_vao));
     GL_CALL(glBindVertexArray(_vao));
 

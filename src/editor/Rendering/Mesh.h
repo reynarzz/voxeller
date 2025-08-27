@@ -20,9 +20,11 @@ public:
     s32 GetIndexCount() const;
     s32 GetVertexCount() const;
 
+    std::vector<Vertex>& GetVertices();
+    std::vector<u32>& GetIndices();
     static std::shared_ptr<Mesh> CreateMesh(const MeshDescriptor* desc);
 
 protected:
-    s32 VertexCount = 0;
-    s32 IndexCount = 0;
+    std::vector<Vertex> _vertices;
+    std::vector<u32> _indices;
 };

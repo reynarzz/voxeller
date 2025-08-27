@@ -21,6 +21,8 @@ ImVec2 lastPos = { 0, 0 };
 ViewState Camera::_state = {};
 
 static glm::mat4 view() { return glm::lookAt(Position, Target, Up); }
+bool _isViewingObjectViewport = false;
+
 
 void updateOrbitCamera()
 {
@@ -40,8 +42,17 @@ void Camera::Update()
 {
     ImGuiIO& io = ImGui::GetIO();
 
+    if (ImGui::IsWindowHovered() && (ImGui::GetIO().MouseDown[1] || ImGui::GetIO().MouseDown[2] || io.MouseWheel != 0)) 
+    {
+        _isViewingObjectViewport = true;
+    }
+    else if(!ImGui::GetIO().MouseDown[1] && !ImGui::GetIO().MouseDown[2] &&  io.MouseWheel ==0)
+    {
+        _isViewingObjectViewport = false;
+    }
+
     // Rotation (RMB drag)
-    if (io.MouseDown[1])
+    if (io.MouseDown[1] && _isViewingObjectViewport)
     {
         if (firstMouse) { lastPos = io.MousePos; firstMouse = false; }
 
@@ -55,8 +66,11 @@ void Camera::Update()
         Pitch = glm::clamp(Pitch, -89.f, 89.f);
     }
     // Panning (MMB drag)
-    else if (io.MouseDown[2])
+    else if (io.MouseDown[2] && _isViewingObjectViewport)
     {
+        
+       
+
         if (firstMouse) { lastPos = io.MousePos; firstMouse = false; }
 
         float dx = io.MousePos.x - lastPos.x;
@@ -74,10 +88,13 @@ void Camera::Update()
         firstMouse = true;
     }
 
-    // Zoom (mouse wheel)
-    Distance -= io.MouseWheel * 2.0f;
-    Distance = glm::clamp(Distance, 2.0f, 1000.0f);
-
+    if(_isViewingObjectViewport)
+    {
+        // Zoom (mouse wheel)
+        Distance -= io.MouseWheel * 2.0f;
+        Distance = glm::clamp(Distance, 2.0f, 1000.0f);
+    }
+   
     if (ImGui::IsKeyPressed(ImGuiKey_F))
     {
         // Reset orbit target & zoom

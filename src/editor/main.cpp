@@ -12,6 +12,7 @@
 #include <Rendering/RenderingSystem.h>
 #include <GUI/Utils/TextureLoader.h>
 #include <Time/Time.h>
+#include <Rendering/VoxObject.h>
 
 // TODO:
 // - UV texture viewer.
@@ -57,7 +58,7 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 	Render(window);
 }
 
-static std::vector<std::shared_ptr<RenderableObject>> CreateFromGeometry(const std::vector<std::shared_ptr<Unvoxeller::UnvoxScene>>& scenes)
+static std::shared_ptr<VoxObject> CreateFromGeometry(const std::vector<std::shared_ptr<Unvoxeller::UnvoxScene>>& scenes)
 {
 	std::vector<std::shared_ptr<RenderableObject>> renderables{};
 	for (const auto& scene : scenes)
@@ -104,14 +105,16 @@ static std::vector<std::shared_ptr<RenderableObject>> CreateFromGeometry(const s
 			renderable->SetTexture(Texture::Create(&tDesc));
 
 			renderable->SetMesh(Mesh::CreateMesh(mDesc.get()));
-			renderable->SetRenderType(PipelineRenderType::NoTexture);
-			renderable->SetDrawType(RenderDrawType::Lines);
+			renderable->SetRenderType(PipelineRenderType::Opaque_Unlit);
+			renderable->SetDrawType(RenderDrawType::Triangles);
 
 			renderables.push_back(renderable);
 		}
 	}
 
-	return renderables;
+	auto voxObject = std::make_shared<VoxObject>(renderables);
+
+	return voxObject;
 }
 
 int Init()
@@ -239,12 +242,8 @@ int Init()
 	//unvox.ExportVoxToModel(exportOptions, convertOptions);
 	auto scene = unvox.VoxToMem(path, convertOptions);
 	
-	_renderables = CreateFromGeometry(scene.Scenes);
-	for (auto renderables : _renderables)
-	{
-		RenderingSystem::PushRenderable(renderables.get());
-	}
-
+	auto voxObject = CreateFromGeometry(scene.Scenes);
+	
 	while (!glfwWindowShouldClose(win))
 	{
 		if (glfwGetWindowAttrib(win, GLFW_ICONIFIED))

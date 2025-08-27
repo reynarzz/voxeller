@@ -75,12 +75,17 @@ void RenderingSystem::Update(const RendererState& state)
     for (size_t i = 0; i < _renderables.size(); i++)
     {
        const RenderableObject* renderable = _renderables[i];
-       const PipelineData* data = _pipelinesConfigs->GetPipelineData(renderable->GetRenderType());
+
+       if(renderable->GetCanDraw())
+       {
+          const PipelineData* data = _pipelinesConfigs->GetPipelineData(renderable->GetRenderType());
+        
+          _device->SetPipelineData(data, state, renderable);
+        
+         // Draw
+          _device->DrawRenderable(renderable);
+       }
        
-       _device->SetPipelineData(data, state, renderable);
-       
-       // Draw
-       _device->DrawRenderable(renderable);
     }
 
     _device->End();

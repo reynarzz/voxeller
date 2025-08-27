@@ -8,8 +8,8 @@
 
 
 
-DropAndDrop::DropCallback DropAndDrop::dropCallback = nullptr;
-DropAndDrop::HoverCallback DropAndDrop::hoverCallback = nullptr;
+DragAndDrop::DropCallback DragAndDrop::dropCallback = nullptr;
+DragAndDrop::HoverCallback DragAndDrop::hoverCallback = nullptr;
 
 @interface DropHoverHelper : NSView <NSDraggingDestination>
 @end
@@ -23,9 +23,9 @@ static NSInteger lastY = -1;
 {
     // Initial entry position
     NSPoint point = [sender draggingLocation];
-    if (DropAndDrop::hoverCallback) 
+    if (DragAndDrop::hoverCallback) 
     {
-        DropAndDrop::hoverCallback({(int)point.x, (int)point.y});
+        DragAndDrop::hoverCallback({(int)point.x, (int)point.y});
     }
     return NSDragOperationCopy;
 }
@@ -42,9 +42,9 @@ static NSInteger lastY = -1;
         lastX = x;
         lastY = y;
 
-        if (DropAndDrop::hoverCallback) 
+        if (DragAndDrop::hoverCallback) 
         {
-            DropAndDrop::hoverCallback({(int)x, (int)y});
+            DragAndDrop::hoverCallback({(int)x, (int)y});
         }
     }
 
@@ -62,7 +62,7 @@ static NSInteger lastY = -1;
     NSArray<NSURL*>* files = [pb readObjectsForClasses:@[[NSURL class]] options:nil];
     NSPoint point = [sender draggingLocation];
 
-    if (files && DropAndDrop::dropCallback) 
+    if (files && DragAndDrop::dropCallback) 
     {
         std::vector<std::string> paths;
         for (NSURL* url in files) {
@@ -70,7 +70,7 @@ static NSInteger lastY = -1;
                 paths.emplace_back([[url path] UTF8String]);
             }
         }
-        DropAndDrop::dropCallback({ paths, (int)point.x, (int)point.y });
+        DragAndDrop::dropCallback({ paths, (int)point.x, (int)point.y });
     }
     return YES;
 }
@@ -79,7 +79,7 @@ static NSInteger lastY = -1;
 
 static DropHoverHelper* gHoverHelper = nil;
 
-void DropAndDrop::Initialize(void* glfwWin) 
+void DragAndDrop::Initialize(void* glfwWin) 
 {
     NSWindow* window = glfwGetCocoaWindow(static_cast<GLFWwindow*>(glfwWin));
     NSView* mainView = [window contentView];
@@ -96,17 +96,17 @@ void DropAndDrop::Initialize(void* glfwWin)
     }
 }
 
-void DropAndDrop::Shutdown() 
+void DragAndDrop::Shutdown() 
 {
     gHoverHelper = nil;
 }
 
-void DropAndDrop::SetDropCallback(DropCallback cb) 
+void DragAndDrop::SetDropCallback(DropCallback cb) 
 {
     dropCallback = cb;
 }
 
-void DropAndDrop::SetHoverCallback(HoverCallback cb) 
+void DragAndDrop::SetHoverCallback(HoverCallback cb) 
 {
     hoverCallback = cb;
 }

@@ -1,4 +1,10 @@
 #include "RenderableObject.h"
+#include <Rendering/RenderingSystem.h>
+
+RenderableObject::RenderableObject()
+{
+    RenderingSystem::PushRenderable(this);
+}
 
 void RenderableObject::SetRenderType(const PipelineRenderType type)
 {
@@ -58,4 +64,14 @@ RenderableTransform &RenderableObject::GetTransform()
 const RenderableTransform &RenderableObject::GetTransform() const
 {
     return _transform;
+}
+
+void RenderableObject::SetCanDraw(bool draw)
+{
+    _canDraw = draw;
+}
+
+bool RenderableObject::GetCanDraw() const
+{
+    return _canDraw;
 }

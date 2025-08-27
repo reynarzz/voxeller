@@ -50,6 +50,7 @@ s32 selectedIndex = 0;
 f32 donuFill = 0;
 std::string searchBar = "";
 
+
 static std::string GetFileName(const std::string& fullPath)
 {
 	s32 start = fullPath.find_last_of(std::filesystem::path::preferred_separator) + 1;
@@ -184,10 +185,9 @@ void VoxToProcessView::ViewportWindow()
 
 	ImGui::Begin("Viewport", &open, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize);
 
-	//if (ImGui::IsWindowHovered()) 
-	{
-		Camera::Update();
-	}
+	
+	Camera::Update();
+
 
 	Screen::_width = ImGui::GetWindowWidth();
 	Screen::_height = ImGui::GetWindowHeight();
@@ -281,12 +281,16 @@ void VoxToProcessView::TextureViewport()
 	ImGuiIO& io = ImGui::GetIO();
 
 	// === Handle zoom/pan ===
-	if (ImGui::IsWindowHovered()) {
-		if (io.MouseWheel != 0.0f) {
+	if (ImGui::IsWindowHovered()) 
+	{
+		if (io.MouseWheel != 0.0f) 
+		{
 			zoom *= (1.0f + io.MouseWheel * 0.1f);
 			zoom = std::max(0.1f, std::min(zoom, 20.0f));
 		}
-		if (ImGui::IsMouseDragging(ImGuiMouseButton_Middle)) {
+
+		if (ImGui::IsMouseDragging(ImGuiMouseButton_Middle)) 
+		{
 			pan.x += io.MouseDelta.x;
 			pan.y += io.MouseDelta.y;
 		}
@@ -297,27 +301,31 @@ void VoxToProcessView::TextureViewport()
 	// ImGui::Image(TEXTURE_TO_IMGUI(myTex), winSize, ImVec2(0,1), ImVec2(1,0));
 
 	// === Example mesh UVs (replace with your own data) ===
-	static std::vector<ImVec2> uvs = {
+	static std::vector<ImVec2> uvs = 
+	{
 		{0.1f, 0.1f}, {0.4f, 0.1f}, {0.25f, 0.4f},
 		{0.6f, 0.2f}, {0.9f, 0.2f}, {0.75f, 0.5f}
 	};
 	static std::vector<int> indices = { 0,1,2, 3,4,5 };
 
-	auto UVToScreen = [&](ImVec2 uv) -> ImVec2 {
+	auto UVToScreen = [&](ImVec2 uv)  
+	{
 		return ImVec2(
 			winPos.x + pan.x + uv.x * winSize.x * zoom,
 			winPos.y + pan.y + uv.y * winSize.y * zoom
 		);
-		};
-	auto ScreenToUV = [&](ImVec2 pos) -> ImVec2 {
+	};
+	auto ScreenToUV = [&](ImVec2 pos)  
+	{
 		return ImVec2(
 			(pos.x - winPos.x - pan.x) / (winSize.x * zoom),
 			(pos.y - winPos.y - pan.y) / (winSize.y * zoom)
 		);
-		};
+	};
 
 	// === Draw triangles ===
-	for (size_t i = 0; i < indices.size(); i += 3) {
+	for (size_t i = 0; i < indices.size(); i += 3) 
+	{
 		ImVec2 p0 = UVToScreen(uvs[indices[i]]);
 		ImVec2 p1 = UVToScreen(uvs[indices[i + 1]]);
 		ImVec2 p2 = UVToScreen(uvs[indices[i + 2]]);
@@ -328,7 +336,8 @@ void VoxToProcessView::TextureViewport()
 
 	// === Draw vertices (draggable) ===
 	float handleSize = 6.0f;
-	for (int i = 0; i < (int)uvs.size(); i++) {
+	for (int i = 0; i < (int)uvs.size(); i++) 
+	{
 		ImVec2 p = UVToScreen(uvs[i]);
 		bool hovered = ImGui::IsMouseHoveringRect(
 			ImVec2(p.x - handleSize, p.y - handleSize),
@@ -346,15 +355,18 @@ void VoxToProcessView::TextureViewport()
 	}
 
 	// === Drag selected vertex ===
-	if (selectedVertex >= 0) {
-		if (ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
+	if (selectedVertex >= 0) 
+	{
+		if (ImGui::IsMouseDown(ImGuiMouseButton_Left)) 
+		{
 			ImVec2 mousePos = io.MousePos;
 			uvs[selectedVertex] = ScreenToUV(mousePos);
 			// Clamp to [0,1]
 			uvs[selectedVertex].x = std::max(0.0f, std::min(1.0f, uvs[selectedVertex].x));
 			uvs[selectedVertex].y = std::max(0.0f, std::min(1.0f, uvs[selectedVertex].y));
 		}
-		else {
+		else 
+		{
 			selectedVertex = -1; // release
 		}
 	}
