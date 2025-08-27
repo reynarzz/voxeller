@@ -6,5 +6,12 @@ enum class PipelineRenderType
     Opaque_Unlit,
     Opaque_Lit,
     Transparent,
-    Wireframe
+    Wireframe,
+    NoTexture,
+};
+
+enum class RenderDrawType 
+{
+    Triangles,
+    Lines
 };

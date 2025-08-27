@@ -11,6 +11,9 @@ public:
     void SetRenderType(const PipelineRenderType type);
     PipelineRenderType GetRenderType() const;
 
+    void SetDrawType(const RenderDrawType type);
+    RenderDrawType GetDrawType() const;
+
     void SetMesh(std::shared_ptr<Mesh> mesh);
     std::weak_ptr<Mesh> GetMesh() const;
     
@@ -30,4 +33,5 @@ private:
     std::shared_ptr<Mesh> _mesh = nullptr;
     std::shared_ptr<Texture> _texture = {};
     PipelineRenderType _renderType = PipelineRenderType::Opaque_Unlit;
+    RenderDrawType _drawType = RenderDrawType::Triangles;
 };

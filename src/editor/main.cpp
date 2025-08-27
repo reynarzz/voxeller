@@ -31,20 +31,12 @@ std::unique_ptr<RenderingSystem> _renderingSystem = nullptr;
 std::unique_ptr<Camera> _camera = nullptr;
 std::vector<std::shared_ptr<RenderableObject>> _renderables = {};
 
-f32 _rotY = 0;
 
 void Render(GLFWwindow* window)
 {
 	glfwPollEvents();
 
 	Time::Update();
-
-	_rotY += Time::GetDeltaTime() * 15.0f;
-
-	for (auto& renderable : _renderables)
-	{
-		renderable->GetTransform().SetRotation({0,_rotY,0});
-	}
 
 	LightState lightStateTest{};
 	lightStateTest.lightIntensity = 1.5f;
@@ -112,7 +104,8 @@ static std::vector<std::shared_ptr<RenderableObject>> CreateFromGeometry(const s
 			renderable->SetTexture(Texture::Create(&tDesc));
 
 			renderable->SetMesh(Mesh::CreateMesh(mDesc.get()));
-			renderable->SetRenderType(PipelineRenderType::Opaque_Unlit);
+			renderable->SetRenderType(PipelineRenderType::NoTexture);
+			renderable->SetDrawType(RenderDrawType::Lines);
 
 			renderables.push_back(renderable);
 		}

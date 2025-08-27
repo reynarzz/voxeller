@@ -11,7 +11,8 @@ enum class ShaderType
     VERTEX_LIT,
     FRAGMENT_LIT,
     WIRE_GEOMETRY,
-    WIRE_FRAGMENT
+    WIRE_FRAGMENT,
+    NO_TEXTURE_FRAGMENT
 };
 
 class ShaderLibrary

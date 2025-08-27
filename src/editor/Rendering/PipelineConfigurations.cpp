@@ -10,6 +10,8 @@ PipelineConfigurations::PipelineConfigurations(GfxDevice* device)
         { PipelineRenderType::Opaque_Lit, CreateOpaqueLitPipeline(device) },
         { PipelineRenderType::Transparent, CreateTransparentPipeline(device) },
         { PipelineRenderType::Wireframe, CreateWireFramePipeline(device) },
+        { PipelineRenderType::NoTexture, CreateNoTextureUnlitPipeline(device) },
+        
     };
 }
 
@@ -80,6 +82,22 @@ std::shared_ptr<PipelineData> PipelineConfigurations::CreateTransparentPipeline(
     auto pipelineData = std::make_shared<PipelineData>();
 
     // TODO: Transparent
+
+    return pipelineData;
+}
+
+std::shared_ptr<PipelineData> PipelineConfigurations::CreateNoTextureUnlitPipeline(GfxDevice* device)
+{
+    auto pipelineData = std::make_shared<PipelineData>();
+
+    ShaderDescriptor desc{};
+    desc.Vertex = _shaderLibrary->GetShaderBuffer(ShaderType::VERTEX_LIT);
+    desc.Fragment = _shaderLibrary->GetShaderBuffer(ShaderType::NO_TEXTURE_FRAGMENT);
+    desc.Geometry = {};
+
+    pipelineData->ZWrite = true;
+    pipelineData->Blending = false;
+    pipelineData->Shader = device->CreateShader(&desc);
 
     return pipelineData;
 }

@@ -11,5 +11,6 @@ VoxToProcessView();
      void UpdateGUI() override;
      void OnCloseView() override;
 private:
-void ViewportWindow();
+    void ViewportWindow();
+    void TextureViewport();
 };

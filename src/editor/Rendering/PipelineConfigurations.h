@@ -20,6 +20,7 @@ private:
     std::shared_ptr<PipelineData> CreateOpaqueLitPipeline(GfxDevice* device);
     std::shared_ptr<PipelineData> CreateWireFramePipeline(GfxDevice* device);
     std::shared_ptr<PipelineData> CreateTransparentPipeline(GfxDevice* device);
+    std::shared_ptr<PipelineData> CreateNoTextureUnlitPipeline(GfxDevice* device);
 
 
 

@@ -56,6 +56,18 @@ void main() {
 }
 )";
 
+static const std::string fragNoTex = R"(
+#version 330 core
+
+out vec4 fragColor;
+
+uniform sampler2D uTexture;
+
+void main() {
+    fragColor = vec4(1.0);
+}
+)";
+
 static const std::string wireFrag = R"(
 #version 330 core
 
@@ -144,6 +156,9 @@ ShaderLibrary::ShaderLibrary()
     auto* g0 = reinterpret_cast<const u8*>(wireFrame.c_str());
     auto* fg0 = reinterpret_cast<const u8*>(wireFrag.c_str());
 
+    auto* ntfg0 = reinterpret_cast<const u8*>(fragNoTex.c_str());
+
+
     _shadersBuffers =
     {
        { ShaderType::VERTEX_UNLIT, std::vector<u8>(v0, v0 + vertexUnlit.size() + 1) },
@@ -154,6 +169,8 @@ ShaderLibrary::ShaderLibrary()
 
        { ShaderType::WIRE_GEOMETRY, std::vector<u8>(g0, g0 + wireFrame.size() + 1) },
        { ShaderType::WIRE_FRAGMENT, std::vector<u8>(fg0, fg0 + wireFrag.size() + 1) },
+
+       { ShaderType::NO_TEXTURE_FRAGMENT, std::vector<u8>(ntfg0, ntfg0 + fragNoTex.size() + 1) },
     };
 }
 

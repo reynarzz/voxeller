@@ -152,7 +152,7 @@ void ToolBar()
 
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 1.0f);
 	ImGui::PushStyleColor(ImGuiCol_Border, IM_COL32(30, 30, 30, 0));
-	ImGui::PushStyleColor(ImGuiCol_WindowBg, WindowsBgColor);
+	ImGui::PushStyleColor(ImGuiCol_WindowBg, {0,0,0,0});
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
 
@@ -172,7 +172,8 @@ void VoxToProcessView::ViewportWindow()
 {
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, _windowsRound);
 	bool open = true;
-	ImGui::SetNextWindowSize({ ImGui::GetIO().DisplaySize.x /2 - 60.0f, ImGui::GetIO().DisplaySize.y - toolBarHeight - windowsSpacingY - 13 }, ImGuiCond_Always);
+	ImVec2 windowSize = { ImGui::GetIO().DisplaySize.x / 2 - 60.0f, ImGui::GetIO().DisplaySize.y - toolBarHeight - windowsSpacingY - 13 };
+	ImGui::SetNextWindowSize(windowSize, ImGuiCond_Always);
 	ImGui::SetNextWindowPos({ 5, toolBarHeight + windowsSpacingY * 2 }, ImGuiCond_Always);
 
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 1.0f);
@@ -250,6 +251,130 @@ void VoxToProcessView::ViewportWindow()
 	ImGui::PopStyleColor(2);
 }
 
+void VoxToProcessView::TextureViewport()
+{
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, _windowsRound);
+	bool open = true;
+
+	const f32 xPos = ImGui::GetIO().DisplaySize.x / 2 - 60.0f + 10;
+	const ImVec2 windowSize = {
+		ImGui::GetIO().DisplaySize.x - 265.0f - xPos,
+		ImGui::GetIO().DisplaySize.y - toolBarHeight - windowsSpacingY - 13
+	};
+
+	ImGui::SetNextWindowSize(windowSize, ImGuiCond_Always);
+	ImGui::SetNextWindowPos({ xPos, toolBarHeight + windowsSpacingY * 2 }, ImGuiCond_Always);
+
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+	ImGui::PushStyleColor(ImGuiCol_WindowBg, IM_COL32(60, 60, 60, 255));
+	ImGui::Begin("Texture Viewport", &open,
+		ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize);
+
+	// === Persistent state (static keeps it across frames) ===
+	static float zoom = 1.0f;
+	static ImVec2 pan(0.0f, 0.0f);
+	static int selectedVertex = -1;   // currently dragged vertex id
+
+	ImVec2 winPos = ImGui::GetWindowPos();
+	ImVec2 winSize = ImGui::GetWindowSize();
+	ImDrawList* dl = ImGui::GetWindowDrawList();
+	ImGuiIO& io = ImGui::GetIO();
+
+	// === Handle zoom/pan ===
+	if (ImGui::IsWindowHovered()) {
+		if (io.MouseWheel != 0.0f) {
+			zoom *= (1.0f + io.MouseWheel * 0.1f);
+			zoom = std::max(0.1f, std::min(zoom, 20.0f));
+		}
+		if (ImGui::IsMouseDragging(ImGuiMouseButton_Middle)) {
+			pan.x += io.MouseDelta.x;
+			pan.y += io.MouseDelta.y;
+		}
+	}
+
+	// === Draw checker background ===
+	const int gridSize = 16;
+	for (int y = 0; y < (int)winSize.y; y += gridSize) {
+		for (int x = 0; x < (int)winSize.x; x += gridSize) {
+			bool light = ((x / gridSize + y / gridSize) % 2) == 0;
+			dl->AddRectFilled(
+				ImVec2(winPos.x + (float)x, winPos.y + (float)y),
+				ImVec2(winPos.x + (float)(x + gridSize), winPos.y + (float)(y + gridSize)),
+				light ? IM_COL32(200, 200, 200, 255) : IM_COL32(120, 120, 120, 255));
+		}
+	}
+
+	// === Draw texture (if you have one) ===
+	// ImGui::Image(TEXTURE_TO_IMGUI(myTex), winSize, ImVec2(0,1), ImVec2(1,0));
+
+	// === Example mesh UVs (replace with your own mesh data) ===
+	static std::vector<ImVec2> uvs = {
+		{0.1f, 0.1f}, {0.4f, 0.1f}, {0.25f, 0.4f},
+		{0.6f, 0.2f}, {0.9f, 0.2f}, {0.75f, 0.5f}
+	};
+	static std::vector<int> indices = { 0,1,2, 3,4,5 };
+
+	auto UVToScreen = [&](ImVec2 uv) -> ImVec2 {
+		return ImVec2(
+			winPos.x + pan.x + uv.x * winSize.x * zoom,
+			winPos.y + pan.y + uv.y * winSize.y * zoom
+		);
+		};
+	auto ScreenToUV = [&](ImVec2 pos) -> ImVec2 {
+		return ImVec2(
+			(pos.x - winPos.x - pan.x) / (winSize.x * zoom),
+			(pos.y - winPos.y - pan.y) / (winSize.y * zoom)
+		);
+		};
+
+	// === Draw triangles ===
+	for (size_t i = 0; i < indices.size(); i += 3) {
+		ImVec2 p0 = UVToScreen(uvs[indices[i]]);
+		ImVec2 p1 = UVToScreen(uvs[indices[i + 1]]);
+		ImVec2 p2 = UVToScreen(uvs[indices[i + 2]]);
+		dl->AddLine(p0, p1, IM_COL32(255, 255, 255, 255), 1.0f);
+		dl->AddLine(p1, p2, IM_COL32(255, 255, 255, 255), 1.0f);
+		dl->AddLine(p2, p0, IM_COL32(255, 255, 255, 255), 1.0f);
+	}
+
+	// === Draw vertices (draggable) ===
+	float handleSize = 6.0f;
+	for (int i = 0; i < (int)uvs.size(); i++) {
+		ImVec2 p = UVToScreen(uvs[i]);
+		bool hovered = ImGui::IsMouseHoveringRect(
+			  ImVec2(p.x - handleSize, p.y - handleSize),
+			  ImVec2(p.x + handleSize, p.y + handleSize));
+
+		ImU32 col = (hovered || selectedVertex == i)
+			? IM_COL32(255, 128, 0, 255)
+			: IM_COL32(0, 255, 255, 255);
+
+		dl->AddCircleFilled(p, handleSize, col);
+
+		// Begin drag if clicked
+		if (hovered && ImGui::IsMouseClicked(ImGuiMouseButton_Left))
+			selectedVertex = i;
+	}
+
+	// === Drag selected vertex ===
+	if (selectedVertex >= 0) {
+		if (ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
+			ImVec2 mousePos = io.MousePos;
+			uvs[selectedVertex] = ScreenToUV(mousePos);
+			// Clamp to [0,1]
+			uvs[selectedVertex].x = std::max(0.0f, std::min(1.0f, uvs[selectedVertex].x));
+			uvs[selectedVertex].y = std::max(0.0f, std::min(1.0f, uvs[selectedVertex].y));
+		}
+		else {
+			selectedVertex = -1; // release
+		}
+	}
+
+	ImGui::End();
+	ImGui::PopStyleColor();
+	ImGui::PopStyleVar(2);
+	ImGui::PopStyleVar();
+}
 
 void ExportWin()
 {
@@ -346,6 +471,8 @@ void VoxToProcessView::UpdateGUI()
 	ExportWin();
 	ToolBar();
 	ViewportWindow();
+	TextureViewport();
+
 	// Sidebar region (no frame)
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, _windowsRound);
 	bool open = true;

@@ -53,9 +53,20 @@ void OpenGLDevice::DrawRenderable(const RenderableObject *renderable)
 		GL_CALL(glBindTexture(GL_TEXTURE_2D, 0));
 	}
 	
-	// Draw
-	GL_CALL(glDrawElements(GL_TRIANGLES, glMesh->GetIndexCount(), GL_UNSIGNED_INT, nullptr));
-
+	if (renderable->GetDrawType() == RenderDrawType::Triangles)
+	{
+		// Draw
+		GL_CALL(glDrawElements(GL_TRIANGLES, glMesh->GetIndexCount(), GL_UNSIGNED_INT, nullptr));
+	}
+	else if (renderable->GetDrawType() == RenderDrawType::Lines)
+	{
+		GL_CALL(glDrawElements(GL_LINES, glMesh->GetIndexCount(), GL_UNSIGNED_INT, nullptr));
+	}
+	else 
+	{
+		
+	}
+	
 	glMesh->Unbind();
 }
 

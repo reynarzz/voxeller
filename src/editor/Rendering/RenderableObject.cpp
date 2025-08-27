@@ -30,6 +30,16 @@ PipelineRenderType RenderableObject::GetRenderType() const
     return _renderType;
 }
 
+void RenderableObject::SetDrawType(const RenderDrawType type)
+{
+    _drawType = type;
+}
+
+RenderDrawType RenderableObject::GetDrawType() const
+{
+    return _drawType;
+}
+
 void RenderableObject::Destroy() 
 {
     _pendingForDestroy = true;
