@@ -262,8 +262,7 @@ void VoxToProcessView::TextureViewport()
     bool open = true;
 
     const f32 xPos = ImGui::GetIO().DisplaySize.x / 2 - 60.0f + 10;
-    const ImVec2 windowSize = 
-	{
+    const ImVec2 windowSize = {
         ImGui::GetIO().DisplaySize.x - 265.0f - xPos,
         ImGui::GetIO().DisplaySize.y - toolBarHeight - windowsSpacingY - 13
     };
@@ -272,7 +271,7 @@ void VoxToProcessView::TextureViewport()
     ImGui::SetNextWindowPos({ xPos, toolBarHeight + windowsSpacingY * 2 }, ImGuiCond_Always);
 
     ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
-    ImGui::PushStyleColor(ImGuiCol_WindowBg, IM_COL32(60, 60, 60, 255));
+    ImGui::PushStyleColor(ImGuiCol_WindowBg, WindowsBgColor);
     ImGui::Begin("Texture Viewport", &open,
         ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize);
 
@@ -282,6 +281,7 @@ void VoxToProcessView::TextureViewport()
     static int selectedVertex = -1;
     static ImVec2 dragStartMouse(0,0);
     static glm::vec2 dragStartUV(0,0);
+    static bool initializedZoom = false; // <=== NEW
 
     ImVec2 winPos = ImGui::GetWindowPos();
     ImVec2 winSize = ImGui::GetWindowSize();
@@ -295,8 +295,7 @@ void VoxToProcessView::TextureViewport()
     auto& indices = mesh->GetIndices();
     auto tex = renderable->GetTexture().lock();
 
-    if (!tex)
-	{
+    if (!tex) {
         ImGui::End();
         ImGui::PopStyleColor();
         ImGui::PopStyleVar(2);
@@ -306,13 +305,19 @@ void VoxToProcessView::TextureViewport()
     float texWidth  = (float)tex->GetWidth();
     float texHeight = (float)tex->GetHeight();
 
+    // === Initialize zoom so texture fits width with 5px gap ===
+    if (!initializedZoom) {
+        zoom = (winSize.x - 10.0f) / texWidth; // fit to width with margin
+        pan = ImVec2(0, 0); // reset pan
+        initializedZoom = true;
+    }
+
     // Canvas center for transforms
     ImVec2 canvasCenter = ImVec2(winPos.x + winSize.x * 0.5f,
                                  winPos.y + winSize.y * 0.5f);
 
     // === Transform helpers (Y flipped) ===
-    auto UVToScreen = [&](glm::vec2 uv) -> ImVec2 
-	{
+    auto UVToScreen = [&](glm::vec2 uv) -> ImVec2 {
         uv.y = 1.0f - uv.y; // flip Y
 
         ImVec2 centered((uv.x - 0.5f) * texWidth,
@@ -321,8 +326,7 @@ void VoxToProcessView::TextureViewport()
                       canvasCenter.y + centered.y * zoom + pan.y);
     };
 
-    auto ScreenToUV = [&](ImVec2 pos) -> ImVec2 
-	{
+    auto ScreenToUV = [&](ImVec2 pos) -> ImVec2 {
         ImVec2 local((pos.x - canvasCenter.x - pan.x) / zoom,
                      (pos.y - canvasCenter.y - pan.y) / zoom);
         ImVec2 uv(local.x / texWidth + 0.5f,
@@ -335,8 +339,7 @@ void VoxToProcessView::TextureViewport()
     // === Handle zoom/pan ===
     if (ImGui::IsWindowHovered())
     {
-        if (io.MouseWheel != 0.0f) 
-		{
+        if (io.MouseWheel != 0.0f) {
             ImVec2 mouse = io.MousePos;
             ImVec2 uvBefore = ScreenToUV(mouse);
 
@@ -348,14 +351,14 @@ void VoxToProcessView::TextureViewport()
             pan.y += (mouse.y - newScreen.y);
         }
 
-        if (ImGui::IsMouseDown(ImGuiMouseButton_Right) || ImGui::IsMouseDown(ImGuiMouseButton_Middle)) 
-		{
+        if (ImGui::IsMouseDown(ImGuiMouseButton_Right) || ImGui::IsMouseDown(ImGuiMouseButton_Middle)) {
             pan.x += io.MouseDelta.x;
             pan.y += io.MouseDelta.y;
         }
     }
 
     // === Draw texture transformed (Y flipped for OpenGL) ===
+       // === Draw texture transformed (Y flipped for OpenGL) ===
     ImVec2 topLeft  = UVToScreen({0.0f, 0.0f});
     ImVec2 topRight = UVToScreen({1.0f, 0.0f});
     ImVec2 botRight = UVToScreen({1.0f, 1.0f});
@@ -365,9 +368,30 @@ void VoxToProcessView::TextureViewport()
         topLeft, topRight, botRight, botLeft,
         ImVec2(0,1), ImVec2(1,1), ImVec2(1,0), ImVec2(0,0));
 
-    // === Draw triangles ===
-    for (size_t i = 0; i < indices.size(); i += 3) 
+    // === Draw dotted border around texture ===
+    auto drawDottedLine = [&](ImVec2 a, ImVec2 b) 
 	{
+        const float segment = 6.0f; // length of each dash
+        ImVec2 dir = ImVec2(b.x - a.x, b.y - a.y);
+        float len = sqrtf(dir.x*dir.x + dir.y*dir.y);
+        if (len <= 0.001f) return;
+        dir.x /= len; dir.y /= len;
+        for (float d = 0; d < len; d += segment*2.0f) 
+		{
+            ImVec2 p1 = ImVec2(a.x + dir.x * d, a.y + dir.y * d);
+            ImVec2 p2 = ImVec2(a.x + dir.x * (d + segment), a.y + dir.y * (d + segment));
+            if (d + segment > len) p2 = b;
+            dl->AddLine(p1, p2, IM_COL32(255,255,255,255), 1.0f);
+        }
+    };
+
+    drawDottedLine(topLeft, topRight);
+    drawDottedLine(topRight, botRight);
+    drawDottedLine(botRight, botLeft);
+    drawDottedLine(botLeft, topLeft);
+
+    // === Draw triangles ===
+    for (size_t i = 0; i < indices.size(); i += 3) {
         ImVec2 p0 = UVToScreen(vertices[indices[i]].UV);
         ImVec2 p1 = UVToScreen(vertices[indices[i + 1]].UV);
         ImVec2 p2 = UVToScreen(vertices[indices[i + 2]].UV);
@@ -378,8 +402,7 @@ void VoxToProcessView::TextureViewport()
 
     // === Draw vertices (draggable) ===
     float handleSize = 4.0f;
-    for (int i = 0; i < (int)vertices.size(); i++) 
-	{
+    for (int i = 0; i < (int)vertices.size(); i++) {
         ImVec2 p = UVToScreen(vertices[i].UV);
         bool hovered = ImGui::IsMouseHoveringRect(
             ImVec2(p.x - handleSize, p.y - handleSize),
@@ -391,37 +414,29 @@ void VoxToProcessView::TextureViewport()
 
         dl->AddCircleFilled(p, 2, col);
 
-        if (hovered && ImGui::IsMouseClicked(ImGuiMouseButton_Left)) 
-		{
+        if (hovered && ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
             selectedVertex = i;
-            dragStartMouse = io.MousePos;          // store mouse pos
-            dragStartUV = vertices[i].UV;          // store UV
+            dragStartMouse = io.MousePos;
+            dragStartUV = vertices[i].UV;
         }
     }
 
-    // === Drag selected vertex (delta-based, no snap) ===
-    if (selectedVertex >= 0) 
-	{
-        if (ImGui::IsMouseDown(ImGuiMouseButton_Left)) 
-		{
-            // delta in screen space
+    // === Drag selected vertex (delta-based) ===
+    if (selectedVertex >= 0) {
+        if (ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
             ImVec2 deltaScreen(io.MousePos.x - dragStartMouse.x,
                                io.MousePos.y - dragStartMouse.y);
 
-            // convert delta to UV space
             ImVec2 deltaUV(
                 deltaScreen.x / (texWidth  * zoom),
                 deltaScreen.y / (texHeight * zoom)
             );
 
-            deltaUV.y = -deltaUV.y; // account for flipped Y
+            deltaUV.y = -deltaUV.y;
 
-            // apply delta
             vertices[selectedVertex].UV.x = std::max(0.0f, std::min(1.0f, dragStartUV.x + deltaUV.x));
             vertices[selectedVertex].UV.y = std::max(0.0f, std::min(1.0f, dragStartUV.y + deltaUV.y));
-        }
-        else 
-		{
+        } else {
             selectedVertex = -1;
         }
     }
