@@ -116,9 +116,9 @@ int Init()
 	// File
 	NativeMenu::Add("File/Open/.vox", []() { LOG_INFO("Open .vox");});
 	NativeMenu::Add("File/Open/Project", []() { LOG_INFO("Open .vox");});
-	NativeMenu::Add("File/Save", []() { LOG_INFO("Open .vox");});
-	NativeMenu::Add("File/Save As", []() { LOG_INFO("Open .vox");});
-
+	NativeMenu::Add("File/Save", []() { LOG_INFO("Save");}, false, "Cmd+S");
+	NativeMenu::Add("File/Save As", []() { LOG_INFO("Save As");}, false, "Shift+Command+S");
+   
 
 	NativeMenu::Add("File/Exit", [&]() { glfwSetWindowShouldClose(win, true); });
 	
@@ -137,9 +137,14 @@ int Init()
 	NativeMenu::Toggle("Window/3D View", true);
 	NativeMenu::Toggle("Window/UV Editor", true);
 
+	// Help
 	NativeMenu::Add("Help/About", []() { LOG_INFO("About");});
-	NativeMenu::Add("Help/Made By Reynardo Perez", []() { LOG_INFO("About");});
-	NativeMenu::Enable("Help/Made By Reynarz", false);
+
+	NativeMenu::Add("Help/Made By Reynarz", []() { LOG_INFO("About");});
+	NativeMenu::Enable("Help/Creadits: Made By Reynarz", false);
+	NativeMenu::Separator("Help/Creadits: Made By Reynarz"); 
+
+
 
 
 

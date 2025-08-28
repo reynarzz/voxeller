@@ -34,103 +34,97 @@ namespace Unvoxeller
 	{
 	}
 
-	static vox_mat3 decode_rotation(uint8_t r)
-	{
-		int idx[3], sign[3];
-		idx[0] = (r >> 0) & 0x3;
-		idx[1] = (r >> 2) & 0x3;
-		idx[2] = 3 - idx[0] - idx[1]; // (since idx[0], idx[1], idx[2] is a permutation of 0,1,2)
-		sign[0] = ((r >> 4) & 0x1) ? -1 : 1;
-		sign[1] = ((r >> 5) & 0x1) ? -1 : 1;
-		sign[2] = ((r >> 6) & 0x1) ? -1 : 1;
+	inline vox_vec3 Rotate3x3(const vox_mat3& m, const vox_vec3& v)
+{
+    // Use the same convention everywhere (this matches your earlier Rotate helper):
+    return {
+        m.m00 * v.x + m.m10 * v.y + m.m20 * v.z,
+        m.m01 * v.x + m.m11 * v.y + m.m21 * v.z,
+        m.m02 * v.x + m.m12 * v.y + m.m22 * v.z
+    };
+}
 
-		float m[3][3] = {};
-		m[0][idx[0]] = sign[0];
-		m[1][idx[1]] = sign[1];
-		m[2][idx[2]] = sign[2];
+// Accumulates world transform for a shape node, correcting Magica's center-vs-plane offset
+inline vox_transform AccumulateWorldTransform(
+    int shapeNodeID,
+    int frameIndex,
+    const vox_file& voxData)
+{
+    // Helper: find the transform node whose childNodeID == nodeID
+    auto findTransformByChild = [&](int childID) -> int {
+        for (auto const& kv : voxData.transforms) {
+            if (kv.second.childNodeID == childID)
+                return kv.first;
+        }
+        return -1;
+    };
 
-		return
-		{
-			m[0][0], m[0][1], m[0][2],
-			m[1][0], m[1][1], m[1][2],
-			m[2][0], m[2][1], m[2][2]
-		};
-	}
+    // 1) start at the transform that directly points to our shape
+    int trnID = findTransformByChild(shapeNodeID);
+    if (trnID < 0) {
+        return vox_transform(); // identity
+    }
 
+    // 2) Walk up to the root; push parent->child order onto a stack
+    std::stack<vox_transform> xfStack;
 
+    while (trnID != -1) {
+        auto it = voxData.transforms.find(trnID);
+        if (it == voxData.transforms.end()) break;
+        const vox_nTRN& trn = it->second;
 
-	inline vox_transform AccumulateWorldTransform(
-		int shapeNodeID,
-		int frameIndex,
-		const vox_file& voxData)
-	{
-		// Helper: find the transform node whose childNodeID == nodeID
-		auto findTransformByChild = [&](int childID) -> int {
-			for (auto const& kv : voxData.transforms) {
-				if (kv.second.childNodeID == childID)
-					return kv.first;
-			}
-			return -1;
-			};
+        // clamp frameIndex
+        int fidx = (frameIndex < trn.framesCount ? frameIndex : 0);
+        const vox_frame_attrib& attr = trn.frameAttrib[fidx];
 
-		// 1) start at the transform that directly points to our shape
-		int trnID = findTransformByChild(shapeNodeID);
-		if (trnID < 0) {
-			return vox_transform(); // identity
-		}
+        // --- Half-voxel correction (once per node, in Magica space) ---
+        // Magica's transforms operate about voxel centers; our faces lie on planes.
+        // Subtract R * (0.5, 0.5, 0.5) from the node translation.
+        const vox_vec3 half{ 0.5f, 0.5f, 0.5f };
+        const vox_vec3 bias = Rotate3x3(attr.rotation, half);
+        vox_vec3 correctedT{
+            attr.translation.x - bias.x,
+            attr.translation.y - bias.y,
+            attr.translation.z - bias.z
+        };
 
-		// 2) We'll walk up to the root, but we need to apply parent transforms *first*,
-		//    so push them on a stack, then multiply in that order.
-		std::stack<vox_transform> xfStack;
+        xfStack.push(vox_transform(attr.rotation, correctedT));
 
-		while (trnID != -1) {
-			auto it = voxData.transforms.find(trnID);
-			if (it == voxData.transforms.end()) break;
-			const vox_nTRN& trn = it->second;
+        // 3) find the *parent* transform of this nTRN:
+        //    a) check explicit "_parent" style attributes
+        int parentID = -1;
+        for (auto const& key : { "_parent", "_parent_id", "_parentID" }) {
+            auto ait = trn.attributes.find(key);
+            if (ait != trn.attributes.end()) {
+                parentID = std::stoi(ait->second);
+                break;
+            }
+        }
 
-			// clamp frameIndex
-			int fidx = (frameIndex < trn.framesCount ? frameIndex : 0);
-			const vox_frame_attrib& attr = trn.frameAttrib[fidx];
+        //    b) if none, see if this nTRN appears as a child of an nGRP, and walk up from that group
+        if (parentID < 0) {
+            for (auto const& gkv : voxData.groups) {
+                for (int cid : gkv.second.childrenIDs) {
+                    if (cid == trnID) {
+                        parentID = findTransformByChild(gkv.first);
+                        break;
+                    }
+                }
+                if (parentID >= 0) break;
+            }
+        }
 
-			xfStack.push(vox_transform(attr.rotation, attr.translation));
+        trnID = parentID;
+    }
 
-			// 3) find the *parent* transform of this nTRN:
-			//    a) first, check explicit "_parent" attributes
-			int parentID = -1;
-			for (auto const& key : { "_parent", "_parent_id", "_parentID" }) {
-				auto ait = trn.attributes.find(key);
-				if (ait != trn.attributes.end()) {
-					parentID = std::stoi(ait->second);
-					break;
-				}
-			}
-
-			//    b) if none, maybe this trn is listed in an nGRP — find the group,
-			//       then find the nTRN whose child is *that* group.
-			if (parentID < 0) {
-				for (auto const& gkv : voxData.groups) {
-					for (int cid : gkv.second.childrenIDs) {
-						if (cid == trnID) {
-							// gkv.first is the group node ID
-							parentID = findTransformByChild(gkv.first);
-							break;
-						}
-					}
-					if (parentID >= 0) break;
-				}
-			}
-
-			trnID = parentID;
-		}
-
-		// 4) Now multiply them in parent→child order
-		vox_transform world; // identity
-		while (!xfStack.empty()) {
-			world = xfStack.top() * world;
-			xfStack.pop();
-		}
-		return world;
-	}
+    // 4) Multiply in parent→child order
+    vox_transform world; // identity
+    while (!xfStack.empty()) {
+        world = xfStack.top() * world;
+        xfStack.pop();
+    }
+    return world;
+}
 
 	// Create and save a PNG texture from the atlas data
 	static bool SaveAtlasImage(const std::string& filename, int width, int height, const std::vector<unsigned char>& rgbaData)
@@ -140,168 +134,6 @@ namespace Unvoxeller
 			return false;
 		}
 		return true;
-	}
-
-	bbox ComputeMeshBoundingBox(const UnvoxMesh* mesh)
-	{
-		bbox boundingBox =
-		{
-			std::numeric_limits<float>::max(),
-			std::numeric_limits<float>::max(),
-			std::numeric_limits<float>::max(),
-			std::numeric_limits<float>::lowest(),
-			std::numeric_limits<float>::lowest(),
-			std::numeric_limits<float>::lowest()
-		};
-		if (!mesh || mesh->Vertices.size() == 0)
-			return boundingBox;
-
-		for (unsigned i = 0; i < mesh->Vertices.size(); ++i)
-		{
-			const vox_vec3& v = mesh->Vertices[i];
-			const vox_vec3& n = mesh->Normals[i];
-			boundingBox.minX = std::min(boundingBox.minX, v.x);
-			boundingBox.minY = std::min(boundingBox.minY, v.y);
-			boundingBox.minZ = std::min(boundingBox.minZ, v.z);
-
-			boundingBox.maxX = std::max(boundingBox.maxX, v.x);
-			boundingBox.maxY = std::max(boundingBox.maxY, v.y);
-			boundingBox.maxZ = std::max(boundingBox.maxZ, v.z);
-		}
-
-		return boundingBox;
-	}
-
-	//vox_vec3 TransformToMeshSpace(const vox_vec3& p,
-	//	const vox_vec3& voxCenter,
-	//	const vox_mat3& rot,
-	//	const vox_vec3& trans)
-	//{
-	//	// 1. Translate so pivot is at origin (pivot recentering)
-	//	vox_vec3 v = p - voxCenter;
-
-	//	// 2. Apply MagicaVoxel's rotation
-	//	v = rot * v;
-
-	//	// 3. Swizzle axes to (x, z, y) to match Assimp's coordinate system
-	//	vox_vec3 sw{ v.x, v.z, v.y };
-
-	//	// 4. Apply translation (note Y↔Z swap)
-	//	sw.x += trans.x;
-	//	sw.y += trans.z;
-	//	sw.z += trans.y;
-
-	//	// 5. Mirror the X-axis to restore right-handedness
-	//	sw.x = -sw.x;
-
-	//	return sw;
-	//}
-
-	//aiMatrix4x4 BuildAiTransformMatrix(
-	//	const vox_mat3& rot,      // 3×3 rotation from MagicaVoxel
-	//	const vox_vec3& trans      // translation from MagicaVoxel (_t), in voxel units
-	//) {
-	//	// 1. Assemble a 4×4 matrix from rot and trans,
-	//	//    with axis swap and X mirroring baked in.
-
-	//	// Prepare rotation rows
-	//	// MagicaVoxel uses row-vectors; we map to column-major aiMatrix4x4
-	//	float R[4][4] = {
-	//		{ rot.m00, rot.m10, rot.m20, 0.0f },
-	//		{ rot.m01, rot.m11, rot.m21, 0.0f },
-	//		{ rot.m02, rot.m12, rot.m22, 0.0f },
-	//		{    0.0f,    0.0f,    0.0f, 1.0f }
-	//	};
-
-	//	// 2. Swap axes: convert (x, y, z) → (x, z, y)
-	//	//    Effectively multiply on the right with a permutation matrix.
-	//	aiMatrix4x4 perm;
-	//	perm.a1 = 1.0f; // X → X
-	//	perm.b3 = 1.0f; // Y → Z
-	//	perm.c2 = 1.0f; // Z → Y
-
-	//	// 3. Mirror X: scale X by –1
-	//	aiMatrix4x4 mirror;
-	//	mirror.a1 = -1.0f;
-
-	//	// Combine rotation, permutation, and mirroring
-	//	aiMatrix4x4 mRot(
-	//		R[0][0], R[0][1], R[0][2], 0.0f,
-	//		R[1][0], R[1][1], R[1][2], 0.0f,
-	//		R[2][0], R[2][1], R[2][2], 0.0f,
-	//		0.0f, 0.0f, 0.0f, 1.0f
-	//	);
-
-	//	aiMatrix4x4 xf = mirror * perm * mRot;
-
-	//	// 4. Apply translation: note the Y ↔ Z swap
-	//	aiVector3D t;
-	//	t.x = trans.x;
-	//	t.y = trans.z;
-	//	t.z = trans.y;
-
-	//	aiMatrix4x4::Translation(t, xf);
-	//	return xf;
-	//}
-
-	vox_mat4 BuildVoxTransformMatrix(
-		const vox_mat3& rot,
-		const vox_vec3& trans
-	)
-	{
-		// 1. Convert MagicaVoxel’s row-major 3×3 rot into column-major 4×4
-		vox_mat4 mRot(
-			rot.m00, rot.m10, rot.m20, 0.0f,
-			rot.m01, rot.m11, rot.m21, 0.0f,
-			rot.m02, rot.m12, rot.m22, 0.0f,
-			0.0f, 0.0f, 0.0f, 1.0f
-		);
-
-		// 2. Axis swap: (x, y, z) → (x, z, y)
-		vox_mat4 perm(
-			1, 0, 0, 0,
-			0, 0, 1, 0,
-			0, 1, 0, 0,
-			0, 0, 0, 1
-		);
-
-		// 3. Mirror X (scale X by –1)
-		vox_mat4 mirror(
-			-1, 0, 0, 0,
-			0, 1, 0, 0,
-			0, 0, 1, 0,
-			0, 0, 0, 1
-		);
-
-		// Combine: mirror * perm * rot
-		vox_mat4 xf = mirror * perm * mRot;
-
-		// 4. Apply translation, with Y↔Z swap and **–0.5 offset**
-		vox_vec3 t;
-		t.x = trans.x - 0.5f;
-		t.y = trans.z - 0.5f; // swap Y/Z
-		t.z = trans.y - 0.5f;
-
-		vox_mat4 transMat(
-			1, 0, 0, t.x,
-			0, 1, 0, t.y,
-			0, 0, 1, t.z,
-			0, 0, 0, 1
-		);
-
-		// Final
-		xf = transMat * xf;
-		return xf;
-	}
-
-	inline vox_vec3 Rotate(const vox_mat3& m, const vox_vec3& v)
-	{
-		return
-		{
-		  m.m00 * v.x + m.m10 * v.y + m.m20 * v.z,
-		  m.m01 * v.x + m.m11 * v.y + m.m21 * v.z,
-		  m.m02 * v.x + m.m12 * v.y + m.m22 * v.z
-		};
 	}
 
 
@@ -321,7 +153,7 @@ namespace Unvoxeller
 
 		s32 materialIndex = 0;
 
-		const std::vector<vox_vec3>& pivots = options.Pivots;// Rotate(wxf.rot, options.Pivot);
+		const std::vector<vox_vec3>& pivots = options.Pivots;
 
 		struct ModelData
 		{
@@ -506,7 +338,6 @@ namespace Unvoxeller
 				// If you want to support groups (nGRP), you may have to walk up to the root and find the chain.
 				vox_transform wxf = AccumulateWorldTransform(shape.nodeID, frameIndex, *voxData);
 
-
 				// Build mesh and apply MagicaVoxel rotation+translation directly into vertices:
 				auto mesh = MeshBuilder::BuildMeshFromFaces(
 					faces,
@@ -514,8 +345,9 @@ namespace Unvoxeller
 					options.Meshing.FlatShading,
 					pallete,
 					box,          // pivot centering
+					voxData->sizes[modelId],
 					wxf.rot,     // MagicaVoxel 3×3 rotation
-					wxf.trans    // MagicaVoxel translation
+					wxf.trans    // MagicaVoxel translation,
 				);
 
 
@@ -546,39 +378,6 @@ namespace Unvoxeller
 				{
 					node->MeshesIndexes.push_back(meshIndex);
 				}
-
-				// box = TransformAABB(box, wxf.rot, wxf.trans);
-				//  float cxx = box.minX + (box.maxX - box.minX) * options.Pivot.x;
-				//  float cyy = box.minY + (box.maxY - box.minY) * options.Pivot.y;
-				//  float czz = box.minZ + (box.maxZ - box.minZ) * options.Pivot.z;
-
-				//auto bbbox = ComputeMeshBoundingBox(mesh.get());
-				//float cxx = bbbox.minX + (bbbox.maxX - bbbox.minX) * currentPivot.x;
-				//float cyy = bbbox.minY + (bbbox.maxY - bbbox.minY) * currentPivot.y;
-				//float czz = bbbox.minZ + (bbbox.maxZ - bbbox.minZ) * currentPivot.z;
-
-				//vox_vec3 cent(cxx, cyy, czz);
-
-				//if (options.Meshing.MeshesToWorldCenter)
-				//{
-				//	for (unsigned int i = 0; i < mesh->Vertices.size(); ++i)
-				//	{
-				//		mesh->Vertices[i] -= cent;
-				//	}
-				//}
-				//else
-				//{
-				//	for (unsigned int i = 0; i < mesh->Vertices.size(); ++i)
-				//	{
-				//		mesh->Vertices[i] -= cent;
-				//	}
-
-				//	// TODO:
-				//	//--node->Transform = vox_vec4(cent.x, cent.y,cent.z, 1.0f) * node->Transform;
-				//}
-
-				// ----------------------------------------------------------------------------------------------------------------------------------------------------------
-				node->Transform = BuildVoxTransformMatrix(wxf.rot, wxf.trans);
 
 				meshes.push_back({ mesh, shapeIndex });
 				shapeNodes.push_back(node);
@@ -766,7 +565,7 @@ namespace Unvoxeller
 				auto& mdl = voxData->voxModels[i];
 				auto& box = mdl.boundingBox;
 
-				auto mesh = MeshBuilder::BuildMeshFromFaces(frameFaces, texData->Width, texData->Height, options.Meshing.FlatShading, voxData->palette, box);
+				auto mesh = MeshBuilder::BuildMeshFromFaces(frameFaces, texData->Width, texData->Height, options.Meshing.FlatShading, voxData->palette, box, sz);
 				mesh->MaterialIndex = options.Texturing.SeparateTexturesPerMesh ? (int)i : 0;
 
 				// Create node for this mesh

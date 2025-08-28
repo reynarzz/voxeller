@@ -86,7 +86,7 @@ namespace Unvoxeller
         if (magicStr != "VOX ") 
         {
             std::cerr << "Invalid .vox file format (magic number not found)\n";
-            return vox;
+            return nullptr;
         }
         vox->header.id = magicStr;
         vox->header.version = std::to_string(version);

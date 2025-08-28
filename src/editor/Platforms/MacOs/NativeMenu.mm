@@ -86,6 +86,58 @@ namespace
             [menu setAutoenablesItems:NO];
     }
 
+  // Parse "Shift+Cmd+S" → set keyEquivalent & modifier mask on the NSMenuItem.
+// Supports: Cmd/Command/⌘, Ctrl/Control/⌃, Alt/Option/⌥, Shift/⇧
+// Keys: single visible char (letter/digit/punct) or special: Esc/Escape, Tab, Return/Enter, Space.
+static void NM_ApplyShortcut(NSMenuItem* item, const std::string& shortcut)
+{
+    if (!item || shortcut.empty()) return;
+
+    NSString* s = [NSString stringWithUTF8String:shortcut.c_str()];
+    NSArray<NSString*>* raw = [s componentsSeparatedByString:@"+"];
+
+    NSEventModifierFlags mods = 0;
+    NSString* keyToken = nil;
+
+    // Parse tokens: accumulate modifiers, last non-mod token becomes the key
+    for (NSString* part in raw)
+    {
+        NSString* p = [part stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+        if (p.length == 0) continue;
+
+        NSString* lower = p.lowercaseString;
+
+        if ([lower isEqualToString:@"cmd"] || [lower isEqualToString:@"command"] || [p isEqualToString:@"⌘"])
+        { mods |= NSEventModifierFlagCommand; continue; }
+
+        if ([lower isEqualToString:@"ctrl"] || [lower isEqualToString:@"control"] || [p isEqualToString:@"⌃"])
+        { mods |= NSEventModifierFlagControl; continue; }
+
+        if ([lower isEqualToString:@"alt"] || [lower isEqualToString:@"option"] || [p isEqualToString:@"⌥"])
+        { mods |= NSEventModifierFlagOption; continue; }
+
+        if ([lower isEqualToString:@"shift"] || [p isEqualToString:@"⇧"])
+        { mods |= NSEventModifierFlagShift; continue; }
+
+        // Not a modifier → treat as key token
+        keyToken = p;
+    }
+
+    if (!keyToken) return;
+
+    // Map special names; otherwise expect a single visible character
+    NSString* keyEq = nil;
+    NSString* lower = keyToken.lowercaseString;
+    if      ([lower isEqualToString:@"esc"] || [lower isEqualToString:@"escape"])          keyEq = [NSString stringWithCharacters:(unichar[]){0x1B} length:1];
+    else if ([lower isEqualToString:@"tab"])                                               keyEq = @"\t";
+    else if ([lower isEqualToString:@"return"] || [lower isEqualToString:@"enter"])        keyEq = @"\r";
+    else if ([lower isEqualToString:@"space"] || [lower isEqualToString:@"spacebar"])      keyEq = @" ";
+    else if (keyToken.length == 1)                                                         keyEq = [keyToken lowercaseString];
+    else                                                                                   return; // Unsupported multi-char key (e.g., "F5")
+
+    item.keyEquivalentModifierMask = mods;
+    item.keyEquivalent = keyEq;
+}
 
 
    NSMenu* EnsureMenu(const std::string& path)
@@ -710,6 +762,86 @@ void NativeMenu::RemoveSeparator(const std::string& path, int index)
     NSMenuItem* mi = [menu itemAtIndex:index];
     if (mi.separatorItem)
         [menu removeItemAtIndex:index];
+}
+
+static void NM_SetShortcut(NSMenuItem* item, const std::string& shortcut)
+{
+    if (shortcut.empty() || !item) return;
+
+    NSString* s = [NSString stringWithUTF8String:shortcut.c_str()];
+    NSArray<NSString*>* parts = [s componentsSeparatedByString:@"+"];
+
+    NSEventModifierFlags mods = 0;
+    NSString* key = nil;
+
+    for (NSString* part in parts)
+    {
+        NSString* p = [part lowercaseString];
+        if ([p isEqualToString:@"cmd"] || [p isEqualToString:@"command"])
+            mods |= NSEventModifierFlagCommand;
+        else if ([p isEqualToString:@"ctrl"] || [p isEqualToString:@"control"])
+            mods |= NSEventModifierFlagControl;
+        else if ([p isEqualToString:@"alt"] || [p isEqualToString:@"option"])
+            mods |= NSEventModifierFlagOption;
+        else if ([p isEqualToString:@"shift"])
+            mods |= NSEventModifierFlagShift;
+        else
+            key = part; // last token = key
+    }
+
+    if (key)
+    {
+        item.keyEquivalentModifierMask = mods;
+        item.keyEquivalent = [key lowercaseString]; // e.g. "o", "s", "f5" doesn't work—needs manual mapping
+    }
+}
+
+void NativeMenu::Add(const std::string& path,
+                     std::function<void()> callback,
+                     bool toggle,
+                     const std::string& shortcut)
+{
+    if (!g_Target) g_Target = [NMFileScopedMenuTarget new];
+
+    auto parts = Split(path);
+    if (parts.empty()) return;
+
+    // Build submenu chain
+    std::string prefix;
+    for (size_t i = 0; i + 1 < parts.size(); ++i)
+    {
+        prefix = prefix.empty() ? parts[i] : (prefix + "/" + parts[i]);
+        (void)EnsureMenu(prefix);
+    }
+
+    NSMenu* parent = (parts.size() == 1) ? EnsureMenu(parts[0]) : g_MenuByPath[prefix];
+
+    int id = g_NextId++;
+    g_IdByPath[path] = id;
+    g_IsToggleByPath[path] = toggle;
+
+    NSMenuItem* item = [[NSMenuItem alloc] initWithTitle:[NSString stringWithUTF8String:parts.back().c_str()]
+                                                  action:@selector(nm_onMenu:)
+                                           keyEquivalent:@""];
+    [item setTarget:g_Target];
+    [item setRepresentedObject:@(id)];
+
+    if (toggle)
+        [item setState:NSControlStateValueOff];
+
+    // Set shortcut if provided
+    //NM_SetShortcut(item, shortcut);
+    NM_ApplyShortcut(item, shortcut);
+
+    [parent addItem:item];
+    g_ItemByPath[path] = item;
+
+    NMItemInfo info;
+    info.cb       = std::move(callback);
+    info.isToggle = toggle;
+    info.checked  = false;
+    info.item     = item;
+    g_InfoById[id] = std::move(info);
 }
 
 

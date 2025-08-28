@@ -17,6 +17,8 @@ public:
     // Add a menu item, optionally checkable (toggle=true). Click auto-toggles, then calls callback.
     static void Add(const std::string& path, std::function<void()> callback, bool toggle);
 
+    static void Add(const std::string& path, std::function<void()> callback, bool toggle, const std::string& shortcut);
+    
     // Programmatically set a checkable item's check state (no-op if item isn't checkable).
     static void Toggle(const std::string& path, bool checked);
 

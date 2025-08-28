@@ -9,6 +9,7 @@ std::shared_ptr<UnvoxMesh> MeshBuilder::BuildMeshFromFaces(
         bool flatShading,
         const std::vector<color>& palette,
         const bbox& box,
+		const vox_size& size,
         const vox_mat3& rotation,
         const vox_vec3& translation
 )
@@ -217,25 +218,15 @@ std::shared_ptr<UnvoxMesh> MeshBuilder::BuildMeshFromFaces(
 		}
 	}
 
-	// 4) Upload into aiMesh (unchanged)
-	// mesh->mPrimitiveTypes = aiPrimitiveType_TRIANGLE;
-	// mesh->mNumVertices = (unsigned int)verts.size();
-	// mesh->mVertices = new aiVector3D[verts.size()];
-	// mesh->mNormals = new aiVector3D[verts.size()];
-	// mesh->mTextureCoords[0] = new aiVector3D[verts.size()];
-	// mesh->mNumUVComponents[0] = 2;
-
 	mesh->Vertices.resize(verts.size());
 	mesh->Normals.resize(verts.size());
 	mesh->UVs.resize(verts.size());
 
-	// compute pivot...
-	vox_vec3 pivot =
-	{
-		(box.minX + box.maxX) * 0.5f,
-		(box.minY + box.maxY) * 0.5f,
-		(box.minZ + box.maxZ) * 0.5f
-	};
+	vox_vec3 pivot {
+    size.x * 0.5f,
+    size.y * 0.5f,
+    size.z * 0.5f
+};
 
 	for (unsigned int i = 0; i < verts.size(); ++i) 
 	{

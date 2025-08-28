@@ -138,6 +138,14 @@ namespace
     }
 } // anonymous namespace
 
+static std::string NM_FormatLabelWithShortcut(const std::string& label,
+                                              const std::string& shortcut)
+{
+    if (shortcut.empty()) return label;
+    return label + "\t" + shortcut; // text after tab shows as shortcut hint
+}
+
+
 // ======================= Public NativeMenu methods =======================
 void NativeMenu::Init(GLFWwindow* window)
 {
@@ -147,12 +155,16 @@ void NativeMenu::Init(GLFWwindow* window)
     g_PrevProc = (WNDPROC)SetWindowLongPtr(g_Hwnd, GWLP_WNDPROC, (LONG_PTR)HookWndProc);
 }
 
-void NativeMenu::Add(const std::string& path, std::function<void()> callback)
+void NativeMenu::Add(const std::string& path, std::function<void()> callback, bool toggle)
 {
-    NativeMenu::Add(path, std::move(callback), false);
+    NativeMenu::Add(path, std::move(callback), toggle, std::string{});
 }
 
-void NativeMenu::Add(const std::string& path, std::function<void()> callback, bool toggle)
+// New overload with shortcut
+void NativeMenu::Add(const std::string& path,
+                     std::function<void()> callback,
+                     bool toggle,
+                     const std::string& shortcut)
 {
     auto parts = Split(path);
     if (parts.empty()) return;
@@ -168,20 +180,23 @@ void NativeMenu::Add(const std::string& path, std::function<void()> callback, bo
     HMENU parent = (parts.size() == 1) ? g_MenuBar : g_MenuByPath[prefix];
 
     UINT id = g_NextId++;
-    AppendMenuA(parent,
-                MF_STRING | (toggle ? MF_UNCHECKED : 0),
-                id,
-                parts.back().c_str());
+    std::string label      = parts.back();
+    std::string finalLabel = NM_FormatLabelWithShortcut(label, shortcut);
 
+    UINT flags = MF_STRING;
+    // (optional) you can set MF_UNCHECKED here for toggles; the check mark is controlled via CheckMenuItem anyway
+    AppendMenuA(parent, flags, id, finalLabel.c_str());
+
+    // Record info
     NMItemInfo info;
-    info.cb      = std::move(callback);
-    info.isToggle= toggle;
-    info.checked = false;
-    info.parent  = parent;
-    info.id      = id;
+    info.cb       = std::move(callback);
+    info.isToggle = toggle;
+    info.checked  = false;
+    info.parent   = parent;
+    info.id       = id;
 
-    g_IdByPath[path] = id;
-    g_InfoById[id]   = std::move(info);
+    g_IdByPath[path]       = id;
+    g_InfoById[id]         = std::move(info);
     g_IsToggleByPath[path] = toggle;
 
     DrawMenuBar(g_Hwnd);
@@ -451,6 +466,8 @@ void NativeMenu::RemoveSeparator(const std::string& path, int index)
     }
     DrawMenuBar(g_Hwnd);
 }
+
+
 
 
 void NativeMenu::Shutdown(GLFWwindow* /*window*/)

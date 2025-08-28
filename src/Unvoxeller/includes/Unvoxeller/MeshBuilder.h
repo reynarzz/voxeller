@@ -18,6 +18,7 @@ namespace Unvoxeller
                 bool flatShading,
                 const std::vector<color>& palette,
                 const bbox& box,
+                const vox_size& size,
                 const vox_mat3& rotation  = {},
                 const vox_vec3& translation  = {} 
             );
