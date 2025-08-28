@@ -249,6 +249,66 @@ void NativeMenu::Enable(const std::string& path, bool enabled)
     }
 }
 
+bool NativeMenu::IsEnabled(const std::string& path)
+{
+    // Leaf item by command ID
+    if (auto it = g_IdByPath.find(path); it != g_IdByPath.end())
+    {
+        UINT id = it->second;
+        auto infoIt = g_InfoById.find(id);
+        if (infoIt == g_InfoById.end() || !infoIt->second.parent) return false;
+
+        HMENU parent = infoIt->second.parent;
+        UINT state = GetMenuState(parent, id, MF_BYCOMMAND);
+        // Disabled if MF_GRAYED or MF_DISABLED is set
+        bool enabled = ((state & (MF_GRAYED | MF_DISABLED)) == 0);
+        return enabled;
+    }
+
+    // Submenu holder by position under its parent
+    std::string parentPath = ParentPath(path);
+    std::string label      = LastSeg(path);
+    HMENU parent = parentPath.empty() ? g_MenuBar : g_MenuByPath[parentPath];
+    if (!parent) return false;
+
+    int count = GetMenuItemCount(parent);
+    for (int i = 0; i < count; ++i)
+    {
+        char buf[256] = {};
+        MENUITEMINFOA mii = {};
+        mii.cbSize     = sizeof(mii);
+        mii.fMask      = MIIM_STRING;
+        mii.dwTypeData = buf;
+        mii.cch        = static_cast<UINT>(sizeof(buf) - 1);
+        if (!GetMenuItemInfoA(parent, i, TRUE, &mii))
+            continue;
+
+        if (label == std::string(buf))
+        {
+            UINT state = GetMenuState(parent, i, MF_BYPOSITION);
+            bool enabled = ((state & (MF_GRAYED | MF_DISABLED)) == 0);
+            return enabled;
+        }
+    }
+    return false;
+}
+
+bool NativeMenu::IsChecked(const std::string& path)
+{
+    auto it = g_IdByPath.find(path);
+    if (it == g_IdByPath.end()) return false;
+
+    UINT id = it->second;
+    auto infoIt = g_InfoById.find(id);
+    if (infoIt == g_InfoById.end()) return false;
+
+    const NMItemInfo& info = infoIt->second;
+    if (!info.isToggle) return false;
+
+    return info.checked;
+}
+
+
 
 void NativeMenu::DestroyMenu(const std::string& path)
 {

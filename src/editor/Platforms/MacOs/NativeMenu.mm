@@ -85,7 +85,7 @@ namespace
     }
 
    NSMenu* EnsureMenu(const std::string& path)
-{
+   {
     if (auto it = g_MenuByPath.find(path); it != g_MenuByPath.end())
         return it->second;
 
@@ -469,6 +469,47 @@ void NativeMenu::DestroyMenu(const std::string& path)
         }
         return;
     }
+}
+
+bool NativeMenu::IsEnabled(const std::string& path)
+{
+    // Leaf item?
+    if (auto it = g_ItemByPath.find(path); it != g_ItemByPath.end())
+    {
+        NSMenuItem* item = it->second;
+        return item ? ([item isEnabled] == YES) : false;
+    }
+
+    // Submenu holder?
+    std::string parentPath = ParentPath(path);
+    std::string label      = LastSeg(path);
+    NSMenu* parentMenu = parentPath.empty() ? NSApp.mainMenu : g_MenuByPath[parentPath];
+    if (!parentMenu) return false;
+
+    NSMenuItem* holder = FindChildItemByTitle(parentMenu, label);
+    if (!holder) return false;
+
+    return [holder isEnabled] == YES;
+}
+
+bool NativeMenu::IsChecked(const std::string& path)
+{
+    // Only for toggle items added with toggle=true
+    auto idIt   = g_IdByPath.find(path);
+    auto itemIt = g_ItemByPath.find(path);
+    if (idIt == g_IdByPath.end() || itemIt == g_ItemByPath.end())
+        return false;
+
+    int id = idIt->second;
+    auto infoIt = g_InfoById.find(id);
+    if (infoIt == g_InfoById.end())
+        return false;
+
+    const NMItemInfo& info = infoIt->second;
+    if (!info.isToggle) return false;
+
+    // Trust our stored state (fast), or you could read item.state != off.
+    return info.checked;
 }
 
 void NativeMenu::Shutdown(GLFWwindow* /*window*/)

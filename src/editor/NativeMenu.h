@@ -23,6 +23,9 @@ public:
     // Enable/disable a menu item or submenu holder (grays it out when disabled).
     static void Enable(const std::string& path, bool enabled);
 
+    static bool IsEnabled(const std::string& path);
+    static bool IsChecked(const std::string& path);
+
     // Remove a single item or an entire submenu tree at "path".
     static void DestroyMenu(const std::string& path);
 

@@ -117,6 +117,8 @@ int Init()
 
 	NativeMenu::Add("File/Export Config", []() { LOG_INFO("Ex config");});
 	NativeMenu::Add("Help/About", []() { LOG_INFO("About");});
+	NativeMenu::Add("Help/Made By Reynardo Perez", []() { LOG_INFO("About");});
+	NativeMenu::Enable("Help/Made By Reynarz", false);
 
 
 	glfwSetFramebufferSizeCallback(win, framebuffer_size_callback);
