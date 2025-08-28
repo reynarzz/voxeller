@@ -12,10 +12,10 @@
 
 using Callback = std::function<void()>;
 
-// ---- Forward (file-local) bridge so Obj-C never references anonymous-namespace names directly.
+// ---------- Bridge so Obj-C never references anon-namespace names directly ----------
 static void NM_InvokeCallback(int id);
 
-// ---- Obj-C class MUST be at global scope; use a unique name and selector to avoid collisions.
+// ---------- Obj-C target (global scope to satisfy Objective-C rules) ----------
 @interface NMFileScopedMenuTarget : NSObject
 @end
 
@@ -28,16 +28,26 @@ static void NM_InvokeCallback(int id);
 }
 @end
 
-// ======================= C++ file-scoped state & helpers =======================
+// ======================= File-scoped C++ state & helpers =======================
 namespace
 {
     NSWindow* g_NsWindow = nil;
     int g_NextId = 30000;
 
-    // Maps (all file-local due to anonymous namespace)
-    std::unordered_map<std::string, NSMenu*>     g_MenuByPath;  // "File" -> NSMenu*, "File/Recent" -> NSMenu*
-    std::unordered_map<std::string, NSMenuItem*> g_ItemByPath;  // "File/Open" -> NSMenuItem*
-    std::unordered_map<int, Callback>            g_CbById;      // ID -> callback
+    // Menus & items
+    std::unordered_map<std::string, NSMenu*>     g_MenuByPath;   // "File" -> NSMenu*
+    std::unordered_map<std::string, NSMenuItem*> g_ItemByPath;   // "File/Open" -> NSMenuItem*
+    std::unordered_map<std::string, int>         g_IdByPath;     // path -> ID
+    std::unordered_map<std::string, bool>        g_IsToggleByPath;
+
+    struct NMItemInfo
+    {
+        Callback     cb;
+        bool         isToggle = false;
+        bool         checked  = false;
+        NSMenuItem*  item     = nil; // backref
+    };
+    std::unordered_map<int, NMItemInfo> g_InfoById;              // ID -> info
 
     NMFileScopedMenuTarget* g_Target = nil;
 
@@ -66,72 +76,92 @@ namespace
         return (pos == std::string::npos) ? path : path.substr(pos + 1);
     }
 
-    NSMenu* EnsureMenu(const std::string& path)
+        // Turn off AppKit's auto-enable so our manual [setEnabled:] sticks
+    static inline void NM_DisableAutoEnable(NSMenu* menu)
     {
-        if (auto it = g_MenuByPath.find(path); it != g_MenuByPath.end())
-            return it->second;
-
-        if (!NSApp) [NSApplication sharedApplication];
-
-        // Ensure there is a main menubar with a basic App menu
-        if (!NSApp.mainMenu)
-        {
-            NSMenu* menubar = [[NSMenu alloc] init];
-            [NSApp setMainMenu:menubar];
-
-            NSMenuItem* appItem = [[NSMenuItem alloc] init];
-            [menubar addItem:appItem];
-            NSMenu* appMenu = [[NSMenu alloc] initWithTitle:@""];
-            NSMenuItem* quitItem = [[NSMenuItem alloc] initWithTitle:@"Quit"
-                                                              action:@selector(terminate:)
-                                                       keyEquivalent:@"q"];
-            [appMenu addItem:quitItem];
-            [appItem setSubmenu:appMenu];
-        }
-
-        std::string parent = ParentPath(path);
-        std::string label  = LastSeg(path);
-
-        if (parent.empty())
-        {
-            // Create a new top-level menu
-            NSMenuItem* top = [[NSMenuItem alloc] init];
-            [top setTitle:[NSString stringWithUTF8String:label.c_str()]];
-            NSMenu* sub = [[NSMenu alloc] initWithTitle:[NSString stringWithUTF8String:label.c_str()]];
-            [top setSubmenu:sub];
-            [NSApp.mainMenu addItem:top];
-            g_MenuByPath[path] = sub;
-            return sub;
-        }
-        else
-        {
-            NSMenu* p = EnsureMenu(parent);
-
-            // Try to find existing submenu item with this title
-            for (NSMenuItem* mi in p.itemArray)
-            {
-                if ([[mi title] isEqualToString:[NSString stringWithUTF8String:label.c_str()]])
-                {
-                    if (mi.submenu)
-                    {
-                        g_MenuByPath[path] = mi.submenu;
-                        return mi.submenu;
-                    }
-                }
-            }
-            // Create new submenu under parent
-            NSMenuItem* container = [[NSMenuItem alloc] initWithTitle:[NSString stringWithUTF8String:label.c_str()]
-                                                               action:nil
-                                                        keyEquivalent:@""];
-            NSMenu* sub = [[NSMenu alloc] initWithTitle:[NSString stringWithUTF8String:label.c_str()]];
-            [container setSubmenu:sub];
-            [p addItem:container];
-            g_MenuByPath[path] = sub;
-            return sub;
-        }
+        if (!menu) return;
+        if (menu.autoenablesItems)
+            [menu setAutoenablesItems:NO];
     }
 
-    // Remove all maps with a given prefix
+   NSMenu* EnsureMenu(const std::string& path)
+{
+    if (auto it = g_MenuByPath.find(path); it != g_MenuByPath.end())
+        return it->second;
+
+    if (!NSApp) [NSApplication sharedApplication];
+
+    // Ensure a main menubar exists
+    if (!NSApp.mainMenu)
+    {
+        NSMenu* menubar = [[NSMenu alloc] init];
+        [NSApp setMainMenu:menubar];
+
+        // Add minimal App menu with Quit for sanity/user expectations
+        NSMenuItem* appItem = [[NSMenuItem alloc] init];
+        [menubar addItem:appItem];
+        NSMenu* appMenu = [[NSMenu alloc] initWithTitle:@""];
+        NSMenuItem* quitItem = [[NSMenuItem alloc] initWithTitle:@"Quit"
+                                                          action:@selector(terminate:)
+                                                   keyEquivalent:@"q"];
+        [appMenu addItem:quitItem];
+        [appItem setSubmenu:appMenu];
+
+        // Do not auto-enable on the menubar either
+        NM_DisableAutoEnable(menubar);
+    }
+
+    std::string parent = ParentPath(path);
+    std::string label  = LastSeg(path);
+
+    if (parent.empty())
+    {
+        // Create a new top-level menu
+        NSMenuItem* top = [[NSMenuItem alloc] init];
+        [top setTitle:[NSString stringWithUTF8String:label.c_str()]];
+        NSMenu* sub = [[NSMenu alloc] initWithTitle:[NSString stringWithUTF8String:label.c_str()]];
+        [top setSubmenu:sub];
+        [NSApp.mainMenu addItem:top];
+
+        // Critical: stop AppKit from re-enabling our items
+        NM_DisableAutoEnable(sub);
+
+        g_MenuByPath[path] = sub;
+        return sub;
+    }
+    else
+    {
+        NSMenu* p = EnsureMenu(parent);
+
+        // Try to find an existing submenu under parent
+        NSString* t = [NSString stringWithUTF8String:label.c_str()];
+        for (NSMenuItem* mi in p.itemArray)
+        {
+            if ([[mi title] isEqualToString:t] && mi.submenu)
+            {
+                // Also make sure adopted submenus don't auto-enable
+                NM_DisableAutoEnable(mi.submenu);
+
+                g_MenuByPath[path] = mi.submenu;
+                return mi.submenu;
+            }
+        }
+
+        // Create new submenu under parent
+        NSMenuItem* container = [[NSMenuItem alloc] initWithTitle:t action:nil keyEquivalent:@""];
+        NSMenu* sub = [[NSMenu alloc] initWithTitle:t];
+        [container setSubmenu:sub];
+        [p addItem:container];
+
+        // Critical here too
+        NM_DisableAutoEnable(sub);
+
+        g_MenuByPath[path] = sub;
+        return sub;
+    }
+}
+
+    // Remove subtree entries for prefix (menus, items, ids, toggles, infos)
     void EraseDescendants(const std::string& prefix)
     {
         const std::string pref = prefix + "/";
@@ -143,25 +173,40 @@ namespace
             else
                 ++it;
         }
-
         for (auto it = g_ItemByPath.begin(); it != g_ItemByPath.end(); )
         {
             if (it->first == prefix || it->first.rfind(pref, 0) == 0)
             {
-                NSMenuItem* item = it->second;
-                NSNumber* key = [item representedObject];
-                if (key) g_CbById.erase(key.intValue);
+                if (NSMenuItem* item = it->second)
+                {
+                    NSNumber* key = [item representedObject];
+                    if (key) g_InfoById.erase(key.intValue);
+                }
                 it = g_ItemByPath.erase(it);
             }
-            else
+            else ++it;
+        }
+        for (auto it = g_IdByPath.begin(); it != g_IdByPath.end(); )
+        {
+            if (it->first == prefix || it->first.rfind(pref, 0) == 0)
             {
-                ++it;
+                g_InfoById.erase(it->second);
+                it = g_IdByPath.erase(it);
             }
+            else ++it;
+        }
+        for (auto it = g_IsToggleByPath.begin(); it != g_IsToggleByPath.end(); )
+        {
+            if (it->first == prefix || it->first.rfind(pref, 0) == 0)
+                it = g_IsToggleByPath.erase(it);
+            else
+                ++it;
         }
     }
 
     NSMenuItem* FindChildItemByTitle(NSMenu* parent, const std::string& title)
     {
+        if (!parent) return nil;
         NSString* t = [NSString stringWithUTF8String:title.c_str()];
         for (NSMenuItem* mi in parent.itemArray)
         {
@@ -169,124 +214,110 @@ namespace
         }
         return nil;
     }
-} // anonymous namespace
 
-// ---- File-local bridge implementation (can access anonymous-namespace state)
-static void NM_InvokeCallback(int id)
-{
-    auto it = g_CbById.find(id);
-    if (it != g_CbById.end())
-        it->second();
-}
-
-// --- Purge default Cocoa/GLFW menus (file-local) ---
-
-// Remove the top-level NSMenuItem hosting a given submenu
-static void NM_RemoveTopLevelMenuForSubmenu(NSMenu* submenu)
-{
-    if (!submenu) return;
-    NSMenu* menubar = NSApp.mainMenu;
-    if (!menubar) return;
-
-    // Copy the array to avoid mutation during enumeration
-    NSArray<NSMenuItem*>* items = [[menubar itemArray] copy];
-    for (NSMenuItem* mi in items)
+    // Remove the NSMenuItem in the menubar that owns a given submenu
+    static void NM_RemoveTopLevelMenuForSubmenu(NSMenu* submenu)
     {
-        if (mi.submenu == submenu)
-        {
-            [menubar removeItem:mi];
-            break;
-        }
-    }
-}
-
-// Remove common default menus created by GLFW/Cocoa.
-// keepAppMenu=true keeps the first "App" menu (recommended).
-static void NM_ClearDefaultMenus(BOOL keepAppMenu)
-{
-    if (!NSApp) [NSApplication sharedApplication];
-
-    // If GLFW created a menubar, ensure we have it.
-    if (!NSApp.mainMenu)
-    {
-        NSMenu* menubar = [[NSMenu alloc] init];
-        [NSApp setMainMenu:menubar];
-    }
-
-    // Optionally remove the App menu (the very first item).
-    if (!keepAppMenu)
-    {
+        if (!submenu) return;
         NSMenu* menubar = NSApp.mainMenu;
-        if (menubar.numberOfItems > 0)
+        if (!menubar) return;
+
+        NSArray<NSMenuItem*>* items = [[menubar itemArray] copy];
+        for (NSMenuItem* mi in items)
         {
-            // Usually item 0 is the App menu
-            [menubar removeItemAtIndex:0];
-        }
-    }
-
-    // Remove default "Window" menu if present
-    NSMenu* windowsMenu = [NSApp windowsMenu];
-    if (windowsMenu)
-    {
-        NM_RemoveTopLevelMenuForSubmenu(windowsMenu);
-        [NSApp setWindowsMenu:nil];
-    }
-
-    // Remove default "Help" menu if present
-    NSMenu* helpMenu = [NSApp helpMenu];
-    if (helpMenu)
-    {
-        NM_RemoveTopLevelMenuForSubmenu(helpMenu);
-        [NSApp setHelpMenu:nil];
-    }
-
-    // Remove default "Services" menu if present (usually under App menu; also can be top-level in some setups)
-    NSMenu* servicesMenu = [NSApp servicesMenu];
-    if (servicesMenu)
-    {
-        // Try remove as a top-level first (rare)
-        NM_RemoveTopLevelMenuForSubmenu(servicesMenu);
-
-        // Also remove from the App menu if it exists there
-        NSMenu* menubar = NSApp.mainMenu;
-        if (menubar.numberOfItems > 0)
-        {
-            NSMenuItem* appItem = [menubar itemAtIndex:0];
-            if (appItem.submenu == nil)
+            if (mi.submenu == submenu)
             {
-                // Skip
+                [menubar removeItem:mi];
+                break;
             }
-            else
+        }
+    }
+
+    // Clear GLFW/Cocoa default menus like “Window”, “Help”, “Services”.
+    static void NM_ClearDefaultMenus(BOOL keepAppMenu)
+    {
+        if (!NSApp) [NSApplication sharedApplication];
+
+        if (!NSApp.mainMenu)
+        {
+            NSMenu* menubar = [[NSMenu alloc] init];
+            [NSApp setMainMenu:menubar];
+        }
+
+        if (!keepAppMenu)
+        {
+            NSMenu* menubar = NSApp.mainMenu;
+            if (menubar.numberOfItems > 0)
+                [menubar removeItemAtIndex:0];
+        }
+
+        NSMenu* windowsMenu = [NSApp windowsMenu];
+        if (windowsMenu)
+        {
+            NM_RemoveTopLevelMenuForSubmenu(windowsMenu);
+            [NSApp setWindowsMenu:nil];
+        }
+
+        NSMenu* helpMenu = [NSApp helpMenu];
+        if (helpMenu)
+        {
+            NM_RemoveTopLevelMenuForSubmenu(helpMenu);
+            [NSApp setHelpMenu:nil];
+        }
+
+        NSMenu* servicesMenu = [NSApp servicesMenu];
+        if (servicesMenu)
+        {
+            NM_RemoveTopLevelMenuForSubmenu(servicesMenu);
+            // Also erase from the App menu if present
+            NSMenu* menubar = NSApp.mainMenu;
+            if (menubar.numberOfItems > 0)
             {
-                NSMenu* appMenu = appItem.submenu;
-                // Find and remove "Services" item by submenu identity
-                NSArray<NSMenuItem*>* appItems = [[appMenu itemArray] copy];
-                for (NSMenuItem* mi in appItems)
+                NSMenuItem* appItem = [menubar itemAtIndex:0];
+                if (appItem.submenu)
                 {
-                    if (mi.submenu == servicesMenu)
+                    NSMenu* appMenu = appItem.submenu;
+                    NSArray<NSMenuItem*>* appItems = [[appMenu itemArray] copy];
+                    for (NSMenuItem* mi in appItems)
                     {
-                        [appMenu removeItem:mi];
-                        break;
+                        if (mi.submenu == servicesMenu)
+                        {
+                            [appMenu removeItem:mi];
+                            break;
+                        }
                     }
                 }
             }
+            [NSApp setServicesMenu:nil];
         }
 
-        [NSApp setServicesMenu:nil];
-    }
-
-    // Finally, remove any **empty** top-level menus that might be left over.
-    NSMenu* menubar = NSApp.mainMenu;
-    NSArray<NSMenuItem*>* items = [[menubar itemArray] copy];
-    for (NSMenuItem* mi in items)
-    {
-        if (mi.submenu && mi.submenu.numberOfItems == 0)
+        // Remove any empty top-level menus
+        NSMenu* menubar = NSApp.mainMenu;
+        NSArray<NSMenuItem*>* items = [[menubar itemArray] copy];
+        for (NSMenuItem* mi in items)
         {
-            [menubar removeItem:mi];
+            if (mi.submenu && mi.submenu.numberOfItems == 0)
+                [menubar removeItem:mi];
         }
     }
-}
+} // anonymous namespace
 
+// ---------- Bridge implementation ----------
+static void NM_InvokeCallback(int id)
+{
+    auto it = g_InfoById.find(id);
+    if (it == g_InfoById.end())
+        return;
+
+    NMItemInfo& info = it->second;
+
+    if (info.isToggle && info.item)
+    {
+        info.checked = !info.checked;
+        [info.item setState:(info.checked ? NSControlStateValueOn : NSControlStateValueOff)];
+    }
+    if (info.cb) info.cb();
+}
 
 // ======================= Public NativeMenu methods =======================
 void NativeMenu::Init(GLFWwindow* window)
@@ -297,10 +328,19 @@ void NativeMenu::Init(GLFWwindow* window)
     [NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
     [NSApp activateIgnoringOtherApps:YES];
 
+    // Remove default macOS menus (like “Window”). Keep App menu (recommended).
     NM_ClearDefaultMenus(YES);
+
+    // Ensure the menubar itself doesn't auto-enable items
+    NM_DisableAutoEnable(NSApp.mainMenu);
 }
 
 void NativeMenu::Add(const std::string& path, std::function<void()> callback)
+{
+    NativeMenu::Add(path, std::move(callback), false);
+}
+
+void NativeMenu::Add(const std::string& path, std::function<void()> callback, bool toggle)
 {
     if (!g_Target) g_Target = [NMFileScopedMenuTarget new];
 
@@ -318,61 +358,125 @@ void NativeMenu::Add(const std::string& path, std::function<void()> callback)
     NSMenu* parent = (parts.size() == 1) ? EnsureMenu(parts[0]) : g_MenuByPath[prefix];
 
     int id = g_NextId++;
-    g_CbById[id] = std::move(callback);
+    g_IdByPath[path] = id;
+    g_IsToggleByPath[path] = toggle;
 
     NSMenuItem* item = [[NSMenuItem alloc] initWithTitle:[NSString stringWithUTF8String:parts.back().c_str()]
                                                   action:@selector(nm_onMenu:)
                                            keyEquivalent:@""];
     [item setTarget:g_Target];
     [item setRepresentedObject:@(id)];
-    [parent addItem:item];
+    if (toggle)
+        [item setState:NSControlStateValueOff];
 
+    [parent addItem:item];
     g_ItemByPath[path] = item;
-    (void)g_NsWindow; // reserved for optional toolbar usage
+
+    NMItemInfo info;
+    info.cb       = std::move(callback);
+    info.isToggle = toggle;
+    info.checked  = false;
+    info.item     = item;
+    g_InfoById[id] = std::move(info);
+
+    (void)g_NsWindow;
 }
 
-void NativeMenu::DestroyMenu(const std::string& path)
+void NativeMenu::Toggle(const std::string& path, bool checked)
 {
-    // Leaf item?
+    auto idIt = g_IdByPath.find(path);
+    auto itemIt = g_ItemByPath.find(path);
+    if (idIt == g_IdByPath.end() || itemIt == g_ItemByPath.end())
+        return;
+
+    int id = idIt->second;
+    NSMenuItem* item = itemIt->second;
+    auto infoIt = g_InfoById.find(id);
+    if (infoIt == g_InfoById.end())
+        return;
+
+    NMItemInfo& info = infoIt->second;
+    if (!info.isToggle)
+        return;
+
+    info.checked = checked;
+    [item setState:(checked ? NSControlStateValueOn : NSControlStateValueOff)];
+}
+
+void NativeMenu::Enable(const std::string& path, bool enabled)
+{
+    // 1) Leaf item
     if (auto it = g_ItemByPath.find(path); it != g_ItemByPath.end())
     {
         NSMenuItem* item = it->second;
-        NSMenu* parent = item.menu;
-        if (parent)
-        {
-            NSNumber* key = [item representedObject];
-            if (key) g_CbById.erase(key.intValue);
-            [parent removeItem:item];
-        }
-        g_ItemByPath.erase(it);
+        // Greys out, prevents click; checkmark (state) remains visible if set.
+        [item setEnabled:enabled ? YES : NO];
         return;
     }
 
-    // Submenu?
+    // 2) Submenu holder (top-level or nested)
+    std::string parentPath = ParentPath(path);
+    std::string label = LastSeg(path);
+    NSMenu* parentMenu = parentPath.empty() ? NSApp.mainMenu : g_MenuByPath[parentPath];
+    if (!parentMenu) return;
+
+    NSMenuItem* holder = FindChildItemByTitle(parentMenu, label);
+    if (!holder) return;
+
+    // Disabling the holder greys it out and prevents opening the submenu.
+    [holder setEnabled:enabled ? YES : NO];
+}
+
+
+void NativeMenu::DestroyMenu(const std::string& path)
+{
+    // Remove leaf item
+    if (auto it = g_ItemByPath.find(path); it != g_ItemByPath.end())
+    {
+        NSMenuItem* item = it->second;
+        if (NSMenu* parent = item.menu)
+        {
+            NSNumber* key = [item representedObject];
+            if (key) g_InfoById.erase(key.intValue);
+            [parent removeItem:item];
+        }
+        g_ItemByPath.erase(it);
+
+        if (auto idIt = g_IdByPath.find(path); idIt != g_IdByPath.end())
+        {
+            g_InfoById.erase(idIt->second);
+            g_IdByPath.erase(idIt);
+        }
+        g_IsToggleByPath.erase(path);
+        return;
+    }
+
+    // Remove submenu tree
     if (auto mit = g_MenuByPath.find(path); mit != g_MenuByPath.end())
     {
         NSMenu* submenu = mit->second;
         std::string parentPath = ParentPath(path);
         NSMenu* parent = parentPath.empty() ? NSApp.mainMenu : g_MenuByPath[parentPath];
 
-        // Find the NSMenuItem that owns this submenu by title and remove it
-        NSMenuItem* holder = FindChildItemByTitle(parent, LastSeg(path));
-        if (holder)
+        if (parent)
         {
-            // Clear maps for subtree first
-            EraseDescendants(path);
-            [parent removeItem:holder];
+            NSMenuItem* holder = FindChildItemByTitle(parent, LastSeg(path));
+            if (holder)
+            {
+                EraseDescendants(path);
+                [parent removeItem:holder];
+            }
         }
         return;
     }
-    // Not found: no-op
 }
 
 void NativeMenu::Shutdown(GLFWwindow* /*window*/)
 {
-    // Keep NSApp/mainMenu; just clear our file-local state
     g_MenuByPath.clear();
     g_ItemByPath.clear();
-    g_CbById.clear();
+    g_IdByPath.clear();
+    g_IsToggleByPath.clear();
+    g_InfoById.clear();
     g_NextId = 30000;
 }

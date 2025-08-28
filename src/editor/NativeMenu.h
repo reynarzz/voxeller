@@ -2,19 +2,28 @@
 #include <functional>
 #include <string>
 
-// Forward-declare to avoid leaking GLFW headers
+// Forward declaration to avoid leaking GLFW into dependents
 struct GLFWwindow;
 
 class NativeMenu
 {
 public:
-    // Call once after creating the GLFW window (main thread).
+    // Initialize after creating the GLFW window (main thread).
     static void Init(GLFWwindow* window);
 
-    // "A/B/C" creates submenus A->B and an item "C" under B (or A if single segment).
+    // Add a menu item at "A/B/C" -> creates submenus A->B and an item "C".
     static void Add(const std::string& path, std::function<void()> callback);
 
-    // Removes either a leaf menu item or a submenu (recursively removes all descendants).
+    // Add a menu item, optionally checkable (toggle=true). Click auto-toggles, then calls callback.
+    static void Add(const std::string& path, std::function<void()> callback, bool toggle);
+
+    // Programmatically set a checkable item's check state (no-op if item isn't checkable).
+    static void Toggle(const std::string& path, bool checked);
+
+    // Enable/disable a menu item or submenu holder (grays it out when disabled).
+    static void Enable(const std::string& path, bool enabled);
+
+    // Remove a single item or an entire submenu tree at "path".
     static void DestroyMenu(const std::string& path);
 
     // Optional cleanup before destroying the window/process.

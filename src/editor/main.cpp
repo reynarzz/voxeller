@@ -111,7 +111,13 @@ int Init()
 	}
 
 	NativeMenu::Init(win);
-	NativeMenu::Add("File/Open .vox", []() { LOG_INFO("Open .vox");});
+	NativeMenu::Add("File/Open .vox", []() { LOG_INFO("Open .vox");}, true);
+	NativeMenu::Toggle("File/Open .vox", true);
+	NativeMenu::Enable("File/Open .vox", false);
+
+	NativeMenu::Add("File/Export Config", []() { LOG_INFO("Ex config");});
+	NativeMenu::Add("Help/About", []() { LOG_INFO("About");});
+
 
 	glfwSetFramebufferSizeCallback(win, framebuffer_size_callback);
 
