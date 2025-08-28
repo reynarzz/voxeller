@@ -17,7 +17,7 @@ std::shared_ptr<VoxObject> CreateVoxObject(const std::vector<std::shared_ptr<Unv
 
 			for (size_t i = 0; i < mesh->Vertices.size(); i++)
 			{
-				const auto& vert = Unvoxeller::vox_vec4(mesh->Vertices[i]);
+				const auto& vert = mesh->Vertices[i];
 				const auto& normal = mesh->Normals[i];
 				const auto& uv = mesh->UVs[i];
 

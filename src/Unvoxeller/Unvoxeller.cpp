@@ -34,97 +34,79 @@ namespace Unvoxeller
 	{
 	}
 
-	inline vox_vec3 Rotate3x3(const vox_mat3& m, const vox_vec3& v)
-{
-    // Use the same convention everywhere (this matches your earlier Rotate helper):
-    return {
-        m.m00 * v.x + m.m10 * v.y + m.m20 * v.z,
-        m.m01 * v.x + m.m11 * v.y + m.m21 * v.z,
-        m.m02 * v.x + m.m12 * v.y + m.m22 * v.z
-    };
-}
+	inline vox_transform AccumulateWorldTransform(
+		int shapeNodeID,
+		int frameIndex,
+		const vox_file& voxData)
+	{
+		// Helper: find the transform node whose childNodeID == nodeID
+		auto findTransformByChild = [&](int childID) -> int 
+		{
+			for (auto const& kv : voxData.transforms) {
+				if (kv.second.childNodeID == childID)
+					return kv.first;
+			}
+			return -1;
+			};
 
-// Accumulates world transform for a shape node, correcting Magica's center-vs-plane offset
-inline vox_transform AccumulateWorldTransform(
-    int shapeNodeID,
-    int frameIndex,
-    const vox_file& voxData)
-{
-    // Helper: find the transform node whose childNodeID == nodeID
-    auto findTransformByChild = [&](int childID) -> int {
-        for (auto const& kv : voxData.transforms) {
-            if (kv.second.childNodeID == childID)
-                return kv.first;
-        }
-        return -1;
-    };
+		// 1) start at the transform that directly points to our shape
+		int trnID = findTransformByChild(shapeNodeID);
+		if (trnID < 0) {
+			return vox_transform(); // identity
+		}
 
-    // 1) start at the transform that directly points to our shape
-    int trnID = findTransformByChild(shapeNodeID);
-    if (trnID < 0) {
-        return vox_transform(); // identity
-    }
+		// 2) We'll walk up to the root, but we need to apply parent transforms *first*,
+		//    so push them on a stack, then multiply in that order.
+		std::stack<vox_transform> xfStack;
 
-    // 2) Walk up to the root; push parent->child order onto a stack
-    std::stack<vox_transform> xfStack;
+		while (trnID != -1) {
+			auto it = voxData.transforms.find(trnID);
+			if (it == voxData.transforms.end()) break;
+			const vox_nTRN& trn = it->second;
 
-    while (trnID != -1) {
-        auto it = voxData.transforms.find(trnID);
-        if (it == voxData.transforms.end()) break;
-        const vox_nTRN& trn = it->second;
+			// clamp frameIndex
+			int fidx = (frameIndex < trn.framesCount ? frameIndex : 0);
+			const vox_frame_attrib& attr = trn.frameAttrib[fidx];
 
-        // clamp frameIndex
-        int fidx = (frameIndex < trn.framesCount ? frameIndex : 0);
-        const vox_frame_attrib& attr = trn.frameAttrib[fidx];
+			xfStack.push(vox_transform(attr.rotation, attr.translation));
 
-        // --- Half-voxel correction (once per node, in Magica space) ---
-        // Magica's transforms operate about voxel centers; our faces lie on planes.
-        // Subtract R * (0.5, 0.5, 0.5) from the node translation.
-        const vox_vec3 half{ 0.5f, 0.5f, 0.5f };
-        const vox_vec3 bias = Rotate3x3(attr.rotation, half);
-        vox_vec3 correctedT{
-            attr.translation.x - bias.x,
-            attr.translation.y - bias.y,
-            attr.translation.z - bias.z
-        };
+			// 3) find the *parent* transform of this nTRN:
+			//    a) first, check explicit "_parent" attributes
+			int parentID = -1;
+			for (auto const& key : { "_parent", "_parent_id", "_parentID" }) {
+				auto ait = trn.attributes.find(key);
+				if (ait != trn.attributes.end()) {
+					parentID = std::stoi(ait->second);
+					break;
+				}
+			}
 
-        xfStack.push(vox_transform(attr.rotation, correctedT));
+			//    b) if none, maybe this trn is listed in an nGRP — find the group,
+			//       then find the nTRN whose child is *that* group.
+			if (parentID < 0) {
+				for (auto const& gkv : voxData.groups) {
+					for (int cid : gkv.second.childrenIDs) {
+						if (cid == trnID) {
+							// gkv.first is the group node ID
+							parentID = findTransformByChild(gkv.first);
+							break;
+						}
+					}
+					if (parentID >= 0) break;
+				}
+			}
 
-        // 3) find the *parent* transform of this nTRN:
-        //    a) check explicit "_parent" style attributes
-        int parentID = -1;
-        for (auto const& key : { "_parent", "_parent_id", "_parentID" }) {
-            auto ait = trn.attributes.find(key);
-            if (ait != trn.attributes.end()) {
-                parentID = std::stoi(ait->second);
-                break;
-            }
-        }
+			trnID = parentID;
+		}
 
-        //    b) if none, see if this nTRN appears as a child of an nGRP, and walk up from that group
-        if (parentID < 0) {
-            for (auto const& gkv : voxData.groups) {
-                for (int cid : gkv.second.childrenIDs) {
-                    if (cid == trnID) {
-                        parentID = findTransformByChild(gkv.first);
-                        break;
-                    }
-                }
-                if (parentID >= 0) break;
-            }
-        }
-
-        trnID = parentID;
-    }
-
-    // 4) Multiply in parent→child order
-    vox_transform world; // identity
-    while (!xfStack.empty()) {
-        world = xfStack.top() * world;
-        xfStack.pop();
-    }
-    return world;
-}
+		// 4) Now multiply them in parent→child order
+		vox_transform world; // identity
+		while (!xfStack.empty()) {
+			world = xfStack.top() * world;
+			xfStack.pop();
+		}
+		return world;
+	}
 
 	// Create and save a PNG texture from the atlas data
 	static bool SaveAtlasImage(const std::string& filename, int width, int height, const std::vector<unsigned char>& rgbaData)
@@ -153,7 +135,7 @@ inline vox_transform AccumulateWorldTransform(
 
 		s32 materialIndex = 0;
 
-		const std::vector<vox_vec3>& pivots = options.Pivots;
+		const std::vector<glm::vec3>& pivots = options.Pivots;
 
 		struct ModelData
 		{
@@ -251,7 +233,7 @@ inline vox_transform AccumulateWorldTransform(
 			s32 shapeIndex{};
 			for (auto& shpKV : voxData->shapes)
 			{
-				vox_vec3 currentPivot{ 0.5f, 0.5f, 0.5f };
+				glm::vec3 currentPivot{ 0.5f, 0.5f, 0.5f };
 
 				if (canIteratePivots)
 				{
@@ -352,8 +334,11 @@ inline vox_transform AccumulateWorldTransform(
 
 
 				// 3) Recenter every vertex so that the mesh’s center is at the origin
-
-
+				// for (unsigned int i = 0; i < mesh->Vertices.size(); ++i)
+				// //	{
+				// 		mesh->Vertices[i] -= glm::vec3(10.5, 10.5, 10.5);
+				// //	}
+				
 				// Assign material index...
 
 				if (options.Meshing.GenerateMaterials)

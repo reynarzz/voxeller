@@ -10,8 +10,8 @@ std::shared_ptr<UnvoxMesh> MeshBuilder::BuildMeshFromFaces(
         const std::vector<color>& palette,
         const bbox& box,
 		const vox_size& size,
-        const vox_mat3& rotation,
-        const vox_vec3& translation
+        const glm::mat3& rotation,
+        const glm::vec3& translation
 )
 {
 	std::shared_ptr<UnvoxMesh> mesh = std::make_shared<UnvoxMesh>();
@@ -108,10 +108,11 @@ std::shared_ptr<UnvoxMesh> MeshBuilder::BuildMeshFromFaces(
 		border = 1.0f;
 
 	// winding‐flip test unchanged
-	const float det =
-		rotation.m00 * (rotation.m11 * rotation.m22 - rotation.m12 * rotation.m21)
-		- rotation.m01 * (rotation.m10 * rotation.m22 - rotation.m12 * rotation.m20)
-		+ rotation.m02 * (rotation.m10 * rotation.m21 - rotation.m11 * rotation.m20);
+	float det =
+    rotation[0][0] * (rotation[1][1] * rotation[2][2] - rotation[1][2] * rotation[2][1]) -
+    rotation[0][1] * (rotation[1][0] * rotation[2][2] - rotation[1][2] * rotation[2][0]) +
+    rotation[0][2] * (rotation[1][0] * rotation[2][1] - rotation[1][1] * rotation[2][0]);
+
 	const bool shouldInvert = (det < 0.0f);
 
 	// 2) Emit all faces
@@ -193,9 +194,9 @@ std::shared_ptr<UnvoxMesh> MeshBuilder::BuildMeshFromFaces(
 		auto i3 = addVertex(x3, y3, z3, nx, ny, nz, u1, v0, face.colorIndex);
 
 		// winding test
-		const vox_vec3 P0{ x0,y0,z0 }, P1{ x1,y1,z1 }, P2{ x2,y2,z2 };
-		const vox_vec3 triN = cross(P1 - P0, P2 - P0);
-		const bool baseIsCCW = (dot(triN, vox_vec3{ nx,ny,nz }) > 0.0f);
+		const glm::vec3 P0{ x0,y0,z0 }, P1{ x1,y1,z1 }, P2{ x2,y2,z2 };
+		const glm::vec3 triN = cross(P1 - P0, P2 - P0);
+		const bool baseIsCCW = (dot(triN, glm::vec3{ nx,ny,nz }) > 0.0f);
 		const bool finalIsCCW = shouldInvert ? !baseIsCCW : baseIsCCW;
 
 		if (finalIsCCW)
@@ -222,7 +223,7 @@ std::shared_ptr<UnvoxMesh> MeshBuilder::BuildMeshFromFaces(
 	mesh->Normals.resize(verts.size());
 	mesh->UVs.resize(verts.size());
 
-	vox_vec3 pivot {
+	glm::vec3 pivot {
     size.x * 0.5f,
     size.y * 0.5f,
     size.z * 0.5f
@@ -240,22 +241,23 @@ std::shared_ptr<UnvoxMesh> MeshBuilder::BuildMeshFromFaces(
 			  nz = verts[i].nz;
 
 		// apply rotation to pos & normal...
-		float tx = rotation.m00 * x + rotation.m01 * y + rotation.m02 * z;
-		float ty = rotation.m10 * x + rotation.m11 * y + rotation.m12 * z;
-		float tz = rotation.m20 * x + rotation.m21 * y + rotation.m22 * z;
-		
-		x = tx; 
-		y = ty; 
-		z = tz;
+		glm::vec3 v(x, y, z);
+		glm::vec3 n(nx, ny, nz);
 
-		tx = rotation.m00 * nx + rotation.m01 * ny + rotation.m02 * nz;
-		ty = rotation.m10 * nx + rotation.m11 * ny + rotation.m12 * nz;
-		tz = rotation.m20 * nx + rotation.m21 * ny + rotation.m22 * nz;
-		nx = tx; ny = ty; nz = tz;
+		glm::vec3 rotatedV = rotation * v;
+		glm::vec3 rotatedN = rotation * n;
+
+		x = rotatedV.x;
+		y = rotatedV.y;
+		z = rotatedV.z;
+
+		nx = rotatedN.x;
+		ny = rotatedN.y;
+		nz = rotatedN.z;
 
 		// swizzle into Assimp
-		vox_vec3 pos{ x, z, y };
-		vox_vec3 norm{ nx, nz, ny };
+		glm::vec3 pos{ x, z, y };
+		glm::vec3 norm{ nx, nz, ny };
 
 		// translation w/ Y⇄Z swap, then un-mirror X
 		pos.x += translation.x; 

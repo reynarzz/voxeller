@@ -4,7 +4,6 @@
 #include <Unvoxeller/Types.h>
 #include <Unvoxeller/Data/TextureType.h>
 #include <Unvoxeller/Data/MeshType.h>
-#include <Unvoxeller/Math/VoxVector.h>
 #include <vector>
 
 namespace Unvoxeller 
@@ -109,9 +108,9 @@ namespace Unvoxeller
 		std::vector<f32> Lods = { 0,0,0,0,0,0,0,0,0,0 };
 
 		// Scale, Ex, if 1.0, every single voxel will take up 1 unit.
-		vox_vec3 Scale = { 1.0f, 1.0f, 1.0f };
+		glm::vec3 Scale = { 1.0f, 1.0f, 1.0f };
 		
 		// Set pivots for every mesh indexwise, if only one is added, it will be shared across meshes.
-		std::vector<vox_vec3> Pivots = {};
+		std::vector<glm::vec3> Pivots = {};
 	};
 }

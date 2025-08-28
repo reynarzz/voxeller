@@ -19,9 +19,9 @@ namespace Unvoxeller
 
         s32 MaterialIndex = 0;
         
-        std::vector<vox_vec3> Vertices;
-        std::vector<vox_vec3> Normals;
-        std::vector<vox_vec2> UVs;
+        std::vector<glm::vec3> Vertices;
+        std::vector<glm::vec3> Normals;
+        std::vector<glm::vec2> UVs;
 
         std::vector<UnvoxFace> Faces;
     };

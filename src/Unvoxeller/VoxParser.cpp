@@ -487,6 +487,19 @@ namespace Unvoxeller
         }
     }
 
+    inline glm::mat3 MatFromRows(const glm::vec3& r0,
+                             const glm::vec3& r1,
+                             const glm::vec3& r2)
+{
+    // GLM is column-major: mat3(c0, c1, c2)
+    // Columns are built from the *components of rows*.
+    return glm::mat3(
+        glm::vec3(r0.x, r1.x, r2.x), // col 0
+        glm::vec3(r0.y, r1.y, r2.y), // col 1
+        glm::vec3(r0.z, r1.z, r2.z)  // col 2
+    );
+}
+
     void VoxParser::parse_nTRN(std::shared_ptr<vox_file> vox, std::ifstream& voxFile, uint32_t contentBytes, uint32_t childrenBytes)
     {
         // nTRN (Transform Node) chunk structure:
@@ -530,7 +543,7 @@ namespace Unvoxeller
             vox_frame_attrib& frameAttrib = transform.frameAttrib[f];
             frameAttrib.frameIndex = f;
             frameAttrib.translation = { 0, 0, 0 };
-            frameAttrib.rotation = vox_mat3::identity;  // identity matrix initially
+            frameAttrib.rotation = glm::mat3(1.0f);  // identity matrix initially
             // Read frame attributes dictionary
             uint32_t frameKvCount;
             voxFile.read(reinterpret_cast<char*>(&frameKvCount), 4);
@@ -541,49 +554,45 @@ namespace Unvoxeller
                 voxFile.read(&key[0], keyLen);
                 uint32_t valLen;
                 voxFile.read(reinterpret_cast<char*>(&valLen), 4);
-                if (key == "_r") {
-                    // Rotation (stored as string of an integer)
-                    std::string rotStr(valLen, '\0');
-                    voxFile.read(&rotStr[0], valLen);
-                    uint32_t rotBits = std::atoi(rotStr.c_str());
-                    // Decode rotation from bits (MagicaVoxel uses a packed 3-bit representation)
-                    // Determine which basis vectors correspond to the rows
-                    uint32_t row0Index = rotBits & 0x3;
-                    uint32_t row1Index = (rotBits >> 2) & 0x3;
-                    // The third row index can be deduced (0,1,2 are axes)
-                    static const uint32_t kRow2IndexLUT[8] = {
-                        UINT32_MAX, 2, 1, UINT32_MAX,
-                        0, UINT32_MAX, UINT32_MAX, UINT32_MAX
-                    };
-                    uint32_t mask = (1u << row0Index) | (1u << row1Index);
-                    uint32_t row2Index = 0;
-                    // find index not in mask (0x7=0b111 for axes 0,1,2)
-                    for (uint32_t bit = 0; bit < 3; ++bit) {
-                        if (!(mask & (1u << bit))) { row2Index = bit; break; }
-                    }
-                    // Sign bits
-                    bool row0Neg = (rotBits >> 4) & 1;
-                    bool row1Neg = (rotBits >> 5) & 1;
-                    bool row2Neg = (rotBits >> 6) & 1;
-                    // Basis vectors for axes
-                    vox_vec3 basis[3] = {
-                        {1.0f, 0.0f, 0.0f},
-                        {0.0f, 1.0f, 0.0f},
-                        {0.0f, 0.0f, 1.0f}
-                    };
-                    vox_vec3 row0 = basis[row0Index];
-                    vox_vec3 row1 = basis[row1Index];
-                    vox_vec3 row2 = basis[row2Index];
-                    if (row0Neg) row0 = row0 * -1;
-                    if (row1Neg) row1 = row1 * -1;
-                    if (row2Neg) row2 = row2 * -1;
-                    // MagicaVoxel rotation is given as row vectors; convert to column-major matrix
-                    vox_mat3 rotMat;
-                    rotMat.m00 = row0.x; rotMat.m01 = row0.y; rotMat.m02 = row0.z;
-                    rotMat.m10 = row1.x; rotMat.m11 = row1.y; rotMat.m12 = row1.z;
-                    rotMat.m20 = row2.x; rotMat.m21 = row2.y; rotMat.m22 = row2.z;
-                    frameAttrib.rotation = rotMat;
+                 if (key == "_r") {
+                std::string rotStr(valLen, '\0');
+                voxFile.read(&rotStr[0], valLen);
+
+                // Magica’s packed rotation integer
+                const uint32_t rotBits = static_cast<uint32_t>(std::atoi(rotStr.c_str()));
+
+                // Row indices (each in {0,1,2} for X,Y,Z), from Magica’s spec
+                const uint32_t row0Index =  rotBits        & 0x3;      // bits 0..1
+                const uint32_t row1Index = (rotBits >> 2) & 0x3;      // bits 2..3
+
+                // Deduce row2 index: the axis not used by row0/row1
+                const uint32_t usedMask = (1u << row0Index) | (1u << row1Index);
+                uint32_t row2Index = 0;
+                for (uint32_t axis = 0; axis < 3; ++axis) {
+                    if ((usedMask & (1u << axis)) == 0) { row2Index = axis; break; }
                 }
+
+                // Sign bits (1 = negative)
+                const bool row0Neg = (rotBits >> 4) & 1;
+                const bool row1Neg = (rotBits >> 5) & 1;
+                const bool row2Neg = (rotBits >> 6) & 1;
+
+                // Canonical basis
+                static const glm::vec3 basis[3] = {
+                    {1,0,0}, {0,1,0}, {0,0,1}
+                };
+
+                glm::vec3 r0 = basis[row0Index];
+                glm::vec3 r1 = basis[row1Index];
+                glm::vec3 r2 = basis[row2Index];
+
+                if (row0Neg) r0 = -r0;
+                if (row1Neg) r1 = -r1;
+                if (row2Neg) r2 = -r2;
+
+                // Magica gives **rows**; GLM wants **columns** → build columns from rows
+                frameAttrib.rotation = MatFromRows(r0, r1, r2);
+            }
                 else if (key == "_t") {
                     // Translation (three integers as strings separated by spaces)
                     std::string tStr(valLen, '\0');

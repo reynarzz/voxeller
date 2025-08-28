@@ -4,9 +4,11 @@
 #include <vector>
 #include <unordered_map>
 #include <limits>
-#include <Unvoxeller/Math/VoxMath.h>
+#include <glm/mat4x4.hpp>
+#include <glm/vec3.hpp>
+#include <glm/vec2.hpp>
 #include <memory>
-
+#include "Types.h"
 
 namespace Unvoxeller
 {
@@ -64,8 +66,8 @@ namespace Unvoxeller
 	struct vox_frame_attrib
 	{
 		s32         frameIndex;
-		vox_vec3    translation;
-		vox_mat3   rotation;
+		glm::vec3    translation;
+		glm::mat3   rotation;
 	};
 
 	//–– Transform node (nTRN chunk)
@@ -144,10 +146,10 @@ namespace Unvoxeller
 	// Compose transform (parent first!)
 	struct vox_transform
 	{
-		vox_mat3 rot;
-		vox_vec3  trans;
+		glm::mat3 rot;
+		glm::vec3  trans;
 		vox_transform() : rot{ 1,0,0,0,1,0,0,0,1 }, trans{ 0,0,0 } {}
-		vox_transform(const vox_mat3& r, const vox_vec3& t) : rot(r), trans(t) {}
+		vox_transform(const glm::mat3& r, const glm::vec3& t) : rot(r), trans(t) {}
 	};
 
 	inline vox_transform operator*(const vox_transform& parent, const vox_transform& child) {

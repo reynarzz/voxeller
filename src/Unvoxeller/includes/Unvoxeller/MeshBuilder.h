@@ -19,8 +19,8 @@ namespace Unvoxeller
                 const std::vector<color>& palette,
                 const bbox& box,
                 const vox_size& size,
-                const vox_mat3& rotation  = {},
-                const vox_vec3& translation  = {} 
+                const glm::mat3& rotation  = {},
+                const glm::vec3& translation  = {} 
             );
     private:
     };

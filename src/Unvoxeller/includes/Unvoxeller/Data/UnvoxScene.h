@@ -1,7 +1,6 @@
 #pragma once
 #include <Unvoxeller/Data/UnvoxMesh.h>
 #include <Unvoxeller/api.h>
-#include <Unvoxeller/Math/VoxMatrix.h>
 #include <Unvoxeller/Data/TextureData.h>
 
 namespace Unvoxeller
@@ -12,7 +11,7 @@ namespace Unvoxeller
         std::weak_ptr<UnvoxNode> Parent = {};
         std::vector<std::shared_ptr<UnvoxNode>> Children;
         std::vector<s32> MeshesIndexes;
-        vox_mat4 Transform;
+        glm::mat4 Transform;
     };
 
     struct UNVOXELLER_API UnvoxMaterial
