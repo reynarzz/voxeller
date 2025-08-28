@@ -20,7 +20,7 @@
 #include <Unvoxeller/Unvoxeller.h>
 #include <filesystem>
 #include <GUI/GUIData.h>
-
+#include "VoxUtils.h"
 
 std::shared_ptr<Texture> blackImage = nullptr;
 static std::vector<VOXFileToProcessData> _testVoxFiles{};
@@ -51,18 +51,6 @@ s32 selectedIndex = 0;
 f32 donuFill = 0;
 std::string searchBar = "";
 
-
-static std::string GetFileName(const std::string& fullPath)
-{
-	s32 start = fullPath.find_last_of(std::filesystem::path::preferred_separator) + 1;
-	
-	return fullPath.substr(start, fullPath.find_last_of(".") - start);
-}
-
-static std::string GetFileExtension(const std::string& fullPath)
-{
-	return fullPath.substr(fullPath.find_last_of(".")+1);
-}
 
 static Unvoxeller::ConvertOptions GetConvertOptions()
 {
@@ -185,7 +173,9 @@ void VoxToProcessView::ViewportWindow()
 	f32 xStartPos = 5;
 	f32 yStartPos = 5;
 
-	std::string modelName = "Model converted Name";
+	auto voxObject = GUIData::_voxObject.lock();
+
+	std::string modelName = voxObject? voxObject->Name: "Empty";
 
 	auto textSize = ImGui::CalcTextSize(modelName.c_str());
 
@@ -193,55 +183,55 @@ void VoxToProcessView::ViewportWindow()
 	ImGui::SetCursorPosX(ImGui::GetWindowSize().x / 2.0 - textSize.x / 2);
 
 	ImGui::Text(modelName.c_str());
-
-	ImGui::SetCursorPosX(xStartPos);
-	ImGui::SetCursorPosY(20);
+	
+	const int buttonsN = 4;
+	ImGui::SetCursorPosX(windowSize.x / 2 - buttonDownWidth * static_cast<f32>(buttonsN) / 2);
 	ImGui::SetCursorPosY(ImGui::GetCursorPosY() + yStartPos);
 
 	ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(spacing, 0));
 	ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(spacing, 0));
 	const bool isFillView =  VoxGUI::ImageButton("##Fill_View", TEXTURE_TO_IMGUI2(_cubeFillIcon), { buttonDownWidth, buttonDOwnHeight }, { 1,1,1,1 }, { 1,1,1,1 }, { 1,1,1,0.5f }, ImDrawFlags_RoundCornersAll, ImVec2(0, 0), ImVec2(1, 1));
 	
-	if(isFillView)
+	if(isFillView && voxObject)
 	{
-		for (auto renderable : GUIData::_voxObject.lock()->GetRenderables())
+		for (auto renderable : voxObject->GetRenderables())
 		{
 			renderable->SetDrawType(RenderDrawType::Triangles);
 			renderable->SetRenderType(PipelineRenderType::Opaque_Unlit);
 		}
 	}
 	
-	ImGui::SetCursorPosX(xStartPos);
 	ImGui::SetCursorPosY(ImGui::GetCursorPosY() + yStartPos);
-
-
+	ImGui::SameLine();
+	
 	const bool isWireframeRender = VoxGUI::ImageButton("##_WireFrame_View", TEXTURE_TO_IMGUI2(_wireFrameIcon), { buttonDownWidth, buttonDOwnHeight }, { 1,1,1,1 }, { 1,1,1,1 }, { 1,1,1,0.5f }, ImDrawFlags_RoundCornersAll, ImVec2(0, 0), ImVec2(1, 1));
 
-	if(isWireframeRender)
+	if(isWireframeRender && voxObject)
 	{
-		for (auto renderable : GUIData::_voxObject.lock()->GetRenderables())
+		for (auto renderable : voxObject->GetRenderables())
 		{
 			renderable->SetDrawType(RenderDrawType::Lines);
 			renderable->SetRenderType(PipelineRenderType::NoTexture);
 		}
 		
 	}
-	ImGui::SetCursorPosX(xStartPos);
+	
 	ImGui::SetCursorPosY(ImGui::GetCursorPosY() + yStartPos);
+	ImGui::SameLine();
 	const bool isLightView = VoxGUI::ImageButton("##_Light_View", TEXTURE_TO_IMGUI2(_lightIcon), { buttonDownWidth, buttonDOwnHeight }, { 1,1,1,1 }, { 1,1,1,1 }, { 1,1,1,0.5f }, ImDrawFlags_RoundCornersAll, ImVec2(0, 0), ImVec2(1, 1));
 
-	if(isLightView)
+	if(isLightView && voxObject)
 	{
-		for (auto renderable : GUIData::_voxObject.lock()->GetRenderables())
+		for (auto renderable : voxObject->GetRenderables())
 		{
 			renderable->SetDrawType(RenderDrawType::Triangles);
 			renderable->SetRenderType(PipelineRenderType::Opaque_Lit);
 		}
 	}
 
-	ImGui::SetCursorPosX(xStartPos);
+	
 	ImGui::SetCursorPosY(ImGui::GetCursorPosY() + yStartPos);
-
+	ImGui::SameLine();
 
 	VoxGUI::ImageButton("##_UV_View", TEXTURE_TO_IMGUI2(_uvIcon), { buttonDownWidth, buttonDOwnHeight }, { 1,1,1,1 }, { 1,1,1,1 }, { 1,1,1,0.5f }, ImDrawFlags_RoundCornersAll, ImVec2(0, 0), ImVec2(1, 1));
 
@@ -402,7 +392,9 @@ void VoxToProcessView::TextureViewport()
     }
 
     // === Draw vertices (draggable) ===
-    float handleSize = 4.0f;
+    const float handleSize = 5.0f;
+	const float handleViewSize = 2.0f;
+
     for (int i = 0; i < (int)vertices.size(); i++) {
         ImVec2 p = UVToScreen(vertices[i].UV);
         bool hovered = ImGui::IsMouseHoveringRect(
@@ -413,7 +405,7 @@ void VoxToProcessView::TextureViewport()
             ? IM_COL32(255, 128, 0, 255)
             : IM_COL32(0, 255, 255, 255);
 
-        dl->AddCircleFilled(p, 2, col);
+        dl->AddCircleFilled(p, handleViewSize, col);
 
         if (hovered && ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
             selectedVertex = i;

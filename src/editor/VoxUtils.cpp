@@ -1,4 +1,6 @@
 #include "VoxUtils.h"
+#include <filesystem>
+
 
 std::shared_ptr<VoxObject> CreateVoxObject(const std::vector<std::shared_ptr<Unvoxeller::UnvoxScene>>& scenes)
 {
@@ -54,5 +56,20 @@ std::shared_ptr<VoxObject> CreateVoxObject(const std::vector<std::shared_ptr<Unv
 		}
 	}
 
-	return std::make_shared<VoxObject>(renderables);
+    auto voxObject = std::make_shared<VoxObject>(renderables);
+
+	return voxObject;
+}
+
+
+std::string GetFileName(const std::string& fullPath)
+{
+	s32 start = fullPath.find_last_of(std::filesystem::path::preferred_separator) + 1;
+	
+	return fullPath.substr(start, fullPath.find_last_of(".") - start);
+}
+
+std::string GetFileExtension(const std::string& fullPath)
+{
+	return fullPath.substr(fullPath.find_last_of(".")+1);
 }

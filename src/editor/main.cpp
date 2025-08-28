@@ -140,9 +140,9 @@ int Init()
 	// Help
 	NativeMenu::Add("Help/About", []() { LOG_INFO("About");});
 
-	NativeMenu::Add("Help/Made By Reynarz", []() { LOG_INFO("About");});
-	NativeMenu::Enable("Help/Creadits: Made By Reynarz", false);
-	NativeMenu::Separator("Help/Creadits: Made By Reynarz"); 
+	NativeMenu::Add("Help/Credits: Made By Reynarz", []() { LOG_INFO("About");});
+	NativeMenu::Enable("Help/Credits: Made By Reynarz", false);
+	NativeMenu::Separator("Help/Credits: Made By Reynarz"); 
 
 
 
@@ -206,9 +206,9 @@ int Init()
 	convertOptions.Meshing.RemoveOccludedFaces = false;
 
 	//Chicken_van_2.vox
-	std::string path = Unvoxeller::File::GetExecutableDir() + "/testvox/nda/Ambulance_1.vox"; // Test this!
+	//std::string path = Unvoxeller::File::GetExecutableDir() + "/testvox/nda/Ambulance_1.vox"; // Test this!
 	//std::string path = Unvoxeller::File::GetExecutableDir() + "/testvox/nda/Bus_Green.vox"; // Test this!
-	//std::string path = Unvoxeller::File::GetExecutableDir() + "/testvox/nda/Chicken_van_3.vox"; // Test this!
+	std::string path = Unvoxeller::File::GetExecutableDir() + "/testvox/nda/Chicken_van_3.vox"; // Test this!
 
 	
 	//std::string path = Unvoxeller::File::GetExecutableDir() + "/testvox/chr_knight.vox"; // Test this!
@@ -226,7 +226,7 @@ int Init()
 	auto scene = unvox.VoxToMem(path, convertOptions);
 	
 	auto voxObject = CreateVoxObject(scene.Scenes);
-	
+	voxObject->Name = GetFileName(path);
 	GUIData::_voxObject = voxObject;
 	while (!glfwWindowShouldClose(win))
 	{
