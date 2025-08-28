@@ -111,14 +111,37 @@ int Init()
 	}
 
 	NativeMenu::Init(win);
-	NativeMenu::Add("File/Open .vox", []() { LOG_INFO("Open .vox");}, true);
-	NativeMenu::Toggle("File/Open .vox", true);
-	NativeMenu::Enable("File/Open .vox", false);
 
-	NativeMenu::Add("File/Export Config", []() { LOG_INFO("Ex config");});
+	
+	// File
+	NativeMenu::Add("File/Open/.vox", []() { LOG_INFO("Open .vox");});
+	NativeMenu::Add("File/Open/Project", []() { LOG_INFO("Open .vox");});
+	NativeMenu::Add("File/Save", []() { LOG_INFO("Open .vox");});
+	NativeMenu::Add("File/Save As", []() { LOG_INFO("Open .vox");});
+
+
+	NativeMenu::Add("File/Exit", [&]() { glfwSetWindowShouldClose(win, true); });
+	
+	NativeMenu::Separator("File"); 
+	NativeMenu::Separator("File", 0); 
+
+
+	// Configuration
+	NativeMenu::Add("Settings/Exporting", []() { LOG_INFO("Ex config");});
+	NativeMenu::Add("Settings/Viewport", []() { LOG_INFO("Ex config");});
+
+	// Window
+	NativeMenu::Add("Window/3D View", []() { LOG_INFO("3d view");}, true);
+	NativeMenu::Add("Window/UV Editor", []() { LOG_INFO("UV editor");}, true);
+
+	NativeMenu::Toggle("Window/3D View", true);
+	NativeMenu::Toggle("Window/UV Editor", true);
+
 	NativeMenu::Add("Help/About", []() { LOG_INFO("About");});
 	NativeMenu::Add("Help/Made By Reynardo Perez", []() { LOG_INFO("About");});
 	NativeMenu::Enable("Help/Made By Reynarz", false);
+
+
 
 
 	glfwSetFramebufferSizeCallback(win, framebuffer_size_callback);

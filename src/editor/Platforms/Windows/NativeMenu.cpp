@@ -352,6 +352,107 @@ void NativeMenu::DestroyMenu(const std::string& path)
     }
 }
 
+void NativeMenu::Separator(const std::string& path)
+{
+    HMENU menu = EnsureMenu(path);
+    if (!menu) return;
+
+    AppendMenuA(menu, MF_SEPARATOR, 0, nullptr);
+    DrawMenuBar(g_Hwnd);
+}
+
+void NativeMenu::Separator(const std::string& path, int index)
+{
+    HMENU menu = EnsureMenu(path);
+    if (!menu) return;
+
+    int count = GetMenuItemCount(menu);
+    if (index < 0 || index >= count)
+    {
+        AppendMenuA(menu, MF_SEPARATOR, 0, nullptr);
+    }
+    else
+    {
+        MENUITEMINFOA mii = {};
+        mii.cbSize = sizeof(mii);
+        mii.fMask  = MIIM_FTYPE;
+        mii.fType  = MFT_SEPARATOR;
+        InsertMenuItemA(menu, static_cast<UINT>(index), TRUE, &mii);
+    }
+    DrawMenuBar(g_Hwnd);
+}
+
+void NativeMenu::RemoveSeparators(const std::string& path)
+{
+    HMENU menu = EnsureMenu(path);
+    if (!menu) return;
+
+    int count = GetMenuItemCount(menu);
+    for (int i = count - 1; i >= 0; --i) // reverse to keep indices valid
+    {
+        MENUITEMINFOA mii = {};
+        mii.cbSize = sizeof(mii);
+        mii.fMask = MIIM_FTYPE;
+        if (GetMenuItemInfoA(menu, i, TRUE, &mii))
+        {
+            if (mii.fType & MFT_SEPARATOR)
+                RemoveMenu(menu, i, MF_BYPOSITION);
+        }
+    }
+    DrawMenuBar(g_Hwnd);
+}
+
+void NativeMenu::RemoveSeparator(const std::string& path)
+{
+    // If path points to an item, remove any separator immediately before it
+    auto idIt = g_IdByPath.find(path);
+    if (idIt == g_IdByPath.end()) return;
+
+    UINT id = idIt->second;
+    auto infoIt = g_InfoById.find(id);
+    if (infoIt == g_InfoById.end() || !infoIt->second.parent) return;
+
+    HMENU parent = infoIt->second.parent;
+    int idx = -1;
+    int count = GetMenuItemCount(parent);
+    for (int i = 0; i < count; ++i)
+    {
+        if (GetMenuItemID(parent, i) == id) { idx = i; break; }
+    }
+    if (idx > 0)
+    {
+        MENUITEMINFOA mii = {};
+        mii.cbSize = sizeof(mii);
+        mii.fMask = MIIM_FTYPE;
+        if (GetMenuItemInfoA(parent, idx - 1, TRUE, &mii))
+        {
+            if (mii.fType & MFT_SEPARATOR)
+                RemoveMenu(parent, idx - 1, MF_BYPOSITION);
+        }
+    }
+    DrawMenuBar(g_Hwnd);
+}
+
+void NativeMenu::RemoveSeparator(const std::string& path, int index)
+{
+    HMENU menu = EnsureMenu(path);
+    if (!menu) return;
+
+    int count = GetMenuItemCount(menu);
+    if (index < 0 || index >= count) return;
+
+    MENUITEMINFOA mii = {};
+    mii.cbSize = sizeof(mii);
+    mii.fMask = MIIM_FTYPE;
+    if (GetMenuItemInfoA(menu, index, TRUE, &mii))
+    {
+        if (mii.fType & MFT_SEPARATOR)
+            RemoveMenu(menu, index, MF_BYPOSITION);
+    }
+    DrawMenuBar(g_Hwnd);
+}
+
+
 void NativeMenu::Shutdown(GLFWwindow* /*window*/)
 {
     if (g_Hwnd && g_PrevProc)

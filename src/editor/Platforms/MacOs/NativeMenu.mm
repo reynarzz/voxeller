@@ -1,5 +1,6 @@
 // native_menu_mac.mm
 #import <Cocoa/Cocoa.h>
+#import <dispatch/dispatch.h>
 #define GLFW_EXPOSE_NATIVE_COCOA
 #include <GLFW/glfw3.h>
 #include <GLFW/glfw3native.h>
@@ -76,6 +77,7 @@ namespace
         return (pos == std::string::npos) ? path : path.substr(pos + 1);
     }
 
+
         // Turn off AppKit's auto-enable so our manual [setEnabled:] sticks
     static inline void NM_DisableAutoEnable(NSMenu* menu)
     {
@@ -83,6 +85,8 @@ namespace
         if (menu.autoenablesItems)
             [menu setAutoenablesItems:NO];
     }
+
+
 
    NSMenu* EnsureMenu(const std::string& path)
    {
@@ -161,6 +165,7 @@ namespace
     }
 }
 
+
     // Remove subtree entries for prefix (menus, items, ids, toggles, infos)
     void EraseDescendants(const std::string& prefix)
     {
@@ -214,6 +219,131 @@ namespace
         }
         return nil;
     }
+
+// Ensure operations happen on the main thread
+static inline void NM_RunOnMain(void (^block)(void))
+{
+    if ([NSThread isMainThread]) { block(); }
+    else { dispatch_async(dispatch_get_main_queue(), block); }
+}
+
+// If `path` points to an existing *item*, return its parent menu and index of that item.
+// If it points to an existing *menu*, return that menu and index = menu.count (append).
+// If it’s new/ambiguous, create/resolve as a *menu* and return that menu (append).
+static void NM_ResolveMenuAndIndexForSeparator(const std::string& path,
+                                               /*in*/  bool hasIndex, /*in*/ NSInteger reqIndex,
+                                               /*out*/ NSMenu** outMenu,
+                                               /*out*/ NSInteger* outIndex)
+{
+    *outMenu = nil;
+    *outIndex = NSNotFound;
+
+    // 1) If path names an existing *item*, insert in its parent.
+    if (auto itemIt = g_ItemByPath.find(path); itemIt != g_ItemByPath.end())
+    {
+        NSMenuItem* item = itemIt->second;
+        NSMenu* parent = item ? item.menu : nil;
+        if (parent)
+        {
+            NM_DisableAutoEnable(parent);
+            NSInteger idx = [parent indexOfItem:item]; // valid index
+            *outMenu = parent;
+            *outIndex = hasIndex ? reqIndex : idx;     // default: insert *before* that item
+            return;
+        }
+    }
+
+    // 2) If path names an existing *menu*, insert into that menu.
+    if (auto menuIt = g_MenuByPath.find(path); menuIt != g_MenuByPath.end())
+    {
+        NSMenu* m = menuIt->second;
+        NM_DisableAutoEnable(m);
+        *outMenu = m;
+        *outIndex = hasIndex ? reqIndex : (NSInteger)m.numberOfItems; // append
+        return;
+    }
+
+    // 3) New/ambiguous: if parent has an item with that title, insert in parent.
+    std::string parentPath = ParentPath(path);
+    std::string label      = LastSeg(path);
+    NSMenu* parentMenu = parentPath.empty() ? NSApp.mainMenu : EnsureMenu(parentPath);
+    if (parentMenu)
+    {
+        if (NSMenuItem* existing = FindChildItemByTitle(parentMenu, label))
+        {
+            NM_DisableAutoEnable(parentMenu);
+            NSInteger idx = [parentMenu indexOfItem:existing];
+            *outMenu = parentMenu;
+            *outIndex = hasIndex ? reqIndex : idx;
+            return;
+        }
+    }
+
+    // 4) Otherwise, treat `path` as a *menu* and append.
+    NSMenu* m = EnsureMenu(path);
+    NM_DisableAutoEnable(m);
+    *outMenu = m;
+    *outIndex = hasIndex ? reqIndex : (NSInteger)m.numberOfItems;
+}
+
+// Clamp to a visible position: avoid leading/trailing separators (Cocoa sometimes hides them).
+static inline NSInteger NM_ClampSepIndex(NSMenu* menu, NSInteger idx)
+{
+    if (!menu) return NSNotFound;
+    NSInteger count = (NSInteger)menu.numberOfItems;
+    if (count <= 0) return 0;              // will show once items exist
+    if (idx <= 0)  return 1;               // avoid separator as first item
+    if (idx >= count) return count - 1;    // avoid separator as last item
+    return idx;
+}
+
+// Return the NSMenu to receive a separator for the given path.
+// - If path is an existing item -> parent menu.
+// - If path is an existing menu -> that menu.
+// - Else treat as a menu path and create it.
+// Also disables auto-enabling to respect manual enabled states.
+static NSMenu* NM_GetTargetMenuForPath(const std::string& path)
+{
+    // Existing leaf item? -> parent menu
+    if (auto it = g_ItemByPath.find(path); it != g_ItemByPath.end())
+    {
+        NSMenuItem* leaf = it->second;
+        NSMenu* pm = leaf ? leaf.menu : nil;
+        if (pm)
+        {
+            NM_DisableAutoEnable(pm);
+            return pm;
+        }
+    }
+
+    // Existing menu?
+    if (auto mit = g_MenuByPath.find(path); mit != g_MenuByPath.end())
+    {
+        NSMenu* m = mit->second;
+        NM_DisableAutoEnable(m);
+        return m;
+    }
+
+    // Ambiguous/new: if the parent has a same-named *item* (not submenu), insert in parent.
+    std::string parent = ParentPath(path);
+    std::string label  = LastSeg(path);
+    NSMenu* parentMenu = parent.empty() ? NSApp.mainMenu : EnsureMenu(parent);
+    if (parentMenu)
+    {
+        NSMenuItem* existing = FindChildItemByTitle(parentMenu, label);
+        if (existing && existing.submenu == nil)
+        {
+            NM_DisableAutoEnable(parentMenu);
+            return parentMenu; // insert among siblings of that item
+        }
+    }
+
+    // Otherwise, ensure/create the menu at `path`
+    NSMenu* m = EnsureMenu(path);
+    NM_DisableAutoEnable(m);
+    return m;
+}
+
 
     // Remove the NSMenuItem in the menubar that owns a given submenu
     static void NM_RemoveTopLevelMenuForSubmenu(NSMenu* submenu)
@@ -511,6 +641,77 @@ bool NativeMenu::IsChecked(const std::string& path)
     // Trust our stored state (fast), or you could read item.state != off.
     return info.checked;
 }
+
+void NativeMenu::Separator(const std::string& path)
+{
+    NM_RunOnMain(^{
+        NSMenu* menu = nil; NSInteger idx = NSNotFound;
+        NM_ResolveMenuAndIndexForSeparator(path, /*hasIndex=*/false, 0, &menu, &idx);
+        if (!menu) return;
+
+        idx = NM_ClampSepIndex(menu, (idx == NSNotFound) ? (NSInteger)menu.numberOfItems : idx);
+        [menu insertItem:[NSMenuItem separatorItem] atIndex:idx];
+    });
+}
+
+void NativeMenu::Separator(const std::string& path, int index)
+{
+    NM_RunOnMain(^{
+        NSMenu* menu = nil; NSInteger idx = NSNotFound;
+        NM_ResolveMenuAndIndexForSeparator(path, /*hasIndex=*/true, (NSInteger)index, &menu, &idx);
+        if (!menu) return;
+
+        idx = NM_ClampSepIndex(menu, idx);
+        [menu insertItem:[NSMenuItem separatorItem] atIndex:idx];
+    });
+}
+
+void NativeMenu::RemoveSeparators(const std::string& path)
+{
+    NSMenu* menu = NM_GetTargetMenuForPath(path);
+    if (!menu) return;
+
+    NSArray<NSMenuItem*>* items = [[menu itemArray] copy];
+    for (NSMenuItem* mi in items)
+    {
+        if (mi.separatorItem)
+            [menu removeItem:mi];
+    }
+}
+
+void NativeMenu::RemoveSeparator(const std::string& path)
+{
+    // If path points to an item, remove any separator immediately before it
+    auto it = g_ItemByPath.find(path);
+    if (it == g_ItemByPath.end()) return;
+
+    NSMenuItem* item = it->second;
+    if (!item) return;
+
+    NSMenu* parent = item.menu;
+    if (!parent) return;
+
+    NSInteger idx = [parent indexOfItem:item];
+    if (idx > 0)
+    {
+        NSMenuItem* prev = [parent itemAtIndex:idx - 1];
+        if (prev.separatorItem)
+            [parent removeItemAtIndex:idx - 1];
+    }
+}
+
+void NativeMenu::RemoveSeparator(const std::string& path, int index)
+{
+    NSMenu* menu = NM_GetTargetMenuForPath(path);
+    if (!menu) return;
+
+    if (index < 0 || index >= menu.numberOfItems) return;
+
+    NSMenuItem* mi = [menu itemAtIndex:index];
+    if (mi.separatorItem)
+        [menu removeItemAtIndex:index];
+}
+
 
 void NativeMenu::Shutdown(GLFWwindow* /*window*/)
 {

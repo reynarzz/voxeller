@@ -26,6 +26,20 @@ public:
     static bool IsEnabled(const std::string& path);
     static bool IsChecked(const std::string& path);
 
+    // Add a separator at the end of the given menu (e.g., "File").
+    static void Separator(const std::string& path);
+
+    // Insert a separator at a specific position (0-based) within the given menu.
+    // If index < 0 or index >= count, it appends at the end.
+    static void Separator(const std::string& path, int index);
+
+    // Remove all separators inside the given menu
+    static void RemoveSeparators(const std::string& path);
+
+    // Remove separator(s) around a specific item path, or at a specific index
+    static void RemoveSeparator(const std::string& path);
+    static void RemoveSeparator(const std::string& path, int index);
+
     // Remove a single item or an entire submenu tree at "path".
     static void DestroyMenu(const std::string& path);
 
