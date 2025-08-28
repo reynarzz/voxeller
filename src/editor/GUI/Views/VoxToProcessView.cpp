@@ -41,7 +41,6 @@ std::vector<std::string> voxTest{ "Vox1", "vox animated", "another vox" };
 s32 currentSelection = 0;
 int prevSelection = 0;
 
-const f32 toolBarHeight = 40;
 const f32 windowsSpacingY = 6;
 const f32 windowsSpacingX = 5;
 //const ImVec4 WindowsBgColor = ImVec4(34.0f / 255.0f, 39.0f / 255.0f, 44.0f / 255.0f, 1.0f);
@@ -146,38 +145,13 @@ void TitleLabel(const char* title)
 	ImGui::TextUnformatted(title);
 }
 
-void ToolBar()
-{
-	ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, _windowsRound);
-	bool open = true;
-	ImGui::SetNextWindowSize({ ImGui::GetIO().DisplaySize.x - 10, toolBarHeight }, ImGuiCond_Always);
-	ImGui::SetNextWindowPos({ 5, 6 }, ImGuiCond_Always);
-
-	ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 1.0f);
-	ImGui::PushStyleColor(ImGuiCol_Border, IM_COL32(30, 30, 30, 0));
-	ImGui::PushStyleColor(ImGuiCol_WindowBg, {0,0,0,0});
-	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
-	ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
-
-	ImGui::Begin("Toolbar", &open, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize);
-	const f32 elementsHeight = 25.0f;
-	ImGui::SetCursorPosY((toolBarHeight - elementsHeight) / 2.0f);
-	ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 3);
-
-	// Code Here
-
-	ImGui::End();
-	ImGui::PopStyleVar(4);
-	ImGui::PopStyleColor(2);
-}
-
 void VoxToProcessView::ViewportWindow()
 {
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, _windowsRound);
 	bool open = true;
-	ImVec2 windowSize = { ImGui::GetIO().DisplaySize.x / 2 - 60.0f, ImGui::GetIO().DisplaySize.y - toolBarHeight - windowsSpacingY - 13 };
+	ImVec2 windowSize = { ImGui::GetIO().DisplaySize.x / 2 - 60.0f, ImGui::GetIO().DisplaySize.y - windowsSpacingY - 13 };
 	ImGui::SetNextWindowSize(windowSize, ImGuiCond_Always);
-	ImGui::SetNextWindowPos({ 5, toolBarHeight + windowsSpacingY * 2 }, ImGuiCond_Always);
+	ImGui::SetNextWindowPos({ 5, windowsSpacingY * 2 }, ImGuiCond_Always);
 
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 1.0f);
 	ImGui::PushStyleColor(ImGuiCol_Border, IM_COL32(30, 30, 30, 0));
@@ -282,26 +256,26 @@ void VoxToProcessView::ViewportWindow()
 
 void VoxToProcessView::TextureViewport()
 {
-    if(!GUIData::_voxObject.lock())
-        return;
-
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, _windowsRound);
     bool open = true;
 
     const f32 xPos = ImGui::GetIO().DisplaySize.x / 2 - 60.0f + 10;
     const ImVec2 windowSize = {
         ImGui::GetIO().DisplaySize.x - 265.0f - xPos,
-        ImGui::GetIO().DisplaySize.y - toolBarHeight - windowsSpacingY - 13
+        ImGui::GetIO().DisplaySize.y - windowsSpacingY - 13
     };
 
     ImGui::SetNextWindowSize(windowSize, ImGuiCond_Always);
-    ImGui::SetNextWindowPos({ xPos, toolBarHeight + windowsSpacingY * 2 }, ImGuiCond_Always);
+    ImGui::SetNextWindowPos({ xPos, windowsSpacingY * 2 }, ImGuiCond_Always);
 
     ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
     ImGui::PushStyleColor(ImGuiCol_WindowBg, WindowsBgColor);
     ImGui::Begin("Texture Viewport", &open,
         ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize);
 
+		  if(GUIData::_voxObject.lock())
+       {
+		
     // === Persistent state ===
     static float zoom = 1.0f;
     static ImVec2 pan(0.0f, 0.0f);
@@ -467,6 +441,7 @@ void VoxToProcessView::TextureViewport()
             selectedVertex = -1;
         }
     }
+	   }
 
     ImGui::End();
     ImGui::PopStyleColor();
@@ -480,7 +455,7 @@ void ExportWin()
 	f32 posX = std::clamp(ImGui::GetIO().DisplaySize.x - 260.0f, 10.0f, ImGui::GetIO().DisplaySize.x);
 
 	ImGui::SetNextWindowPos(ImVec2(posX, ImGui::GetIO().DisplaySize.y - 125 + windowsSpacingY * 2), ImGuiCond_Always);
-	const f32 height = ImGui::GetIO().DisplaySize.y - toolBarHeight - windowsSpacingY - (ImGui::GetIO().DisplaySize.y - 170) - 20;//ImGui::GetIO().DisplaySize.y - toolBarHeight - windowsSpacingY - 13;
+	const f32 height = ImGui::GetIO().DisplaySize.y - windowsSpacingY - (ImGui::GetIO().DisplaySize.y - 170) - 20;//ImGui::GetIO().DisplaySize.y - toolBarHeight - windowsSpacingY - 13;
 
 	ImGui::SetNextWindowSize(ImVec2(std::min(ImGui::GetIO().DisplaySize.x - posX - 5, ImGui::GetIO().DisplaySize.x - 13), height), ImGuiCond_Always);
 
@@ -566,7 +541,6 @@ void VoxToProcessView::UpdateGUI()
 	style.Colors[ImGuiCol_ScrollbarGrabActive] = ImVec4(1, 1, 1, 1.0f);
 
 	ExportWin();
-	ToolBar();
 	ViewportWindow();
 	TextureViewport();
 
@@ -575,7 +549,7 @@ void VoxToProcessView::UpdateGUI()
 	bool open = true;
 	f32 posX = std::clamp(ImGui::GetIO().DisplaySize.x - 260.0f, 10.0f, ImGui::GetIO().DisplaySize.x);
 
-	ImGui::SetNextWindowPos(ImVec2(posX, toolBarHeight + windowsSpacingY * 2), ImGuiCond_Always);
+	ImGui::SetNextWindowPos(ImVec2(posX, windowsSpacingY * 2), ImGuiCond_Always);
 	const f32 height = ImGui::GetIO().DisplaySize.y - 170;//ImGui::GetIO().DisplaySize.y - toolBarHeight - windowsSpacingY - 13;
 
 	ImGui::SetNextWindowSize(ImVec2(std::min(ImGui::GetIO().DisplaySize.x - posX - 5, ImGui::GetIO().DisplaySize.x - 13), height), ImGuiCond_Always);

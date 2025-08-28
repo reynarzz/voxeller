@@ -54,6 +54,7 @@ endforeach()
 if(APPLE)
     set_source_files_properties(
         ${CMAKE_CURRENT_SOURCE_DIR}/GUI/Utils/DropHover.mm
+        ${CMAKE_CURRENT_SOURCE_DIR}/Platforms/MacOs/NativeMenu.mm
         PROPERTIES
         LANGUAGE OBJCXX
     )
@@ -64,6 +65,8 @@ add_executable(Unvoxeller_editor
     ${ROOT_DIR}/third/editor/gl/glad.cpp
     $<$<BOOL:WIN32>:${CMAKE_CURRENT_SOURCE_DIR}/resources/app.rc>
     $<$<BOOL:APPLE>:${CMAKE_CURRENT_SOURCE_DIR}/GUI/Utils/DropHover.mm>
+    $<$<BOOL:APPLE>:${CMAKE_CURRENT_SOURCE_DIR}/Platforms/MacOs/NativeMenu.mm>
+
 )
 
 install(TARGETS Unvoxeller_editor
