@@ -1,6 +1,6 @@
 #if _WIN32
 #include "NativeMenu.h"
-#define GLFW_EXPOSE_NATIVE_WIN32
+#include <GLFW/glfw3.h>
 #include <GLFW/glfw3native.h>
 #include <windows.h>
 
@@ -153,6 +153,11 @@ void NativeMenu::Init(GLFWwindow* window)
     g_MenuBar = CreateMenu();
     SetMenu(g_Hwnd, g_MenuBar);
     g_PrevProc = (WNDPROC)SetWindowLongPtr(g_Hwnd, GWLP_WNDPROC, (LONG_PTR)HookWndProc);
+}
+
+void NativeMenu::Add(const std::string& path, std::function<void()> callback)
+{
+    Add(path, callback, false);
 }
 
 void NativeMenu::Add(const std::string& path, std::function<void()> callback, bool toggle)

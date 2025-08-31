@@ -1,6 +1,7 @@
 #pragma once
 #include <vector>
 #include "RenderableObject.h"
+#include <string>
 
 class VoxObject
 {
