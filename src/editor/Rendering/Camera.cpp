@@ -68,9 +68,6 @@ void Camera::Update()
     // Panning (MMB drag)
     else if (io.MouseDown[2] && _isViewingObjectViewport)
     {
-        
-       
-
         if (firstMouse) { lastPos = io.MousePos; firstMouse = false; }
 
         float dx = io.MousePos.x - lastPos.x;

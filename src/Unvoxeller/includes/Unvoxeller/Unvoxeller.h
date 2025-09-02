@@ -3,7 +3,6 @@
 #include <Unvoxeller/api.h>
 #include <Unvoxeller/Data/ExportResults.h>
 #include <Unvoxeller/Data/ConvertResults.h>
-#include <Unvoxeller/Data/ConvertResults.h>
 #include <Unvoxeller/Data/ConvertOptions.h>
 #include <Unvoxeller/Data/ExportOptions.h>
 

@@ -140,7 +140,8 @@ void main()
 
     // Combine ambient + diffuse
     vec3 color = /*uAmbientColor + */_LIGHT_COLOR_ * diff * _LIGHT_INTENSITY_;
-   
+    color = clamp(color, vec3(0.3), vec3(1.0));
+
     FragColor = texture(uTexture, vec2(vTexCoord.x, 1.0f - vTexCoord.y)) * vec4(color, 1.0);
 }
 )";

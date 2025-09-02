@@ -2,7 +2,6 @@
 #include <vector>
 #include <Unvoxeller/api.h>
 #include <Unvoxeller/Types.h>
-#include "TextureData.h"
 #include <Unvoxeller/Data/UnvoxScene.h>
 
 namespace Unvoxeller 

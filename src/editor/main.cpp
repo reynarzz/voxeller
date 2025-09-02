@@ -122,8 +122,8 @@ int Init()
 
 	NativeMenu::Add("File/Exit", [&]() { glfwSetWindowShouldClose(win, true); });
 	
-	NativeMenu::Separator("File"); 
-	NativeMenu::Separator("File", 0); 
+	NativeMenu::Separator("File", 0);
+	NativeMenu::Separator("File", 3);
 
 
 	// Configuration
@@ -206,11 +206,11 @@ int Init()
 	convertOptions.Meshing.RemoveOccludedFaces = false;
 
 	//Chicken_van_2.vox
-	//std::string path = Unvoxeller::File::GetExecutableDir() + "/testvox/nda/Ambulance_1.vox"; // Test this!
+	std::string path = Unvoxeller::File::GetExecutableDir() + "/testvox/nda/Ambulance_1.vox"; // Test this!
 	//std::string path = Unvoxeller::File::GetExecutableDir() + "/testvox/nda/Bus_Green.vox"; // Test this!
-	std::string path = Unvoxeller::File::GetExecutableDir() + "/testvox/nda/Chicken_van_3.vox"; // Test this!
+	//std::string path = Unvoxeller::File::GetExecutableDir() + "/testvox/nda/Chicken_van_3.vox"; // Test this!
 
-	
+	 
 	//std::string path = Unvoxeller::File::GetExecutableDir() + "/testvox/chr_knight.vox"; // Test this!
 	//std::string path = Unvoxeller::File::GetExecutableDir() + "/testvox/room.vox";
 	//std::string output = "testvox/nda/export/Output.fbx";

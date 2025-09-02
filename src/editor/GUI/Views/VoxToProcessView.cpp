@@ -41,12 +41,13 @@ std::vector<std::string> voxTest{ "Vox1", "vox animated", "another vox" };
 s32 currentSelection = 0;
 int prevSelection = 0;
 
-const f32 windowsSpacingY = 6;
+const f32 windowsSpacingY = 4;
 const f32 windowsSpacingX = 5;
 //const ImVec4 WindowsBgColor = ImVec4(34.0f / 255.0f, 39.0f / 255.0f, 44.0f / 255.0f, 1.0f);
 const ImVec4 WindowsBgColor = ImVec4(0.12f, 0.12f, 0.12f, 1.0f);
 f32 _windowsRound = 7.0f;
 s32 selectedIndex = 0;
+f32 voxelBagSize = 130;
 
 f32 donuFill = 0;
 std::string searchBar = "";
@@ -444,10 +445,11 @@ void ExportWin()
 {
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, _windowsRound);
 	bool open = true;
-	f32 posX = std::clamp(ImGui::GetIO().DisplaySize.x - 260.0f, 10.0f, ImGui::GetIO().DisplaySize.x);
+	const f32 posX = std::clamp(ImGui::GetIO().DisplaySize.x - 260.0f, 10.0f, ImGui::GetIO().DisplaySize.x);
+	const f32 posY = ImGui::GetIO().DisplaySize.y - voxelBagSize + windowsSpacingY * 4;
 
-	ImGui::SetNextWindowPos(ImVec2(posX, ImGui::GetIO().DisplaySize.y - 125 + windowsSpacingY * 2), ImGuiCond_Always);
-	const f32 height = ImGui::GetIO().DisplaySize.y - windowsSpacingY - (ImGui::GetIO().DisplaySize.y - 170) - 20;//ImGui::GetIO().DisplaySize.y - toolBarHeight - windowsSpacingY - 13;
+	ImGui::SetNextWindowPos(ImVec2(posX, posY), ImGuiCond_Always);
+	const f32 height = (ImGui::GetIO().DisplaySize.y - posY) - windowsSpacingY * 2;
 
 	ImGui::SetNextWindowSize(ImVec2(std::min(ImGui::GetIO().DisplaySize.x - posX - 5, ImGui::GetIO().DisplaySize.x - 13), height), ImGuiCond_Always);
 
@@ -458,11 +460,10 @@ void ExportWin()
 	ImGui::Begin("##ExportWin", &open, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize);
 
 
-
 	f32 spacing = 1;
 	f32 buttonDownWidth = 75;
 	f32 buttonDOwnHeight = 25;
-	std::vector<std::string> options = { "Fbx", "Obj" };
+	std::vector<std::string> options = { "Fbx", "Obj", "Gltf", "Glb", "Dae" };
 
 	VoxGUI::Dropdown("Format", &selectedIndex, options, 10, 200, 70);
 	ImGui::Text("Config");
@@ -542,7 +543,7 @@ void VoxToProcessView::UpdateGUI()
 	f32 posX = std::clamp(ImGui::GetIO().DisplaySize.x - 260.0f, 10.0f, ImGui::GetIO().DisplaySize.x);
 
 	ImGui::SetNextWindowPos(ImVec2(posX, windowsSpacingY * 2), ImGuiCond_Always);
-	const f32 height = ImGui::GetIO().DisplaySize.y - 170;//ImGui::GetIO().DisplaySize.y - toolBarHeight - windowsSpacingY - 13;
+	const f32 height = ImGui::GetIO().DisplaySize.y - voxelBagSize;
 
 	ImGui::SetNextWindowSize(ImVec2(std::min(ImGui::GetIO().DisplaySize.x - posX - 5, ImGui::GetIO().DisplaySize.x - 13), height), ImGuiCond_Always);
 

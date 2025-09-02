@@ -139,9 +139,17 @@ namespace Unvoxeller
 		case ModelFormat::FBX:
 			ext = "fbx";
 			break;
-
 		case ModelFormat::OBJ:
 			ext = "obj";
+			break;
+		case ModelFormat::GLTF:
+			ext = "gltf";
+			break;
+		case ModelFormat::GLB:
+			ext = "glb";
+			break;
+		case ModelFormat::DAE:
+			ext = "dae";
 			break;
 		default:
 			LOG_ERROR("Format not implemented in writeToFile switch.");

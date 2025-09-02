@@ -1,5 +1,3 @@
-
-
 #include <Unvoxeller/VoxParser.h>
 
 #include <fstream>
@@ -11,17 +9,18 @@
 #include <limits>
 #include <memory>
 #include <cstdint>
+#include <unordered_map>
 
 namespace Unvoxeller
 {
     int VoxParser::modelIndex = 0;
-    
-    vox_header VoxParser::read_vox_metadata(const char* path) 
+
+    vox_header VoxParser::read_vox_metadata(const char* path)
     {
         std::ifstream voxFile(path, std::ios::binary);
         vox_header header{};
         modelIndex = 0;
-        if (voxFile.is_open()) 
+        if (voxFile.is_open())
         {
             char magic[4];
             int version;
@@ -31,23 +30,22 @@ namespace Unvoxeller
             header.id = magicStr;
             header.version = std::to_string(version);
         }
-        else 
+        else
         {
             std::cerr << "Invalid file path: " << path << '\n';
         }
         return header;
     }
 
-    vox_header VoxParser::read_vox_metadata(const void* bytes) 
+    vox_header VoxParser::read_vox_metadata(const void* /*bytes*/)
     {
-        // Not implemented: reading from a memory buffer
         return {};
     }
 
-    std::shared_ptr<vox_file> VoxParser::read_vox_file(const char* path) 
+    std::shared_ptr<vox_file> VoxParser::read_vox_file(const char* path)
     {
         std::ifstream voxFile(path, std::ios::binary);
-        if (!voxFile.is_open()) 
+        if (!voxFile.is_open())
         {
             std::cerr << "Invalid file path: " << path << '\n';
             return nullptr;
@@ -63,10 +61,10 @@ namespace Unvoxeller
         vox->groups.clear();
         vox->shapes.clear();
         vox->materials.clear();
-        vox->layers.clear();  // assuming vox_file has a container for layers
+        vox->layers.clear();
 
         vox->palette.resize(default_palette.size());
-        for (size_t i = 0; i < default_palette.size(); ++i) 
+        for (size_t i = 0; i < default_palette.size(); ++i)
         {
             uint32_t c = default_palette[i];
             vox->palette[i].r = uint8_t((c >> 0) & 0xFF);
@@ -74,16 +72,16 @@ namespace Unvoxeller
             vox->palette[i].b = uint8_t((c >> 16) & 0xFF);
             vox->palette[i].a = uint8_t((c >> 24) & 0xFF);
         }
-        
-        // track if we ever see an RGBA chunk
+
         bool sawRGBA = false;
+
         // Read file magic and version
         char magic[4];
         int version;
         voxFile.read(magic, 4);
         voxFile.read(reinterpret_cast<char*>(&version), 4);
         std::string magicStr(magic, 4);
-        if (magicStr != "VOX ") 
+        if (magicStr != "VOX ")
         {
             std::cerr << "Invalid .vox file format (magic number not found)\n";
             return nullptr;
@@ -98,21 +96,17 @@ namespace Unvoxeller
             std::cerr << "Invalid .vox file: MAIN chunk not found\n";
             return vox;
         }
-        // Read MAIN chunk sizes (content and children)
         uint32_t mainContentBytes = 0;
         uint32_t mainChildrenBytes = 0;
         voxFile.read(reinterpret_cast<char*>(&mainContentBytes), 4);
         voxFile.read(reinterpret_cast<char*>(&mainChildrenBytes), 4);
-        // mainContentBytes is expected to be 0 for MAIN, children size is the rest of the file
 
         // Loop through all chunks inside MAIN
         modelIndex = 0;
         while (true) {
-            // Read the next chunk ID
             char chunkId[4];
             if (!voxFile.read(chunkId, 4)) {
-                // Reached end of file or error
-                break;
+                break; // EOF
             }
             uint32_t chunkContentBytes = 0;
             uint32_t chunkChildrenBytes = 0;
@@ -120,10 +114,7 @@ namespace Unvoxeller
             voxFile.read(reinterpret_cast<char*>(&chunkChildrenBytes), 4);
             std::string chunkStr(chunkId, 4);
 
-
-
             if (chunkStr == "PACK") {
-                // Multiple models chunk
                 parse_PACK(vox, voxFile, chunkContentBytes, chunkChildrenBytes);
             }
             else if (chunkStr == "SIZE") {
@@ -155,12 +146,10 @@ namespace Unvoxeller
                 parse_LAYR(vox, voxFile, chunkContentBytes, chunkChildrenBytes);
             }
             else {
-                // Unknown chunk type: skip it
                 voxFile.seekg(chunkContentBytes + chunkChildrenBytes, std::ios::cur);
             }
         }
 
-        // If no RGBA chunk was encountered, use default palette
         if (!sawRGBA) {
             vox->palette.resize(default_palette.size());
             for (size_t i = 0; i < default_palette.size(); ++i) {
@@ -174,21 +163,61 @@ namespace Unvoxeller
             }
         }
 
+        // -------------------------------
+        // POST-PASS: build parent links
+        // -------------------------------
+        // Map: childNodeID (of nTRN) -> nTRN id
+        std::unordered_map<int, int> trnByChild;
+        trnByChild.reserve(vox->transforms.size());
+        for (const auto& kv : vox->transforms) {
+            trnByChild[kv.second.childNodeID] = kv.first;
+        }
+
+        // Map: nodeId -> its immediate parent group node (if any)
+        std::unordered_map<int, int> parentGroupOfNode;
+        for (const auto& gkv : vox->groups) {
+            const int grpId = gkv.first;
+            for (int childId : gkv.second.childrenIDs) {
+                parentGroupOfNode[childId] = grpId;
+            }
+        }
+
+        // For each transform node, walk up via groups to find the parent transform
+        for (auto& kv : vox->transforms) {
+            vox_nTRN& trn = kv.second;
+            trn.parentNodeID = -1;  // default: root
+
+            int cur = trn.nodeID;
+            // climb: node -> parent group -> (maybe parent group of that group) ... until a TRN owns that group as child
+            while (true) {
+                auto pg = parentGroupOfNode.find(cur);
+                if (pg == parentGroupOfNode.end()) {
+                    break; // reached root (no parent group)
+                }
+                int grpId = pg->second;
+
+                auto pt = trnByChild.find(grpId);
+                if (pt != trnByChild.end()) {
+                    trn.parentNodeID = pt->second; // found the parent transform id
+                    break;
+                }
+
+                // No TRN owns this group directly; continue climbing as if the group were "cur"
+                cur = grpId;
+            }
+        }
+        // -------------------------------
+
         vox->isValid = true;
         return vox;
     }
 
-    void VoxParser::parse_PACK(std::shared_ptr<vox_file> vox, std::ifstream& voxFile,
+    void VoxParser::parse_PACK(std::shared_ptr<vox_file> /*vox*/, std::ifstream& voxFile,
         uint32_t contentBytes, uint32_t childrenBytes) {
-        // The PACK chunk contains one int: number of models
-        if (contentBytes < 4) {
-            std::cerr << "Invalid PACK chunk size\n";
-            // Skip anyway
+        if (contentBytes >= 4) {
+            uint32_t numModels = 0;
+            voxFile.read(reinterpret_cast<char*>(&numModels), 4);
         }
-        uint32_t numModels = 0;
-        voxFile.read(reinterpret_cast<char*>(&numModels), 4);
-        // We could store numModels if needed, but it�s mainly for verification.
-        // Skip any child chunks bytes (should be none for PACK)
         if (childrenBytes > 0) {
             voxFile.seekg(childrenBytes, std::ios::cur);
         }
@@ -196,9 +225,7 @@ namespace Unvoxeller
 
     void VoxParser::parse_SIZE(std::shared_ptr<vox_file> vox, std::ifstream& voxFile,
         uint32_t contentBytes, uint32_t childrenBytes) {
-        // SIZE chunk: 3 ints (x, y, z dimensions)
         if (contentBytes != 12) {
-            // If contentBytes is not 12, skip chunk
             std::cerr << "Unexpected SIZE chunk length: " << contentBytes << '\n';
         }
         vox_size size;
@@ -206,25 +233,19 @@ namespace Unvoxeller
         voxFile.read(reinterpret_cast<char*>(&size.y), 4);
         voxFile.read(reinterpret_cast<char*>(&size.z), 4);
         vox->sizes.push_back(size);
-        // Skip any children (SIZE normally has no children)
         if (childrenBytes > 0) {
             voxFile.seekg(childrenBytes, std::ios::cur);
         }
-        // (Optional) Debug: print model dimensions
-        // std::cout << "Model " << vox->sizes.size()-1 << " size: " 
-        //           << size.x << " x " << size.y << " x " << size.z << "\n";
     }
 
     void VoxParser::parse_XYZI(std::shared_ptr<vox_file> vox, std::ifstream& voxFile,
-        uint32_t contentBytes, uint32_t childrenBytes)
+        uint32_t /*contentBytes*/, uint32_t childrenBytes)
     {
-        // XYZI chunk: int N (number of voxels), then N * 4 bytes (x,y,z,colorIndex)
         uint32_t numVoxels = 0;
         voxFile.read(reinterpret_cast<char*>(&numVoxels), 4);
         vox_model model;
         model.voxels.resize(numVoxels);
 
-        // Initialize a 3D grid for this model for quick lookup (filled with -1)
         const vox_size& size = vox->sizes[modelIndex++];
         int sx = size.x, sy = size.y, sz = size.z;
         model.voxel_3dGrid = new int** [sz];
@@ -236,7 +257,6 @@ namespace Unvoxeller
             }
         }
 
-        // Initialize bounding box (start as empty)
         model.boundingBox.minX = std::numeric_limits<float>::infinity();
         model.boundingBox.minY = std::numeric_limits<float>::infinity();
         model.boundingBox.minZ = std::numeric_limits<float>::infinity();
@@ -244,24 +264,18 @@ namespace Unvoxeller
         model.boundingBox.maxY = -std::numeric_limits<float>::infinity();
         model.boundingBox.maxZ = -std::numeric_limits<float>::infinity();
 
-        // Read each voxel
         for (uint32_t i = 0; i < numVoxels; ++i) {
-            vox_voxel voxData;
+            vox_voxel vv;
             uint8_t xi, yi, zi, ci;
             voxFile.read(reinterpret_cast<char*>(&xi), 1);
             voxFile.read(reinterpret_cast<char*>(&yi), 1);
             voxFile.read(reinterpret_cast<char*>(&zi), 1);
             voxFile.read(reinterpret_cast<char*>(&ci), 1);
-            voxData.x = xi;
-            voxData.y = yi;
-            voxData.z = zi;
-            voxData.colorIndex = ci;
-            model.voxels[i] = voxData;
+            vv.x = xi; vv.y = yi; vv.z = zi; vv.colorIndex = ci;
+            model.voxels[i] = vv;
 
-            // Mark voxel in 3D grid
             model.voxel_3dGrid[zi][yi][xi] = static_cast<int>(i);
 
-            // Update bounding box (note: max side includes full cube extent!)
             model.boundingBox.minX = std::min(model.boundingBox.minX, static_cast<float>(xi));
             model.boundingBox.minY = std::min(model.boundingBox.minY, static_cast<float>(yi));
             model.boundingBox.minZ = std::min(model.boundingBox.minZ, static_cast<float>(zi));
@@ -272,7 +286,6 @@ namespace Unvoxeller
 
         vox->voxModels.push_back(std::move(model));
 
-        // Skip any children chunks (XYZI typically has none)
         if (childrenBytes > 0) {
             voxFile.seekg(childrenBytes, std::ios::cur);
         }
@@ -280,24 +293,16 @@ namespace Unvoxeller
 
     void VoxParser::parse_RGBA(std::shared_ptr<vox_file> vox, std::ifstream& voxFile,
         uint32_t contentBytes, uint32_t childrenBytes) {
-        // RGBA chunk: 256 * 4 bytes = 1024 bytes (even though palette index 0 is unused)
         const size_t paletteSize = 256;
         vox->palette.resize(paletteSize);
-        if (contentBytes != paletteSize * 4) {
-            // If there's a discrepancy, adjust reading to smaller of expected vs actual
-        }
         for (size_t i = 0; i < paletteSize; ++i) {
             uint8_t r, g, b, a;
             voxFile.read(reinterpret_cast<char*>(&r), 1);
             voxFile.read(reinterpret_cast<char*>(&g), 1);
             voxFile.read(reinterpret_cast<char*>(&b), 1);
             voxFile.read(reinterpret_cast<char*>(&a), 1);
-            color col;
-            col.r = r; col.g = g; col.b = b; col.a = a;
-            vox->palette[i] = col;
+            vox->palette[i] = { r, g, b, a };
         }
-        // If the first palette entry (index 0) is meant to be transparent and not used for voxels,
-        // it might be 0x00000000. We keep it in the palette vector regardless.
         if (childrenBytes > 0) {
             voxFile.seekg(childrenBytes, std::ios::cur);
         }
@@ -305,469 +310,297 @@ namespace Unvoxeller
 
     void VoxParser::parse_MATT(std::shared_ptr<vox_file> vox, std::ifstream& voxFile,
         uint32_t contentBytes, uint32_t childrenBytes) {
-        // MATT chunk (deprecated in newer versions): material properties for one color index
-        // Structure: int32 id, int32 materialType, float materialWeight, int32 propertyBits,
-        // then optional floats for each property present.
-        if (contentBytes < 4 * 3) { // at least id, type, weight, propertyBits = 16 bytes
-            // Malformed MATT chunk, skip it entirely
+        if (contentBytes < 16) {
             voxFile.seekg(contentBytes + childrenBytes, std::ios::cur);
             return;
         }
-        uint32_t matId;
-        uint32_t type;
+        uint32_t matId, type, propertyBits;
         float weight;
-        uint32_t propertyBits;
         voxFile.read(reinterpret_cast<char*>(&matId), 4);
         voxFile.read(reinterpret_cast<char*>(&type), 4);
         voxFile.read(reinterpret_cast<char*>(&weight), 4);
         voxFile.read(reinterpret_cast<char*>(&propertyBits), 4);
 
         vox_MATL& material = vox->materials[matId];
-        // Initialize defaults for this material
-        material.diffuse = 0.0f;
-        material.metal = 0.0f;
-        material.glass = 0.0f;
-        material.emit = 0.0f;
-        material.plastic = 0.0f;
-        material.rough = 0.0f;
-        material.spec = 0.0f;
-        material.ior = 0.0f;
-        material.att = 0.0f;
-        material.flux = 0.0f;
-        material.weight = 0.0f;
-        // Set material type flags
-        if (type == 0) {        // diffuse
-            material.diffuse = 1.0f;
-        }
-        else if (type == 1) { // metal
-            material.metal = 1.0f;
-        }
-        else if (type == 2) { // glass
-            material.glass = 1.0f;
-        }
-        else if (type == 3) { // emissive
-            material.emit = 1.0f;
-        }
+        material = {}; // zero-init
+        if (type == 0) material.diffuse = 1.0f;
+        else if (type == 1) material.metal = 1.0f;
+        else if (type == 2) material.glass = 1.0f;
+        else if (type == 3) material.emit = 1.0f;
         material.weight = weight;
 
-        // Property bits indicate which additional properties are present
-        if (propertyBits & 0x1) { // Plastic
-            float plasticVal;
-            voxFile.read(reinterpret_cast<char*>(&plasticVal), 4);
-            material.plastic = plasticVal;
-        }
-        if (propertyBits & 0x2) { // Roughness
-            float roughnessVal;
-            voxFile.read(reinterpret_cast<char*>(&roughnessVal), 4);
-            material.rough = roughnessVal;
-        }
-        if (propertyBits & 0x4) { // Specular
-            float specularVal;
-            voxFile.read(reinterpret_cast<char*>(&specularVal), 4);
-            material.spec = specularVal;
-        }
-        if (propertyBits & 0x8) { // IOR (index of refraction)
-            float iorVal;
-            voxFile.read(reinterpret_cast<char*>(&iorVal), 4);
-            material.ior = iorVal;
-        }
-        if (propertyBits & 0x10) { // Attenuation
-            float attVal;
-            voxFile.read(reinterpret_cast<char*>(&attVal), 4);
-            material.att = attVal;
-        }
-        float emissivePower = 0.0f;
-        float emissiveGlow = 0.0f;
-        if (propertyBits & 0x20) { // Emissive power
-            voxFile.read(reinterpret_cast<char*>(&emissivePower), 4);
-        }
-        if (propertyBits & 0x40) { // Emissive glow
-            voxFile.read(reinterpret_cast<char*>(&emissiveGlow), 4);
-        }
-        if (propertyBits & 0x80) { // IsTotalPower (unused here)
-            float dummy;
-            voxFile.read(reinterpret_cast<char*>(&dummy), 4);
-        }
-        // If emissive, combine power and glow into flux intensity (approximation)
+        if (propertyBits & 0x1) { float v; voxFile.read(reinterpret_cast<char*>(&v), 4); material.plastic = v; }
+        if (propertyBits & 0x2) { float v; voxFile.read(reinterpret_cast<char*>(&v), 4); material.rough = v; }
+        if (propertyBits & 0x4) { float v; voxFile.read(reinterpret_cast<char*>(&v), 4); material.spec = v; }
+        if (propertyBits & 0x8) { float v; voxFile.read(reinterpret_cast<char*>(&v), 4); material.ior = v; }
+        if (propertyBits & 0x10) { float v; voxFile.read(reinterpret_cast<char*>(&v), 4); material.att = v; }
+        float emissivePower = 0.0f, emissiveGlow = 0.0f;
+        if (propertyBits & 0x20) { voxFile.read(reinterpret_cast<char*>(&emissivePower), 4); }
+        if (propertyBits & 0x40) { voxFile.read(reinterpret_cast<char*>(&emissiveGlow), 4); }
+        if (propertyBits & 0x80) { float dummy; voxFile.read(reinterpret_cast<char*>(&dummy), 4); }
         if (material.emit > 0.0f) {
-            // Base flux from power (power is an exponent in older format)
-            material.flux = (emissivePower != 0.0f ? std::pow(10.0f, emissivePower) : 1.0f);
-            // Incorporate glow as a multiplier (glow adds extra bloom without increasing actual light)
-            material.flux *= (1.0f + emissiveGlow);
+            material.flux = (emissivePower != 0.0f ? std::pow(10.0f, emissivePower) : 1.0f) * (1.0f + emissiveGlow);
         }
 
-        // Skip any declared children bytes (none expected for MATT)
         if (childrenBytes > 0) {
             voxFile.seekg(childrenBytes, std::ios::cur);
         }
     }
 
     void VoxParser::parse_MATL(std::shared_ptr<vox_file> vox, std::ifstream& voxFile,
-        uint32_t contentBytes, uint32_t childrenBytes) {
-        // MATL chunk: int32 material id, DICT of material properties (keys and values as strings)
+        uint32_t /*contentBytes*/, uint32_t childrenBytes) {
         uint32_t matId;
         voxFile.read(reinterpret_cast<char*>(&matId), 4);
         vox_MATL& material = vox->materials[matId];
-        // Set default material values
-        material.diffuse = 0.0f;
-        material.metal = 0.0f;
-        material.glass = 0.0f;
-        material.emit = 0.0f;
-        material.plastic = 0.0f;
-        material.rough = 0.0f;
-        material.spec = 0.0f;
-        material.ior = 0.0f;
-        material.att = 0.0f;
-        material.flux = 0.0f;
-        material.weight = 0.0f;
-        // By default, assume diffuse unless type says otherwise
+        material = {};
         material.diffuse = 1.0f;
 
-        // Read DICT of key-value material properties
         uint32_t kvCount;
         voxFile.read(reinterpret_cast<char*>(&kvCount), 4);
         for (uint32_t i = 0; i < kvCount; ++i) {
-            uint32_t keyLen;
-            voxFile.read(reinterpret_cast<char*>(&keyLen), 4);
-            std::string key(keyLen, '\0');
-            voxFile.read(&key[0], keyLen);
-            uint32_t valLen;
-            voxFile.read(reinterpret_cast<char*>(&valLen), 4);
-            std::string val(valLen, '\0');
-            voxFile.read(&val[0], valLen);
+            uint32_t keyLen; voxFile.read(reinterpret_cast<char*>(&keyLen), 4);
+            std::string key(keyLen, '\0'); voxFile.read(&key[0], keyLen);
+            uint32_t valLen; voxFile.read(reinterpret_cast<char*>(&valLen), 4);
+            std::string val(valLen, '\0'); voxFile.read(&val[0], valLen);
 
             if (key == "_type") {
-                // Material type: _diffuse, _metal, _glass, _emit
-                if (val == "_metal") {
-                    material.diffuse = 0.0f;
-                    material.metal = 1.0f;
-                }
-                else if (val == "_glass") {
-                    material.diffuse = 0.0f;
-                    material.glass = 1.0f;
-                }
-                else if (val == "_emit") {
-                    material.diffuse = 0.0f;
-                    material.emit = 1.0f;
-                }
-                else {
-                    // "_diffuse" or unknown defaults to diffuse
-                    material.diffuse = 1.0f;
-                }
+                material.diffuse = material.metal = material.glass = material.emit = 0.0f;
+                if (val == "_metal") material.metal = 1.0f;
+                else if (val == "_glass") material.glass = 1.0f;
+                else if (val == "_emit")  material.emit = 1.0f;
+                else                      material.diffuse = 1.0f;
             }
-            else if (key == "_weight") {
-                material.weight = std::stof(val);
-            }
-            else if (key == "_rough") {
-                material.rough = std::stof(val);
-            }
-            else if (key == "_spec") {
-                material.spec = std::stof(val);
-            }
-            else if (key == "_ior") {
-                material.ior = std::stof(val);
-            }
-            else if (key == "_att") {
-                material.att = std::stof(val);
-            }
-            else if (key == "_flux") {
-                material.flux = std::stof(val);
-            }
-            else if (key == "_plastic") {
-                // _plastic is treated as boolean (0 or 1)
-                material.plastic = std::stof(val);
-            }
-            else {
-                // Ignore any other material property keys
-            }
+            else if (key == "_weight") material.weight = std::stof(val);
+            else if (key == "_rough")  material.rough = std::stof(val);
+            else if (key == "_spec")   material.spec = std::stof(val);
+            else if (key == "_ior")    material.ior = std::stof(val);
+            else if (key == "_att")    material.att = std::stof(val);
+            else if (key == "_flux")   material.flux = std::stof(val);
+            else if (key == "_plastic")material.plastic = std::stof(val);
         }
-        // Skip children chunks if any (none expected for MATL)
+
         if (childrenBytes > 0) {
             voxFile.seekg(childrenBytes, std::ios::cur);
         }
     }
 
     inline glm::mat3 MatFromRows(const glm::vec3& r0,
-                             const glm::vec3& r1,
-                             const glm::vec3& r2)
-{
-    // GLM is column-major: mat3(c0, c1, c2)
-    // Columns are built from the *components of rows*.
-    return glm::mat3(
-        glm::vec3(r0.x, r1.x, r2.x), // col 0
-        glm::vec3(r0.y, r1.y, r2.y), // col 1
-        glm::vec3(r0.z, r1.z, r2.z)  // col 2
-    );
-}
-
-    void VoxParser::parse_nTRN(std::shared_ptr<vox_file> vox, std::ifstream& voxFile, uint32_t contentBytes, uint32_t childrenBytes)
+        const glm::vec3& r1,
+        const glm::vec3& r2)
     {
-        // nTRN (Transform Node) chunk structure:
+        return glm::mat3(
+            glm::vec3(r0.x, r1.x, r2.x),
+            glm::vec3(r0.y, r1.y, r2.y),
+            glm::vec3(r0.z, r1.z, r2.z)
+        );
+    }
+
+    static inline glm::mat3 DecodeVoxRotation(uint32_t rotBits) 
+    {
+        rotBits &= 0x7F; // keep bits 0..6
+        const uint32_t i0 = rotBits & 0x3; // row0 index
+        const uint32_t i1 = (rotBits >> 2) & 0x3; // row1 index
+        if (i0 > 2 || i1 > 2 || i0 == i1) {
+            return glm::mat3(1.0f); // invalid -> identity
+        }
+        uint32_t used = (1u << i0) | (1u << i1);
+        uint32_t i2 = (used & 1u) ? ((used & 2u) ? 2u : 1u) : 0u;
+
+        glm::vec3 basis[3] = { {1,0,0},{0,1,0},{0,0,1} };
+
+        glm::vec3 r0 = basis[i0];
+        glm::vec3 r1 = basis[i1];
+        glm::vec3 r2 = basis[i2];
+
+        if ((rotBits >> 4) & 1u) r0 = -r0;
+        if ((rotBits >> 5) & 1u) r1 = -r1;
+        if ((rotBits >> 6) & 1u) r2 = -r2;
+
+        // Build for GLM (columns = basis vectors):
+        return glm::mat3(
+            glm::vec3(r0.x, r1.x, r2.x),
+            glm::vec3(r0.y, r1.y, r2.y),
+            glm::vec3(r0.z, r1.z, r2.z)
+        );
+    }
+
+    void VoxParser::parse_nTRN(std::shared_ptr<vox_file> vox, std::ifstream& voxFile,
+        uint32_t /*contentBytes*/, uint32_t childrenBytes)
+    {
+        // nTRN layout:
         // int32 nodeId
         // DICT nodeAttributes
         // int32 childNodeId
         // int32 reserved (-1)
         // int32 layerId
         // int32 numFrames
-        // then numFrames * { DICT frameAttributes }
+        // numFrames * DICT frameAttribs
         uint32_t nodeId;
         voxFile.read(reinterpret_cast<char*>(&nodeId), 4);
         vox_nTRN& transform = vox->transforms[nodeId];
         transform.nodeID = nodeId;
-        // Read node attributes dictionary
+        transform.parentNodeID = -1; // we'll link it in a post-pass
+
+        // node DICT
         uint32_t kvCount;
         voxFile.read(reinterpret_cast<char*>(&kvCount), 4);
         for (uint32_t i = 0; i < kvCount; ++i) {
-            uint32_t keyLen;
-            voxFile.read(reinterpret_cast<char*>(&keyLen), 4);
-            std::string key(keyLen, '\0');
-            voxFile.read(&key[0], keyLen);
-            uint32_t valLen;
-            voxFile.read(reinterpret_cast<char*>(&valLen), 4);
-            std::string val(valLen, '\0');
-            voxFile.read(&val[0], valLen);
-            // Store known attributes (e.g., _name or _hidden) if needed:
+            uint32_t keyLen; voxFile.read(reinterpret_cast<char*>(&keyLen), 4);
+            std::string key(keyLen, '\0'); voxFile.read(&key[0], keyLen);
+            uint32_t valLen; voxFile.read(reinterpret_cast<char*>(&valLen), 4);
+            std::string val(valLen, '\0'); voxFile.read(&val[0], valLen);
             transform.attributes[key] = val;
         }
-        // Read child node, reserved, layer, and number of frames
+
         voxFile.read(reinterpret_cast<char*>(&transform.childNodeID), 4);
-        int32_t reserved;
-        voxFile.read(reinterpret_cast<char*>(&reserved), 4);
+
+        int32_t reservedMinusOne;
+        voxFile.read(reinterpret_cast<char*>(&reservedMinusOne), 4); // ignore; NOT a parent id
+
         voxFile.read(reinterpret_cast<char*>(&transform.layerID), 4);
-        uint32_t numFrames;
+
+        uint32_t numFrames = 0;
         voxFile.read(reinterpret_cast<char*>(&numFrames), 4);
         transform.framesCount = numFrames;
         transform.frameAttrib.resize(numFrames);
 
         for (uint32_t f = 0; f < numFrames; ++f) {
-            vox_frame_attrib& frameAttrib = transform.frameAttrib[f];
-            frameAttrib.frameIndex = f;
-            frameAttrib.translation = { 0, 0, 0 };
-            frameAttrib.rotation = glm::mat3(1.0f);  // identity matrix initially
-            // Read frame attributes dictionary
+            vox_frame_attrib& fa = transform.frameAttrib[f];
+            fa.frameIndex = static_cast<s32>(f);
+            fa.translation = { 0,0,0 };
+            fa.rotation = glm::mat3(1.0f);
+
             uint32_t frameKvCount;
             voxFile.read(reinterpret_cast<char*>(&frameKvCount), 4);
             for (uint32_t i = 0; i < frameKvCount; ++i) {
-                uint32_t keyLen;
-                voxFile.read(reinterpret_cast<char*>(&keyLen), 4);
-                std::string key(keyLen, '\0');
-                voxFile.read(&key[0], keyLen);
-                uint32_t valLen;
-                voxFile.read(reinterpret_cast<char*>(&valLen), 4);
-                 if (key == "_r") {
-                std::string rotStr(valLen, '\0');
-                voxFile.read(&rotStr[0], valLen);
+                uint32_t keyLen; voxFile.read(reinterpret_cast<char*>(&keyLen), 4);
+                std::string key(keyLen, '\0'); voxFile.read(&key[0], keyLen);
+                uint32_t valLen; voxFile.read(reinterpret_cast<char*>(&valLen), 4);
 
-                // Magica’s packed rotation integer
-                const uint32_t rotBits = static_cast<uint32_t>(std::atoi(rotStr.c_str()));
-
-                // Row indices (each in {0,1,2} for X,Y,Z), from Magica’s spec
-                const uint32_t row0Index =  rotBits        & 0x3;      // bits 0..1
-                const uint32_t row1Index = (rotBits >> 2) & 0x3;      // bits 2..3
-
-                // Deduce row2 index: the axis not used by row0/row1
-                const uint32_t usedMask = (1u << row0Index) | (1u << row1Index);
-                uint32_t row2Index = 0;
-                for (uint32_t axis = 0; axis < 3; ++axis) {
-                    if ((usedMask & (1u << axis)) == 0) { row2Index = axis; break; }
+                if (key == "_r") 
+                {
+                    std::string rotStr(valLen, '\0'); voxFile.read(&rotStr[0], valLen);
+                    uint32_t rotBits = static_cast<uint32_t>(std::atoi(rotStr.c_str()));
+                    fa.rotation = DecodeVoxRotation(rotBits);
                 }
-
-                // Sign bits (1 = negative)
-                const bool row0Neg = (rotBits >> 4) & 1;
-                const bool row1Neg = (rotBits >> 5) & 1;
-                const bool row2Neg = (rotBits >> 6) & 1;
-
-                // Canonical basis
-                static const glm::vec3 basis[3] = {
-                    {1,0,0}, {0,1,0}, {0,0,1}
-                };
-
-                glm::vec3 r0 = basis[row0Index];
-                glm::vec3 r1 = basis[row1Index];
-                glm::vec3 r2 = basis[row2Index];
-
-                if (row0Neg) r0 = -r0;
-                if (row1Neg) r1 = -r1;
-                if (row2Neg) r2 = -r2;
-
-                // Magica gives **rows**; GLM wants **columns** → build columns from rows
-                frameAttrib.rotation = MatFromRows(r0, r1, r2);
-            }
-                else if (key == "_t") {
-                    // Translation (three integers as strings separated by spaces)
-                    std::string tStr(valLen, '\0');
-                    voxFile.read(&tStr[0], valLen);
-                    // Parse three integers from tStr
-                    int tx = 0, ty = 0, tz = 0;
-                    std::sscanf(tStr.c_str(), "%d %d %d", &tx, &ty, &tz);
-                    frameAttrib.translation.x = tx;
-                    frameAttrib.translation.y = ty;
-                    frameAttrib.translation.z = tz;
-                }
-                else if (key == "_f") {
-                    // Frame index (usually -1 or 0, not used in current versions as numFrames is typically 1)
-                    std::string fStr(valLen, '\0');
-                    voxFile.read(&fStr[0], valLen);
-                    // We won't use frameAttrib.frameIndex here since it's set by loop
+                else if (key == "_t") 
+                {
+                    std::string tStr(valLen, '\0'); voxFile.read(&tStr[0], valLen);
+                    int tx = 0, ty = 0, tz = 0; std::sscanf(tStr.c_str(), "%d %d %d", &tx, &ty, &tz);
+                    fa.translation = glm::vec3(tx, ty, tz);
                 }
                 else {
-                    // Unknown frame attribute: skip its value
+                    // read & ignore unknown value
                     voxFile.seekg(valLen, std::ios::cur);
                 }
             }
         }
-        // Skip any children chunks of nTRN (e.g., none expected, as frames are within content)
+
         if (childrenBytes > 0) {
             voxFile.seekg(childrenBytes, std::ios::cur);
         }
     }
 
     void VoxParser::parse_nGRP(std::shared_ptr<vox_file> vox, std::ifstream& voxFile,
-        uint32_t contentBytes, uint32_t childrenBytes) {
-        // nGRP (Group Node) chunk:
-        // int32 nodeId
-        // DICT nodeAttributes
-        // int32 numChildren
-        // int32 childNodeIds[numChildren]
+        uint32_t /*contentBytes*/, uint32_t childrenBytes) {
         uint32_t nodeId;
         voxFile.read(reinterpret_cast<char*>(&nodeId), 4);
         vox_nGRP& group = vox->groups[nodeId];
         group.nodeID = nodeId;
-        // Read group attributes dictionary
+
         uint32_t kvCount;
         voxFile.read(reinterpret_cast<char*>(&kvCount), 4);
         for (uint32_t i = 0; i < kvCount; ++i) {
-            uint32_t keyLen;
-            voxFile.read(reinterpret_cast<char*>(&keyLen), 4);
-            std::string key(keyLen, '\0');
-            voxFile.read(&key[0], keyLen);
-            uint32_t valLen;
-            voxFile.read(reinterpret_cast<char*>(&valLen), 4);
-            std::string val(valLen, '\0');
-            voxFile.read(&val[0], valLen);
-            // Store known attributes if needed (e.g., _name), otherwise ignore
+            uint32_t keyLen; voxFile.read(reinterpret_cast<char*>(&keyLen), 4);
+            std::string key(keyLen, '\0'); voxFile.read(&key[0], keyLen);
+            uint32_t valLen; voxFile.read(reinterpret_cast<char*>(&valLen), 4);
+            std::string val(valLen, '\0'); voxFile.read(&val[0], valLen);
             group.attributes[key] = val;
         }
-        // Read children
+
         uint32_t numChildren;
         voxFile.read(reinterpret_cast<char*>(&numChildren), 4);
         group.childrenIDs.resize(numChildren);
         for (uint32_t i = 0; i < numChildren; ++i) {
             voxFile.read(reinterpret_cast<char*>(&group.childrenIDs[i]), 4);
         }
-        // Skip any children chunks of nGRP (none expected, childrenIDs are in content)
+
         if (childrenBytes > 0) {
             voxFile.seekg(childrenBytes, std::ios::cur);
         }
     }
 
     void VoxParser::parse_nSHP(std::shared_ptr<vox_file> vox, std::ifstream& voxFile,
-        uint32_t contentBytes, uint32_t childrenBytes) {
-        // nSHP (Shape Node) chunk:
-        // int32 nodeId
-        // DICT nodeAttributes
-        // int32 numModels (usually 1)
-        // For each model: { int32 modelId, DICT modelAttributes }
+        uint32_t /*contentBytes*/, uint32_t childrenBytes) {
         uint32_t nodeId;
         voxFile.read(reinterpret_cast<char*>(&nodeId), 4);
         vox_nSHP& shape = vox->shapes[nodeId];
         shape.nodeID = nodeId;
-        // Read shape node attributes dictionary
+
         uint32_t kvCount;
         voxFile.read(reinterpret_cast<char*>(&kvCount), 4);
         for (uint32_t i = 0; i < kvCount; ++i) {
-            uint32_t keyLen;
-            voxFile.read(reinterpret_cast<char*>(&keyLen), 4);
-            std::string key(keyLen, '\0');
-            voxFile.read(&key[0], keyLen);
-            uint32_t valLen;
-            voxFile.read(reinterpret_cast<char*>(&valLen), 4);
-            std::string val(valLen, '\0');
-            voxFile.read(&val[0], valLen);
-            // Store known attributes if needed (e.g., _name or _hidden), else ignore
+            uint32_t keyLen; voxFile.read(reinterpret_cast<char*>(&keyLen), 4);
+            std::string key(keyLen, '\0'); voxFile.read(&key[0], keyLen);
+            uint32_t valLen; voxFile.read(reinterpret_cast<char*>(&valLen), 4);
+            std::string val(valLen, '\0'); voxFile.read(&val[0], valLen);
             shape.attributes[key] = val;
         }
-        // Read models
+
         uint32_t numModels;
         voxFile.read(reinterpret_cast<char*>(&numModels), 4);
         shape.models.resize(numModels);
         for (uint32_t i = 0; i < numModels; ++i) {
             vox_nSHP_model& modelRef = shape.models[i];
             voxFile.read(reinterpret_cast<char*>(&modelRef.modelID), 4);
-            // Read model attributes dictionary (reserved usage, e.g., _f frame index)
+
             uint32_t modelKvCount;
             voxFile.read(reinterpret_cast<char*>(&modelKvCount), 4);
             for (uint32_t j = 0; j < modelKvCount; ++j) {
-                uint32_t keyLen;
-                voxFile.read(reinterpret_cast<char*>(&keyLen), 4);
-                std::string key(keyLen, '\0');
-                voxFile.read(&key[0], keyLen);
-                uint32_t valLen;
-                voxFile.read(reinterpret_cast<char*>(&valLen), 4);
-                std::string val(valLen, '\0');
-                voxFile.read(&val[0], valLen);
+                uint32_t keyLen; voxFile.read(reinterpret_cast<char*>(&keyLen), 4);
+                std::string key(keyLen, '\0'); voxFile.read(&key[0], keyLen);
+                uint32_t valLen; voxFile.read(reinterpret_cast<char*>(&valLen), 4);
+                std::string val(valLen, '\0'); voxFile.read(&val[0], valLen);
                 if (key == "_f") {
-                    // The _f key might specify an animation frame index for this model reference
                     modelRef.frameIndex = std::stoi(val);
-                }
-                else {
-                    // Ignore other model attributes if any
                 }
             }
         }
-        // Skip any children chunks of nSHP (none expected)
+
         if (childrenBytes > 0) {
             voxFile.seekg(childrenBytes, std::ios::cur);
         }
     }
 
     void VoxParser::parse_LAYR(std::shared_ptr<vox_file> vox, std::ifstream& voxFile,
-        uint32_t contentBytes, uint32_t childrenBytes) {
-        // LAYR (Layer Definition) chunk:
-        // int32 layerId
-        // DICT layerAttributes (e.g., _name, _hidden)
-        // int32 reserved (must be -1)
+        uint32_t /*contentBytes*/, uint32_t childrenBytes) {
         uint32_t layerId;
         voxFile.read(reinterpret_cast<char*>(&layerId), 4);
         vox_layer layerInfo;
         layerInfo.layerID = layerId;
         layerInfo.name = "";
         layerInfo.hidden = false;
-        // Read layer attributes dictionary
+
         uint32_t kvCount;
         voxFile.read(reinterpret_cast<char*>(&kvCount), 4);
         for (uint32_t i = 0; i < kvCount; ++i) {
-            uint32_t keyLen;
-            voxFile.read(reinterpret_cast<char*>(&keyLen), 4);
-            std::string key(keyLen, '\0');
-            voxFile.read(&key[0], keyLen);
-            uint32_t valLen;
-            voxFile.read(reinterpret_cast<char*>(&valLen), 4);
-            std::string val(valLen, '\0');
-            voxFile.read(&val[0], valLen);
-            if (key == "_name") {
-                layerInfo.name = val;
-            }
-            else if (key == "_hidden") {
-                // "_hidden" value is "0" or "1"
-                layerInfo.hidden = (val == "1");
-            }
-            else {
-                // ignore other layer attributes if any
-            }
+            uint32_t keyLen; voxFile.read(reinterpret_cast<char*>(&keyLen), 4);
+            std::string key(keyLen, '\0'); voxFile.read(&key[0], keyLen);
+            uint32_t valLen; voxFile.read(reinterpret_cast<char*>(&valLen), 4);
+            std::string val(valLen, '\0'); voxFile.read(&val[0], valLen);
+            if (key == "_name")   layerInfo.name = val;
+            else if (key == "_hidden") layerInfo.hidden = (val == "1");
         }
-        // Read and discard reserved int
+
         int32_t reserved;
         voxFile.read(reinterpret_cast<char*>(&reserved), 4);
-        // Store layer info
         vox->layers[layerId] = layerInfo;
-        // Skip any children chunks of LAYR (none expected)
+
         if (childrenBytes > 0) {
             voxFile.seekg(childrenBytes, std::ios::cur);
         }
     }
 
-    // Default palette (256 colors) as per MagicaVoxel specification
     const std::vector<unsigned int> VoxParser::default_palette = {
         0x00000000, 0xffffffff, 0xffccffff, 0xff99ffff, 0xff66ffff, 0xff33ffff,
         0xff00ffff, 0xffffccff, 0xffccccff, 0xff99ccff, 0xff66ccff, 0xff33ccff,
@@ -779,13 +612,8 @@ namespace Unvoxeller
         0xff00ffcc, 0xffffcccc, 0xffcccccc, 0xff99cccc, 0xff66cccc, 0xff33cccc,
         0xff00cccc, 0xffff99cc, 0xffcc99cc, 0xff9999cc, 0xff6699cc, 0xff3399cc,
         0xff0099cc, 0xffff66cc, 0xffcc66cc, 0xff9966cc, 0xff6666cc, 0xff3366cc,
-        0xff0066cc, 0xffff33cc, 0xffcc33cc, 0xff9933cc, 0xff6633cc, 0xff3333cc,
-        0xff0033cc, 0xffffff99, 0xffccff99, 0xff99ff99, 0xff66ff99, 0xff33ff99,
-        0xff00ff99, 0xffffcc99, 0xffcccc99, 0xff99cc99, 0xff66cc99, 0xff33cc99,
-        0xff00cc99, 0xffff9999, 0xffcc9999, 0xff999999, 0xff669999, 0xff339999,
-        0xff009999, 0xffff6699, 0xffcc6699, 0xff996699, 0xff666699, 0xff336699,
-        0xff006699, 0xffff3399, 0xffcc3399, 0xff993399, 0xff663399, 0xff333399,
-        0xff003399, 0xffff0099, 0xffcc0099, 0xff990099, 0xff660099, 0xff330099,
+        0xff0066cc, 0xffff33cc, 0xffcc33cc, 0xff9933cc, 0xff66ff99, 0xff33ff99,
+        0xff00ff99, 0xffffcc99, 0xffcc6699, 0xff996699, 0xff666699, 0xff336699,
         0xff000099, 0xffffff66, 0xffccff66, 0xff99ff66, 0xff66ff66, 0xff33ff66,
         0xff00ff66, 0xffffcc66, 0xffcccc66, 0xff99cc66, 0xff66cc66, 0xff33cc66,
         0xff00cc66, 0xffff9966, 0xffcc9966, 0xff999966, 0xff669966, 0xff339966,

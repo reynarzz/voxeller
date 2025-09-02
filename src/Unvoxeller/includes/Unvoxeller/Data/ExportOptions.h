@@ -7,7 +7,11 @@ namespace Unvoxeller
 {
 	enum class ModelFormat
 	{
-		FBX, OBJ, GLB, GLTF, DAE
+		FBX, 
+		OBJ,
+		GLTF,
+		GLB, 
+		DAE
 	};
 
 	struct UNVOXELLER_API ExportOptions
