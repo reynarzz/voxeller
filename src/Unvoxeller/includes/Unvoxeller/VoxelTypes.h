@@ -65,36 +65,37 @@ namespace Unvoxeller
 	//–– Per‐frame transform attributes
 	struct vox_frame_attrib
 	{
-		s32         frameIndex;
-		glm::vec3    translation;
-		glm::mat3   rotation;
+		s32 frameIndex;
+		glm::vec3 translation;
+		glm::mat3 rotation;
 	};
 
 	//–– Transform node (nTRN chunk)
 	struct vox_nTRN
 	{
-		s32                                                 nodeID;
-		std::unordered_map<std::string, std::string>       attributes;
-		s32                                                 childNodeID;
-		s32                                                 layerID;
-		s32                                                 framesCount;
-		std::vector<vox_frame_attrib>                      frameAttrib;
+		s32 nodeID;
+		std::unordered_map<std::string, std::string> attributes;
+		s32 childNodeID;
+		s32 layerID;
+		s32 framesCount;
+		std::vector<vox_frame_attrib> frameAttrib;
+		s32 parentNodeID;
 	};
 
 	//–– Group node (nGRP chunk)
 	struct vox_nGRP
 	{
-		s32                                                 nodeID;
-		std::unordered_map<std::string, std::string>       attributes;
-		s32                                                 childrenCount;
-		std::vector<s32>                                    childrenIDs;
+		s32 nodeID;
+		std::unordered_map<std::string, std::string> attributes;
+		s32 childrenCount;
+		std::vector<s32> childrenIDs;
 	};
 
 	//–– Single shape‐model reference
 	struct vox_nSHP_model
 	{
-		s32     modelID;
-		s32     frameIndex;
+		s32 modelID;
+		s32 frameIndex;
 	};
 
 	//–– Shape node (nSHP chunk)
@@ -108,17 +109,17 @@ namespace Unvoxeller
 	//–– Unified material record for MATT & MATL
 	struct vox_MATL
 	{
-		f32   diffuse;
-		f32   metal;
-		f32   glass;
-		f32   emit;
-		f32   plastic;
-		f32   rough;
-		f32   spec;
-		f32   ior;
-		f32   att;
-		f32   flux;
-		f32   weight;
+		f32 diffuse;
+		f32 metal;
+		f32 glass;
+		f32 emit;
+		f32 plastic;
+		f32 rough;
+		f32 spec;
+		f32 ior;
+		f32 att;
+		f32 flux;
+		f32 weight;
 	};
 
 	//–– Layer definition (LAYR chunk)
@@ -130,17 +131,18 @@ namespace Unvoxeller
 	};
 
 	//–– All data read from one .vox file
-	struct vox_file {
-		vox_header                                              header;
-		std::vector<color>                                      palette;
-		std::vector<vox_size>                                   sizes;
-		std::vector<vox_model>                                  voxModels;
-		std::unordered_map<s32, vox_nTRN>                       transforms;
-		std::unordered_map<s32, vox_nGRP>                       groups;
-		std::unordered_map<s32, vox_nSHP>                       shapes;
-		std::unordered_map<s32, vox_MATL>                       materials;
-		std::unordered_map<s32, vox_layer>                      layers;
-		bool                                                    isValid = false;
+	struct vox_file
+	{
+		vox_header                         header;
+		std::vector<color>                 palette;
+		std::vector<vox_size>              sizes;
+		std::vector<vox_model>             voxModels;
+		std::unordered_map<s32, vox_nTRN>  transforms;
+		std::unordered_map<s32, vox_nGRP>  groups;
+		std::unordered_map<s32, vox_nSHP>  shapes;
+		std::unordered_map<s32, vox_MATL>  materials;
+		std::unordered_map<s32, vox_layer> layers;
+		bool                               isValid = false;
 	};
 
 	// Compose transform (parent first!)
@@ -153,7 +155,7 @@ namespace Unvoxeller
 	};
 
 	inline vox_transform operator*(const vox_transform& parent, const vox_transform& child) {
-		return 
+		return
 		{
 			parent.rot * child.rot,              // rotate child by parent
 			parent.rot * child.trans + parent.trans // rotate+offset child's translation
