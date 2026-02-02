@@ -14,7 +14,7 @@ case "$UNAME" in
   Linux*)       PLATFORM="linux"   ;;
   Darwin*)      PLATFORM="darwin"  ;;
   CYGWIN*|MINGW*|MSYS*|MINGW64*) PLATFORM="windows" ;;
-  *)            echo "❌ Unsupported OS: $UNAME" >&2; exit 1 ;;
+  *)            echo "Unsupported OS: $UNAME" >&2; exit 1 ;;
 esac
 
 # ── 4) Choose archive extension
@@ -35,7 +35,7 @@ if [[ -d "$DEST_DIR" ]]; then
 fi
 
 # ── 7) Download (disable revocation check on Windows/Schannel)
-echo "⬇️  Downloading Android NDK ${NDK_VERSION} for ${PLATFORM}..."
+echo "Downloading Android NDK ${NDK_VERSION} for ${PLATFORM}..."
 if [[ "$PLATFORM" == "windows" ]]; then
   curl --ssl-no-revoke -fL -o "$ARCHIVE_PATH" "$NDK_URL"
 else
