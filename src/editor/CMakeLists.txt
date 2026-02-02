@@ -136,3 +136,14 @@ elseif(APPLE)
     )
 
 endif()
+
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    set(DST_FOLDER "${CMAKE_SOURCE_DIR}/bin/Debug")
+elseif(CMAKE_BUILD_TYPE STREQUAL "Release")
+    set(DST_FOLDER "${CMAKE_SOURCE_DIR}/bin/Release")
+endif()
+
+# Assets folder
+set(SRC_FOLDER "${CMAKE_SOURCE_DIR}/assets")
+
+file(COPY "${SRC_FOLDER}" DESTINATION "${DST_FOLDER}")

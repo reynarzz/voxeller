@@ -498,7 +498,7 @@ void ExportWin()
 			Unvoxeller::ExportOptions exportOptions{};
 				
 			// V2
-			exportOptions.OutputDir = Unvoxeller::File::GetExecutableDir() + "/testvox/nda/export";
+			exportOptions.OutputDir = Unvoxeller::File::GetExecutableDir() + "/assets";
 			exportOptions.OutputName = fileInfo.FileName;
 			exportOptions.InputPath = fileInfo.FullPath;
 			exportOptions.OutputFormat = static_cast<Unvoxeller::ModelFormat>(selectedIndex);

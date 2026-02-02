@@ -188,8 +188,8 @@ int Init()
 	convertOptions.Meshing.FlatShading = false;
 	convertOptions.Meshing.MaterialPerMesh = true;
 	convertOptions.Meshing.MeshType = MeshType::Greedy;
-	convertOptions.Scale = { 1.3f, 1.3f, 1.3f };
-	convertOptions.Pivots = { { 0.5f, 0.0f, 0.5f } };
+	convertOptions.Scale = { 1.0f, 1.0f, 1.0f };
+	convertOptions.Pivots = { { 0.5f, 0.5f, 0.5f } };
 	convertOptions.ExportFramesSeparatelly = true;
 	convertOptions.ExportMeshesSeparatelly = false;
 
@@ -211,7 +211,7 @@ int Init()
 	exportOptions.OutputDir = Unvoxeller::File::GetExecutableDir() + "/assets";
 	exportOptions.OutputName = "Output";
 	exportOptions.InputPath = path;
-	exportOptions.OutputFormat = Unvoxeller::ModelFormat::OBJ;
+	exportOptions.OutputFormat = Unvoxeller::ModelFormat::FBX;
 	 
 	Unvoxeller::Unvoxeller unvox{};
 	//unvox.ExportVoxToModel(exportOptions, convertOptions);
