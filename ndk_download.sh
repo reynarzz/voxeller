@@ -30,7 +30,7 @@ ARCHIVE_PATH="$SCRIPT_DIR/$NDK_FILE"
 
 # ── 6) Skip if already installed
 if [[ -d "$DEST_DIR" ]]; then
-  echo "✅ NDK already installed at $DEST_DIR"
+  echo "NDK already installed at $DEST_DIR"
   exit 0
 fi
 
@@ -43,7 +43,7 @@ else
 fi
 
 # ── 8) Extract to ./android-ndk
-echo "🗜️  Extracting into $DEST_DIR..."
+echo "Extracting into $DEST_DIR..."
 if [[ "$EXT" == "zip" ]]; then
   unzip -q "$ARCHIVE_PATH" -d "$SCRIPT_DIR"
   mv "$SCRIPT_DIR/android-ndk-${NDK_VERSION}" "$DEST_DIR"
@@ -55,9 +55,9 @@ rm "$ARCHIVE_PATH"
 # ── 10) Done
 cat <<EOF
 
-🎉 Installed Android NDK ${NDK_VERSION} to:
+Installed Android NDK ${NDK_VERSION} to:
     $DEST_DIR
 
-👉 To use with CMake:
+To use with CMake:
     export ANDROID_NDK=\$DEST_DIR
 EOF
