@@ -35,6 +35,8 @@ std::unique_ptr<RenderingSystem> _renderingSystem = nullptr;
 std::unique_ptr<Camera> _camera = nullptr;
 std::vector<std::shared_ptr<RenderableObject>> _renderables = {};
 
+RendererState state{};
+LightState lightStateTest{};
 
 void Render(GLFWwindow* window)
 {
@@ -42,10 +44,8 @@ void Render(GLFWwindow* window)
 
 	Time::Update();
 
-	LightState lightStateTest{};
 	lightStateTest.lightIntensity = 1.5f;
 
-	RendererState state{};
 	state.ViewState = &_camera->GetState();
 	state.LightState = &lightStateTest;
 	
