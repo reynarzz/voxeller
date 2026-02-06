@@ -1,3 +1,1 @@
-<p align="center">
-  <img src="project_image.png" alt="Gameplay">
-</p>
+Magica voxel .vox to .fbx converter and optimizer (wip)
